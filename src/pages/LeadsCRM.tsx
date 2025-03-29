@@ -41,17 +41,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Plus,
-  MoreHorizontal,
-  Users,
   UserPlus,
+  Users,
   Building,
   Mail,
   Phone,
@@ -60,7 +52,6 @@ import {
   Filter,
   Calendar,
   MessageSquare,
-  Send,
   UserCheck,
   BarChart3,
   Upload,
@@ -234,6 +225,27 @@ const LeadsCRM = () => {
   const viewLeadDetails = (lead: Lead) => {
     setSelectedLead(lead);
     setLeadDetailsOpen(true);
+  };
+
+  const handleCallContact = (phone: string) => {
+    toast({
+      title: "Calling contact",
+      description: `Initiating call to ${phone}`,
+    });
+  };
+
+  const handleEmailContact = (email: string) => {
+    toast({
+      title: "Email client",
+      description: `Opening email to ${email}`,
+    });
+  };
+
+  const handleMessageContact = (contact: string) => {
+    toast({
+      title: "Open chat",
+      description: `Opening chat with ${contact}`,
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -596,37 +608,41 @@ const LeadsCRM = () => {
                             <span className="text-sm text-muted-foreground">Not scheduled</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => viewLeadDetails(lead)}>
-                                <ClipboardList className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Lead
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Send Message
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <CalendarCheck className="mr-2 h-4 w-4" />
-                                Schedule Follow-up
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Lead
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleCallContact(lead.phone)}
+                              title="Call"
+                            >
+                              <Phone className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleEmailContact(lead.email)}
+                              title="Email"
+                            >
+                              <Mail className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleMessageContact(lead.name)}
+                              title="Message"
+                            >
+                              <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => viewLeadDetails(lead)}
+                              title="View Details"
+                            >
+                              <ClipboardList className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -710,37 +726,40 @@ const LeadsCRM = () => {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <ClipboardList className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Client
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Send Message
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Briefcase className="mr-2 h-4 w-4" />
-                                Manage Subscription
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Client
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleCallContact(client.phone)}
+                              title="Call"
+                            >
+                              <Phone className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleEmailContact(client.email)}
+                              title="Email"
+                            >
+                              <Mail className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleMessageContact(client.name)}
+                              title="Message"
+                            >
+                              <MessageSquare className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              title="View Details"
+                            >
+                              <ClipboardList className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
