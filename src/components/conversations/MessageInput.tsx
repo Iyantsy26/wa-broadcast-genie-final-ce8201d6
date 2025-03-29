@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { useConversation } from '@/contexts/ConversationContext';
 
 interface MessageInputProps {
   onSendMessage: (content: string, file: File | null) => void;
@@ -35,6 +35,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
   const [activeAttachmentType, setActiveAttachmentType] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recordingTimerRef = useRef<number | null>(null);
+  const { handleVoiceMessageSent } = useConversation();
 
   const emojis = ['😀', '😂', '😊', '😍', '🥰', '😘', '😎', '👍', '🙏', '❤️', '🔥', '⭐', '🎉', '✅', '🤔', '👏', '🌟', '💯', '🤣', '😢'];
 
@@ -81,13 +82,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
         recordingTimerRef.current = null;
       }
       
-      toast({
-        title: "Voice message sent",
-        description: `Voice message (${recordingTime}s) has been sent.`,
-      });
+      handleVoiceMessageSent(recordingTime);
       
-      // Here we would normally process the voice recording
-      // For now, we'll just clear the recording state
       setRecordingTime(0);
     } else {
       toast({

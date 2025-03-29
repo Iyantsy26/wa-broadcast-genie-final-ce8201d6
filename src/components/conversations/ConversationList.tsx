@@ -21,6 +21,7 @@ interface ConversationListProps {
   setAssigneeFilter?: (assignee: string) => void;
   tagFilter?: string;
   setTagFilter?: (tag: string) => void;
+  resetAllFilters: () => void;
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({
@@ -36,18 +37,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
   assigneeFilter,
   setAssigneeFilter,
   tagFilter,
-  setTagFilter
+  setTagFilter,
+  resetAllFilters
 }) => {
   const assignees = Array.from(new Set(conversations.filter(c => c.assignedTo).map(c => c.assignedTo as string)));
   const tags = Array.from(new Set(conversations.flatMap(c => c.tags || [])));
-  
-  const resetAllFilters = () => {
-    setStatusFilter('all');
-    setDateRange && setDateRange(undefined);
-    setAssigneeFilter && setAssigneeFilter('');
-    setTagFilter && setTagFilter('');
-    setSearchTerm('');
-  };
 
   return (
     <div className="w-1/3 flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden">
