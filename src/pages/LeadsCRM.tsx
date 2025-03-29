@@ -67,6 +67,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface Lead {
   id: string;
@@ -80,6 +81,8 @@ interface Lead {
   lastContact: string;
   nextFollowUp: string;
   assignedTo: string;
+  avatar?: string; // Added avatar field
+  notes?: string;
 }
 
 interface Client {
@@ -92,6 +95,8 @@ interface Client {
   referredBy: string;
   joinDate: string;
   renewalDate: string;
+  avatar?: string; // Added avatar field
+  notes?: string;
 }
 
 const leads: Lead[] = [
@@ -107,6 +112,8 @@ const leads: Lead[] = [
     lastContact: '2023-06-15T09:45:00Z',
     nextFollowUp: '2023-06-22T10:00:00Z',
     assignedTo: 'Sarah Miller',
+    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+    notes: 'Interested in our premium package. Follow up about pricing details.',
   },
   {
     id: '2',
@@ -120,6 +127,8 @@ const leads: Lead[] = [
     lastContact: '2023-06-14T15:30:00Z',
     nextFollowUp: '2023-06-21T14:00:00Z',
     assignedTo: 'Robert Brown',
+    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+    notes: 'Scheduled a demo for next week. Prepare technical overview.',
   },
   {
     id: '3',
@@ -133,6 +142,7 @@ const leads: Lead[] = [
     lastContact: '',
     nextFollowUp: '2023-06-20T11:30:00Z',
     assignedTo: 'Unassigned',
+    notes: 'Referred by existing client. Interested in our services.',
   },
   {
     id: '4',
@@ -146,6 +156,8 @@ const leads: Lead[] = [
     lastContact: '2023-06-18T13:15:00Z',
     nextFollowUp: '2023-06-24T15:30:00Z',
     assignedTo: 'Sarah Miller',
+    avatar: 'https://randomuser.me/api/portraits/women/28.jpg',
+    notes: 'Sent proposal. Waiting for feedback.',
   },
   {
     id: '5',
@@ -159,6 +171,8 @@ const leads: Lead[] = [
     lastContact: '2023-06-17T11:45:00Z',
     nextFollowUp: '',
     assignedTo: 'Robert Brown',
+    avatar: 'https://randomuser.me/api/portraits/men/22.jpg',
+    notes: 'Successfully converted to a client. Setting up onboarding.',
   },
 ];
 
@@ -173,6 +187,8 @@ const clients: Client[] = [
     referredBy: 'Trade Show',
     joinDate: '2023-01-15T00:00:00Z',
     renewalDate: '2024-01-15T00:00:00Z',
+    avatar: 'https://randomuser.me/api/portraits/men/72.jpg',
+    notes: 'Large enterprise client. Regular check-ins required.',
   },
   {
     id: '2',
@@ -184,6 +200,8 @@ const clients: Client[] = [
     referredBy: 'Website',
     joinDate: '2023-03-10T00:00:00Z',
     renewalDate: '2024-03-10T00:00:00Z',
+    avatar: 'https://randomuser.me/api/portraits/women/58.jpg',
+    notes: 'International client with multiple locations.',
   },
   {
     id: '3',
@@ -195,6 +213,8 @@ const clients: Client[] = [
     referredBy: 'Robert Chen',
     joinDate: '2023-05-20T00:00:00Z',
     renewalDate: '2024-05-20T00:00:00Z',
+    avatar: 'https://randomuser.me/api/portraits/men/42.jpg',
+    notes: 'Startup client with growth potential.',
   },
 ];
 
@@ -206,6 +226,39 @@ const LeadsCRM = () => {
   
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadDetailsOpen, setLeadDetailsOpen] = useState(false);
+  const [editLeadOpen, setEditLeadOpen] = useState(false);
+  const [scheduleFollowUpOpen, setScheduleFollowUpOpen] = useState(false);
+  const [leadNoteOpen, setLeadNoteOpen] = useState(false);
+  
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
+  const [editClientOpen, setEditClientOpen] = useState(false);
+  const [clientNoteOpen, setClientNoteOpen] = useState(false);
+  
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Check file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Avatar image must be less than 2MB",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAddLead = () => {
     toast({
@@ -213,6 +266,8 @@ const LeadsCRM = () => {
       description: "Lead has been successfully added to your CRM",
     });
     setNewLeadDialogOpen(false);
+    setAvatarFile(null);
+    setAvatarPreview(null);
   };
 
   const handleAddClient = () => {
@@ -221,11 +276,58 @@ const LeadsCRM = () => {
       description: "Client has been successfully added to your CRM",
     });
     setNewClientDialogOpen(false);
+    setAvatarFile(null);
+    setAvatarPreview(null);
   };
 
   const viewLeadDetails = (lead: Lead) => {
     setSelectedLead(lead);
     setLeadDetailsOpen(true);
+  };
+  
+  const viewClientDetails = (client: Client) => {
+    setSelectedClient(client);
+    setClientDetailsOpen(true);
+  };
+  
+  const handleEditLead = () => {
+    toast({
+      title: "Lead updated",
+      description: "Lead information has been successfully updated",
+    });
+    setEditLeadOpen(false);
+  };
+  
+  const handleScheduleFollowUp = () => {
+    toast({
+      title: "Follow-up scheduled",
+      description: "Follow-up has been scheduled successfully",
+    });
+    setScheduleFollowUpOpen(false);
+  };
+  
+  const handleSaveLeadNote = () => {
+    toast({
+      title: "Note added",
+      description: "Note has been added to the lead successfully",
+    });
+    setLeadNoteOpen(false);
+  };
+  
+  const handleEditClient = () => {
+    toast({
+      title: "Client updated",
+      description: "Client information has been successfully updated",
+    });
+    setEditClientOpen(false);
+  };
+  
+  const handleSaveClientNote = () => {
+    toast({
+      title: "Note added",
+      description: "Note has been added to the client successfully",
+    });
+    setClientNoteOpen(false);
   };
 
   const handleCallContact = (phone: string) => {
@@ -278,6 +380,14 @@ const LeadsCRM = () => {
         return <Badge variant="outline">{plan}</Badge>;
     }
   };
+  
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -306,6 +416,31 @@ const LeadsCRM = () => {
               </DialogHeader>
               
               <div className="grid gap-4 py-4">
+                <div className="flex justify-center mb-2">
+                  <div className="relative">
+                    <Avatar className="w-24 h-24 border-2 border-muted">
+                      {avatarPreview ? (
+                        <AvatarImage src={avatarPreview} alt="Avatar preview" />
+                      ) : (
+                        <AvatarFallback className="text-lg">+</AvatarFallback>
+                      )}
+                    </Avatar>
+                    <Input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-24 h-24 rounded-full"
+                      onChange={handleAvatarChange}
+                    />
+                    <div className="absolute bottom-0 right-0 bg-primary rounded-full p-1 shadow-md">
+                      <Upload className="h-3.5 w-3.5 text-primary-foreground" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-center text-muted-foreground -mt-2">
+                  Upload photo (max 2MB)
+                </p>
+                
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="lead-name">Full Name</Label>
@@ -420,6 +555,31 @@ const LeadsCRM = () => {
               </DialogHeader>
               
               <div className="grid gap-4 py-4">
+                <div className="flex justify-center mb-2">
+                  <div className="relative">
+                    <Avatar className="w-24 h-24 border-2 border-muted">
+                      {avatarPreview ? (
+                        <AvatarImage src={avatarPreview} alt="Avatar preview" />
+                      ) : (
+                        <AvatarFallback className="text-lg">+</AvatarFallback>
+                      )}
+                    </Avatar>
+                    <Input
+                      id="avatar-upload-client"
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-24 h-24 rounded-full"
+                      onChange={handleAvatarChange}
+                    />
+                    <div className="absolute bottom-0 right-0 bg-primary rounded-full p-1 shadow-md">
+                      <Upload className="h-3.5 w-3.5 text-primary-foreground" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-center text-muted-foreground -mt-2">
+                  Upload photo (max 2MB)
+                </p>
+                
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="client-name">Client Name</Label>
@@ -572,13 +732,24 @@ const LeadsCRM = () => {
                     {leads.map((lead) => (
                       <TableRow key={lead.id}>
                         <TableCell>
-                          <div 
-                            className="font-medium cursor-pointer hover:text-primary hover:underline"
-                            onClick={() => viewLeadDetails(lead)}
-                          >
-                            {lead.name}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              {lead.avatar ? (
+                                <AvatarImage src={lead.avatar} alt={lead.name} />
+                              ) : (
+                                <AvatarFallback>{getInitials(lead.name)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div>
+                              <div 
+                                className="font-medium cursor-pointer hover:text-primary hover:underline"
+                                onClick={() => viewLeadDetails(lead)}
+                              >
+                                {lead.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{lead.email}</div>
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">{lead.email}</div>
                         </TableCell>
                         <TableCell>{getStatusBadge(lead.status)}</TableCell>
                         <TableCell>{lead.company}</TableCell>
@@ -697,10 +868,24 @@ const LeadsCRM = () => {
                     {clients.map((client) => (
                       <TableRow key={client.id}>
                         <TableCell>
-                          <div className="font-medium cursor-pointer hover:text-primary hover:underline">
-                            {client.name}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              {client.avatar ? (
+                                <AvatarImage src={client.avatar} alt={client.name} />
+                              ) : (
+                                <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div>
+                              <div 
+                                className="font-medium cursor-pointer hover:text-primary hover:underline"
+                                onClick={() => viewClientDetails(client)}
+                              >
+                                {client.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{client.company}</div>
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">{client.company}</div>
                         </TableCell>
                         <TableCell>{getPlanBadge(client.plan)}</TableCell>
                         <TableCell>
@@ -756,6 +941,7 @@ const LeadsCRM = () => {
                             <Button 
                               variant="ghost" 
                               size="icon"
+                              onClick={() => viewClientDetails(client)}
                               title="View Details"
                             >
                               <ClipboardList className="h-4 w-4 text-muted-foreground hover:text-primary" />
@@ -772,11 +958,21 @@ const LeadsCRM = () => {
         </TabsContent>
       </Tabs>
       
+      {/* Lead Details Dialog */}
       <Dialog open={leadDetailsOpen} onOpenChange={setLeadDetailsOpen}>
         {selectedLead && (
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
-              <DialogTitle className="text-xl">{selectedLead.name}</DialogTitle>
+              <DialogTitle className="text-xl flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  {selectedLead.avatar ? (
+                    <AvatarImage src={selectedLead.avatar} alt={selectedLead.name} />
+                  ) : (
+                    <AvatarFallback>{getInitials(selectedLead.name)}</AvatarFallback>
+                  )}
+                </Avatar>
+                {selectedLead.name}
+              </DialogTitle>
               <div className="flex items-center gap-2 mt-1">
                 {getStatusBadge(selectedLead.status)}
                 <span className="text-sm text-muted-foreground">
@@ -924,6 +1120,21 @@ const LeadsCRM = () => {
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Notes & Activity</h3>
                 <div className="space-y-3">
+                  {selectedLead.notes && (
+                    <div className="p-3 border rounded-md">
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium">Notes</div>
+                        <Button variant="ghost" size="sm" onClick={() => setLeadNoteOpen(true)}>
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                      <p className="text-sm mt-1">
+                        {selectedLead.notes}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="p-3 border rounded-md">
                     <div className="flex justify-between items-start">
                       <div className="font-medium">Initial Contact</div>
@@ -957,19 +1168,581 @@ const LeadsCRM = () => {
             
             <DialogFooter className="gap-2 sm:gap-0">
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  setLeadDetailsOpen(false);
+                  setEditLeadOpen(true);
+                }}>
                   <Edit className="mr-2 h-3.5 w-3.5" />
                   Edit Lead
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  setLeadDetailsOpen(false);
+                  setScheduleFollowUpOpen(true);
+                }}>
                   <Calendar className="mr-2 h-3.5 w-3.5" />
                   Schedule Follow-up
                 </Button>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleMessageContact(selectedLead.name)}>
                   <Send className="mr-2 h-3.5 w-3.5" />
                   Send Message
                 </Button>
               </div>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      
+      {/* Client Details Dialog */}
+      <Dialog open={clientDetailsOpen} onOpenChange={setClientDetailsOpen}>
+        {selectedClient && (
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  {selectedClient.avatar ? (
+                    <AvatarImage src={selectedClient.avatar} alt={selectedClient.name} />
+                  ) : (
+                    <AvatarFallback>{getInitials(selectedClient.name)}</AvatarFallback>
+                  )}
+                </Avatar>
+                {selectedClient.name}
+              </DialogTitle>
+              <div className="flex items-center gap-2 mt-1">
+                {getPlanBadge(selectedClient.plan)}
+                <span className="text-sm text-muted-foreground">
+                  Client since {new Date(selectedClient.joinDate).toLocaleDateString()}
+                </span>
+              </div>
+            </DialogHeader>
+            
+            <div className="grid gap-6 py-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Contact Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedClient.company}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedClient.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedClient.phone}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Client Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <div className="w-4 h-4 mt-0.5">
+                          <UserPlus className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Referred By</div>
+                          <div className="text-sm text-muted-foreground">{selectedClient.referredBy}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-4 h-4 mt-0.5">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Plan</div>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedClient.plan.charAt(0).toUpperCase() + selectedClient.plan.slice(1)} Package
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Subscription Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between p-3 border rounded-md">
+                        <div>
+                          <div className="text-sm font-medium">Join Date</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(selectedClient.joinDate).toLocaleDateString(undefined, {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </div>
+                        </div>
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      
+                      <div className="flex justify-between p-3 border rounded-md">
+                        <div>
+                          <div className="text-sm font-medium">Renewal Date</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(selectedClient.renewalDate).toLocaleDateString(undefined, {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </div>
+                        </div>
+                        <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Plan Usage</h3>
+                    <div className="p-3 border rounded-md">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Messages Used</span>
+                        <span>2,345 / 5,000</span>
+                      </div>
+                      <Progress value={47} />
+                      <div className="flex justify-between text-sm mt-3 mb-1">
+                        <span>Storage Used</span>
+                        <span>156 MB / 1 GB</span>
+                      </div>
+                      <Progress value={15} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Notes & Activity</h3>
+                <div className="space-y-3">
+                  {selectedClient.notes && (
+                    <div className="p-3 border rounded-md">
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium">Notes</div>
+                        <Button variant="ghost" size="sm" onClick={() => setClientNoteOpen(true)}>
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+                      <p className="text-sm mt-1">
+                        {selectedClient.notes}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="p-3 border rounded-md">
+                    <div className="flex justify-between items-start">
+                      <div className="font-medium">Onboarding Completed</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(selectedClient.joinDate).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <p className="text-sm mt-1">
+                      Successfully completed onboarding process. Client is now using the platform.
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 border rounded-md">
+                    <div className="flex justify-between items-start">
+                      <div className="font-medium">Support Request</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date().toLocaleDateString()}
+                      </div>
+                    </div>
+                    <p className="text-sm mt-1">
+                      Helped with questions about the broadcast feature. Client is satisfied with the solution.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter className="gap-2 sm:gap-0">
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => {
+                  setClientDetailsOpen(false);
+                  setEditClientOpen(true);
+                }}>
+                  <Edit className="mr-2 h-3.5 w-3.5" />
+                  Edit Client
+                </Button>
+                <Button size="sm" onClick={() => handleMessageContact(selectedClient.name)}>
+                  <Send className="mr-2 h-3.5 w-3.5" />
+                  Send Message
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      
+      {/* Edit Lead Dialog */}
+      <Dialog open={editLeadOpen} onOpenChange={setEditLeadOpen}>
+        {selectedLead && (
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Edit Lead</DialogTitle>
+              <DialogDescription>
+                Update the information for {selectedLead.name}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="flex justify-center mb-2">
+                <div className="relative">
+                  <Avatar className="w-24 h-24 border-2 border-muted">
+                    {avatarPreview ? (
+                      <AvatarImage src={avatarPreview} alt="Avatar preview" />
+                    ) : selectedLead.avatar ? (
+                      <AvatarImage src={selectedLead.avatar} alt={selectedLead.name} />
+                    ) : (
+                      <AvatarFallback>{getInitials(selectedLead.name)}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <Input
+                    id="avatar-upload-edit"
+                    type="file"
+                    accept="image/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-24 h-24 rounded-full"
+                    onChange={handleAvatarChange}
+                  />
+                  <div className="absolute bottom-0 right-0 bg-primary rounded-full p-1 shadow-md">
+                    <Upload className="h-3.5 w-3.5 text-primary-foreground" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-center text-muted-foreground -mt-2">
+                Upload photo (max 2MB)
+              </p>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-name">Full Name</Label>
+                  <Input id="edit-lead-name" defaultValue={selectedLead.name} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-company">Company</Label>
+                  <Input id="edit-lead-company" defaultValue={selectedLead.company} />
+                </div>
+              </div>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-email">Email</Label>
+                  <Input id="edit-lead-email" type="email" defaultValue={selectedLead.email} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-phone">Phone</Label>
+                  <Input id="edit-lead-phone" defaultValue={selectedLead.phone} />
+                </div>
+              </div>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-status">Status</Label>
+                  <Select defaultValue={selectedLead.status}>
+                    <SelectTrigger id="edit-lead-status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="qualified">Qualified</SelectItem>
+                      <SelectItem value="proposal">Proposal</SelectItem>
+                      <SelectItem value="converted">Converted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-source">Source</Label>
+                  <Select defaultValue={selectedLead.source.toLowerCase()}>
+                    <SelectTrigger id="edit-lead-source">
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="website">Website</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="google">Google</SelectItem>
+                      <SelectItem value="social">Social Media</SelectItem>
+                      <SelectItem value="email">Email Campaign</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-assigned">Assign To</Label>
+                  <Select defaultValue={selectedLead.assignedTo === 'Sarah Miller' ? 'sarah' : 
+                                        selectedLead.assignedTo === 'Robert Brown' ? 'robert' :
+                                        selectedLead.assignedTo === 'Jessica Lee' ? 'jessica' : 'unassigned'}>
+                    <SelectTrigger id="edit-lead-assigned">
+                      <SelectValue placeholder="Select team member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sarah">Sarah Miller</SelectItem>
+                      <SelectItem value="robert">Robert Brown</SelectItem>
+                      <SelectItem value="jessica">Jessica Lee</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lead-followup">Next Follow-up</Label>
+                  <Input 
+                    id="edit-lead-followup" 
+                    type="datetime-local" 
+                    defaultValue={selectedLead.nextFollowUp ? 
+                      new Date(selectedLead.nextFollowUp).toISOString().slice(0, 16) : ''}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditLeadOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditLead}>
+                Update Lead
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      
+      {/* Schedule Follow-up Dialog */}
+      <Dialog open={scheduleFollowUpOpen} onOpenChange={setScheduleFollowUpOpen}>
+        {selectedLead && (
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Schedule Follow-up</DialogTitle>
+              <DialogDescription>
+                Schedule a follow-up for {selectedLead.name}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="followup-date">Date and Time</Label>
+                <Input id="followup-date" type="datetime-local" />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="followup-type">Follow-up Type</Label>
+                <Select defaultValue="call">
+                  <SelectTrigger id="followup-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="call">Phone Call</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="meeting">Meeting</SelectItem>
+                    <SelectItem value="demo">Product Demo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="followup-notes">Notes</Label>
+                <Textarea 
+                  id="followup-notes" 
+                  placeholder="Add details about the follow-up..."
+                  className="min-h-[100px]"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="followup-reminder">Set Reminder</Label>
+                <Select defaultValue="15">
+                  <SelectTrigger id="followup-reminder">
+                    <SelectValue placeholder="Select reminder time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes before</SelectItem>
+                    <SelectItem value="30">30 minutes before</SelectItem>
+                    <SelectItem value="60">1 hour before</SelectItem>
+                    <SelectItem value="1440">1 day before</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setScheduleFollowUpOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleScheduleFollowUp}>
+                Schedule
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      
+      {/* Lead Note Dialog */}
+      <Dialog open={leadNoteOpen} onOpenChange={setLeadNoteOpen}>
+        {selectedLead && (
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add Note</DialogTitle>
+              <DialogDescription>
+                Add a note for {selectedLead.name}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="lead-note">Note</Label>
+                <Textarea 
+                  id="lead-note" 
+                  placeholder="Add your note here..."
+                  className="min-h-[150px]"
+                  defaultValue={selectedLead.notes}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setLeadNoteOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveLeadNote}>
+                Save Note
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      
+      {/* Edit Client Dialog */}
+      <Dialog open={editClientOpen} onOpenChange={setEditClientOpen}>
+        {selectedClient && (
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Edit Client</DialogTitle>
+              <DialogDescription>
+                Update the information for {selectedClient.name}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="flex justify-center mb-2">
+                <div className="relative">
+                  <Avatar className="w-24 h-24 border-2 border-muted">
+                    {avatarPreview ? (
+                      <AvatarImage src={avatarPreview} alt="Avatar preview" />
+                    ) : selectedClient.avatar ? (
+                      <AvatarImage src={selectedClient.avatar} alt={selectedClient.name} />
+                    ) : (
+                      <AvatarFallback>{getInitials(selectedClient.name)}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <Input
+                    id="avatar-upload-edit-client"
+                    type="file"
+                    accept="image/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-24 h-24 rounded-full"
+                    onChange={handleAvatarChange}
+                  />
+                  <div className="absolute bottom-0 right-0 bg-primary rounded-full p-1 shadow-md">
+                    <Upload className="h-3.5 w-3.5 text-primary-foreground" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-center text-muted-foreground -mt-2">
+                Upload photo (max 2MB)
+              </p>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-name">Client Name</Label>
+                  <Input id="edit-client-name" defaultValue={selectedClient.name} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-company">Company</Label>
+                  <Input id="edit-client-company" defaultValue={selectedClient.company} />
+                </div>
+              </div>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-email">Email</Label>
+                  <Input id="edit-client-email" type="email" defaultValue={selectedClient.email} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-phone">Phone</Label>
+                  <Input id="edit-client-phone" defaultValue={selectedClient.phone} />
+                </div>
+              </div>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-plan">Subscription Plan</Label>
+                  <Select defaultValue={selectedClient.plan}>
+                    <SelectTrigger id="edit-client-plan">
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="starter">Starter</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-referred">Referred By</Label>
+                  <Input id="edit-client-referred" defaultValue={selectedClient.referredBy} />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditClientOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditClient}>
+                Update Client
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      
+      {/* Client Note Dialog */}
+      <Dialog open={clientNoteOpen} onOpenChange={setClientNoteOpen}>
+        {selectedClient && (
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add Note</DialogTitle>
+              <DialogDescription>
+                Add a note for {selectedClient.name}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="client-note">Note</Label>
+                <Textarea 
+                  id="client-note" 
+                  placeholder="Add your note here..."
+                  className="min-h-[150px]"
+                  defaultValue={selectedClient.notes}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClientNoteOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveClientNote}>
+                Save Note
+              </Button>
             </DialogFooter>
           </DialogContent>
         )}
@@ -979,3 +1752,4 @@ const LeadsCRM = () => {
 };
 
 export default LeadsCRM;
+
