@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -95,11 +95,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
     }
   };
   
-  // Get unique assignees and tags for filter options
   const assignees = Array.from(new Set(conversations.filter(c => c.assignedTo).map(c => c.assignedTo as string)));
   const tags = Array.from(new Set(conversations.flatMap(c => c.tags || [])));
   
-  // Count active filters
   const activeFilterCount = [
     statusFilter !== 'all',
     !!dateRange?.from,
@@ -107,7 +105,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
     !!tagFilter,
   ].filter(Boolean).length;
 
-  // Reset all filters function
   const resetAllFilters = () => {
     setStatusFilter('all');
     setDateRange && setDateRange(undefined);
@@ -145,7 +142,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
               <DropdownMenuLabel>Conversation Filters</DropdownMenuLabel>
               <DropdownMenuSeparator />
               
-              {/* Status Filter */}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <MessageSquare className="h-4 w-4 mr-2" />
@@ -176,7 +172,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </DropdownMenuPortal>
               </DropdownMenuSub>
               
-              {/* Assignee Filter */}
               {setAssigneeFilter && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -202,7 +197,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </DropdownMenuSub>
               )}
               
-              {/* Tag Filter */}
               {setTagFilter && tags.length > 0 && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -228,7 +222,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </DropdownMenuSub>
               )}
               
-              {/* Date Range Picker */}
               {setDateRange && (
                 <DropdownMenuItem>
                   <div className="w-full">
@@ -282,7 +275,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
           </Button>
         </div>
         
-        {/* Show active filters */}
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {statusFilter !== 'all' && (
