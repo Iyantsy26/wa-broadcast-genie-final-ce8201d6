@@ -23,11 +23,12 @@ export const StorageUsage: React.FC<StorageUsageProps> = ({ used, limit }) => {
               <span>Storage</span>
               <span>{used.toFixed(1)}GB/{limit}GB</span>
             </div>
-            <Progress 
-              value={usagePercent} 
-              className={`h-1.5 ${isLow ? 'bg-green-100' : isWarning ? 'bg-amber-100' : 'bg-red-100'}`}
-              indicatorClassName={`${isLow ? 'bg-green-500' : isWarning ? 'bg-amber-500' : 'bg-red-500'}`}
-            />
+            <div className={`relative h-1.5 ${isLow ? 'bg-green-100' : isWarning ? 'bg-amber-100' : 'bg-red-100'} rounded-full overflow-hidden`}>
+              <Progress 
+                value={usagePercent} 
+                className="h-full"
+              />
+            </div>
           </div>
           <Info className="h-3.5 w-3.5 text-muted-foreground" />
         </div>

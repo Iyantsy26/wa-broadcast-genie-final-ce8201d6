@@ -1,8 +1,7 @@
-
 import React, { createContext, useState, useContext, useEffect, useRef, ReactNode } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
-import { Conversation, Message, ChatType, Contact } from '@/types/conversation';
+import { Conversation, Message, ChatType, Contact, MessageType } from '@/types/conversation';
 import { toast } from "@/hooks/use-toast";
 
 // Sample data - normally this would come from an API
@@ -63,10 +62,8 @@ const initialLeadContacts: Contact[] = [
   },
 ];
 
-// Combine all contacts
 const allContacts = [...initialTeamContacts, ...initialClientContacts, ...initialLeadContacts];
 
-// Generate sample conversations from contacts
 const initialConversations: Conversation[] = allContacts.map((contact, index) => ({
   id: contact.id,
   contact,
@@ -87,7 +84,6 @@ const initialConversations: Conversation[] = allContacts.map((contact, index) =>
   chatType: contact.type,
 }));
 
-// Sample messages for the first conversation
 const initialMessages: Message[] = [
   {
     id: '1',
@@ -241,7 +237,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Mock storage data
   const storageUsed = 2.1; // GB
   const storageLimit = 5; // GB
 
@@ -259,16 +254,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Filter conversations based on applied filters
   useEffect(() => {
     let filtered = [...conversations];
     
-    // First filter by chat type
     if (chatTypeFilter !== 'all') {
       filtered = filtered.filter(convo => convo.chatType === chatTypeFilter);
     }
     
-    // Then apply other filters
     if (statusFilter !== 'all') {
       filtered = filtered.filter(convo => convo.status === statusFilter);
     }
@@ -307,7 +299,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     }
     
-    // Sort: pinned first, then by timestamp (newest first)
     filtered.sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
@@ -376,7 +367,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
     }
     
-    // Simulate typing indicator
     setIsTyping(false);
     
     setMessages(prev => [...prev, newMessage]);
@@ -387,7 +377,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     
     if (activeConversation) {
-      const updatedConvo = {
+      const updatedConvo: Conversation = {
         ...activeConversation,
         lastMessage: {
           content: newMessage.content || (file ? 'Attachment' : 'Message'),
@@ -395,7 +385,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isOutbound: true,
           isRead: false
         },
-        status: 'active',
+        status: activeConversation.status === 'new' ? 'active' : activeConversation.status,
       };
       setActiveConversation(updatedConvo);
       
@@ -406,7 +396,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     }
     
-    // Simulate delivery/read status updates
     setTimeout(() => {
       setMessages(prev => 
         prev.map(msg => 
@@ -470,7 +459,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     }
     
-    // Simulate delivery/read status updates
     setTimeout(() => {
       setMessages(prev => 
         prev.map(msg => 
@@ -489,7 +477,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const handleReaction = (messageId: string, emoji: string) => {
-    // Add or toggle reaction to a message
     setMessages(prev => 
       prev.map(msg => {
         if (msg.id === messageId) {
@@ -498,16 +485,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           if (existingReaction) {
             if (existingReaction.emoji === emoji) {
-              // Remove reaction if clicking the same emoji
               newReactions = newReactions.filter(r => r.userId !== 'current-user');
             } else {
-              // Change reaction if clicking a different emoji
               newReactions = newReactions.map(r => 
                 r.userId === 'current-user' ? { ...r, emoji, timestamp: new Date().toISOString() } : r
               );
             }
           } else {
-            // Add new reaction
             newReactions = [...newReactions, {
               emoji,
               userId: 'current-user',
@@ -524,7 +508,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const handleReadMessages = () => {
-    // Mark all messages as read for the active conversation
     if (activeConversation) {
       const updatedConvo = {
         ...activeConversation,
@@ -575,7 +558,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  // Simulate typing indicator
   useEffect(() => {
     const typingTimeout = setTimeout(() => {
       const shouldShowTyping = Math.random() > 0.7;

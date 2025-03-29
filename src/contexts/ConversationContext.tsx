@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
-import { Conversation, Message } from '@/types/conversation';
+import { Conversation, Message, ChatType, Contact, MessageType } from '@/types/conversation';
 import { toast } from "@/hooks/use-toast";
 
 // Sample data - normally this would come from an API
@@ -9,10 +9,12 @@ const initialConversations: Conversation[] = [
   {
     id: '1',
     contact: {
+      id: 'c1',
       name: 'Sarah Johnson',
       phone: '+1 555-123-4567',
       avatar: '',
       isOnline: true,
+      type: 'client'
     },
     lastMessage: {
       content: "Yes, I'd like to book an appointment for next week.",
@@ -23,13 +25,16 @@ const initialConversations: Conversation[] = [
     assignedTo: 'Maria Lopez',
     tags: ['appointment', 'new-customer'],
     status: 'active',
+    chatType: 'client'
   },
   {
     id: '2',
     contact: {
+      id: 'c2',
       name: 'David Williams',
       phone: '+1 555-987-6543',
       avatar: '',
+      type: 'client'
     },
     lastMessage: {
       content: "Thanks for the information. I'll check it and get back to you.",
@@ -38,13 +43,16 @@ const initialConversations: Conversation[] = [
       isRead: true,
     },
     status: 'waiting',
+    chatType: 'client'
   },
   {
     id: '3',
     contact: {
+      id: 'l1',
       name: 'Michael Brown',
       phone: '+1 555-567-8901',
       avatar: '',
+      type: 'lead'
     },
     lastMessage: {
       content: 'I have a question about my recent order #45678.',
@@ -53,14 +61,17 @@ const initialConversations: Conversation[] = [
       isRead: false,
     },
     status: 'new',
+    chatType: 'lead'
   },
   {
     id: '4',
     contact: {
+      id: 'c3',
       name: 'Emily Davis',
       phone: '+1 555-345-6789',
       avatar: '',
       isOnline: true,
+      type: 'client'
     },
     lastMessage: {
       content: 'Your appointment has been confirmed for June 25th at 2 PM.',
@@ -71,13 +82,16 @@ const initialConversations: Conversation[] = [
     assignedTo: 'Robert Chen',
     tags: ['appointment', 'follow-up'],
     status: 'resolved',
+    chatType: 'client'
   },
   {
     id: '5',
     contact: {
+      id: 'c4',
       name: 'James Wilson',
       phone: '+1 555-234-5678',
       avatar: '',
+      type: 'client'
     },
     lastMessage: {
       content: 'Do you have this product in blue?',
@@ -88,6 +102,7 @@ const initialConversations: Conversation[] = [
     assignedTo: 'Maria Lopez',
     tags: ['product-inquiry'],
     status: 'active',
+    chatType: 'client'
   },
 ];
 

@@ -53,6 +53,11 @@ interface ConversationListProps {
   archiveConversation: (conversationId: string, isArchived: boolean) => void;
 }
 
+interface FilteredTagsResult {
+  displayTags: string[];
+  remaining: number;
+}
+
 const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
   activeConversation,
@@ -80,8 +85,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
     ? conversations.filter(c => c.isArchived) 
     : conversations.filter(c => !c.isArchived);
   
-  const getFilteredTags = (conversation: Conversation) => {
-    if (!conversation.tags) return [];
+  const getFilteredTags = (conversation: Conversation): FilteredTagsResult => {
+    if (!conversation.tags) return { displayTags: [], remaining: 0 };
     
     // Show max 2 tags to keep the UI clean
     const displayTags = conversation.tags.slice(0, 2);

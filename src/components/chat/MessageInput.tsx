@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -245,7 +244,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         />
         
         {isEncrypted && (
-          <Lock className="h-4 w-4 text-green-600 mx-1" title="End-to-end encrypted" />
+          <Lock className="h-4 w-4 text-green-600 mx-1" aria-label="End-to-end encrypted" />
         )}
         
         {!isRecording ? (
