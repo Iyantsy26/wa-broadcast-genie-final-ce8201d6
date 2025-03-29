@@ -61,7 +61,8 @@ import {
   Clock,
   CalendarCheck,
   Briefcase,
-} from "lucide-react";
+  Send,
+} from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
