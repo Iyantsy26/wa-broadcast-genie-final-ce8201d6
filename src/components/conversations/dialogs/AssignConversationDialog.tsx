@@ -9,7 +9,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Mock team members data - in production this would come from a context or API
+const TEAM_MEMBERS = [
+  { id: 'alice', name: 'Alice Smith' },
+  { id: 'bob', name: 'Bob Johnson' },
+  { id: 'carol', name: 'Carol Williams' },
+  { id: 'dave', name: 'Dave Brown' },
+];
 
 interface AssignConversationDialogProps {
   open: boolean;
@@ -24,51 +38,78 @@ const AssignConversationDialog: React.FC<AssignConversationDialogProps> = ({
   conversationId,
   onAssign
 }) => {
-  const [assigneeName, setAssigneeName] = useState('');
+  const [assignee, setAssignee] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAssignSubmit = async () => {
-    if (!assigneeName.trim()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignee) return;
     
     try {
-      await onAssign(conversationId, assigneeName.trim());
+      setIsSubmitting(true);
+      // Close dialog before assigning to prevent UI freezing
       onOpenChange(false);
-      setAssigneeName('');
-      toast({
-        title: "Conversation assigned",
-        description: `Conversation has been assigned to ${assigneeName}.`,
-      });
+      // Execute assignment after dialog is closed
+      await onAssign(conversationId, assignee);
     } catch (error) {
       console.error("Error assigning conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to assign conversation. Please try again.",
-        variant: "destructive",
-      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Reset assignee when dialog opens/closes
+  React.useEffect(() => {
+    if (!open) {
+      setAssignee('');
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign Conversation</DialogTitle>
           <DialogDescription>
             Assign this conversation to a team member.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center space-y-2 py-4">
-          <input
-            type="text"
-            placeholder="Enter team member name"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            value={assigneeName}
-            onChange={(e) => setAssigneeName(e.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAssignSubmit}>Assign</Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit}>
+          <div className="py-4">
+            <Select
+              value={assignee}
+              onValueChange={setAssignee}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select team member" />
+              </SelectTrigger>
+              <SelectContent>
+                {TEAM_MEMBERS.map(member => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!assignee || isSubmitting}
+            >
+              Assign
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

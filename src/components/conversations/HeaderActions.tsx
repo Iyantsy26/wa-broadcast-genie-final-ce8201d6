@@ -41,6 +41,34 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
 
+  // Only open one dialog at a time
+  const closeAllDialogs = () => {
+    setShowDeleteDialog(false);
+    setShowArchiveDialog(false);
+    setShowTagDialog(false);
+    setShowAssignDialog(false);
+  };
+
+  const openDeleteDialog = () => {
+    closeAllDialogs();
+    setShowDeleteDialog(true);
+  };
+
+  const openArchiveDialog = () => {
+    closeAllDialogs();
+    setShowArchiveDialog(true);
+  };
+
+  const openTagDialog = () => {
+    closeAllDialogs();
+    setShowTagDialog(true);
+  };
+
+  const openAssignDialog = () => {
+    closeAllDialogs();
+    setShowAssignDialog(true);
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -50,22 +78,22 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setShowArchiveDialog(true)}>
+          <DropdownMenuItem onClick={openArchiveDialog}>
             <Archive className="mr-2 h-4 w-4" />
             Archive conversation
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowTagDialog(true)}>
+          <DropdownMenuItem onClick={openTagDialog}>
             <Tag className="mr-2 h-4 w-4" />
             Add tags
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowAssignDialog(true)}>
+          <DropdownMenuItem onClick={openAssignDialog}>
             <UserPlus className="mr-2 h-4 w-4" />
             Assign to team member
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             className="text-red-600"
-            onClick={() => setShowDeleteDialog(true)}
+            onClick={openDeleteDialog}
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete conversation

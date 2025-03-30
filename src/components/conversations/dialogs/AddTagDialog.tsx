@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from '@/hooks/use-toast';
+import { Input } from "@/components/ui/input";
 
 interface AddTagDialogProps {
   open: boolean;
@@ -24,51 +24,70 @@ const AddTagDialog: React.FC<AddTagDialogProps> = ({
   conversationId,
   onAddTag
 }) => {
-  const [tagInput, setTagInput] = useState('');
+  const [tag, setTag] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddTagSubmit = async () => {
-    if (!tagInput.trim()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tag.trim()) return;
     
     try {
-      await onAddTag(conversationId, tagInput.trim());
+      setIsSubmitting(true);
+      // Close dialog before adding tag to prevent UI freezing
       onOpenChange(false);
-      setTagInput('');
-      toast({
-        title: "Tag added",
-        description: `Tag "${tagInput}" has been added to this conversation.`,
-      });
+      // Execute tag addition after dialog is closed
+      await onAddTag(conversationId, tag.trim());
+      setTag('');
     } catch (error) {
       console.error("Error adding tag:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add tag. Please try again.",
-        variant: "destructive",
-      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Reset tag when dialog opens/closes
+  React.useEffect(() => {
+    if (!open) {
+      setTag('');
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Tag</DialogTitle>
           <DialogDescription>
-            Add tags to categorize this conversation.
+            Add a tag to categorize this conversation.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center space-y-2 py-4">
-          <input
-            type="text"
-            placeholder="Enter tag name"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAddTagSubmit}>Add Tag</Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit}>
+          <div className="py-4">
+            <Input
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder="Enter tag name"
+              className="w-full"
+              disabled={isSubmitting}
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              disabled={!tag.trim() || isSubmitting}
+            >
+              Add Tag
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

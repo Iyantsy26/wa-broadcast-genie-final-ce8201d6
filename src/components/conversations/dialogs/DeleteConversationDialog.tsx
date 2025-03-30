@@ -10,7 +10,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from '@/hooks/use-toast';
 
 interface DeleteConversationDialogProps {
   open: boolean;
@@ -29,19 +28,12 @@ const DeleteConversationDialog: React.FC<DeleteConversationDialogProps> = ({
 }) => {
   const handleDelete = async () => {
     try {
+      // Close dialog before deletion to prevent UI freezing
       onOpenChange(false);
+      // Execute deletion after dialog is closed
       await onDelete(conversationId);
-      toast({
-        title: "Conversation deleted",
-        description: "The conversation has been successfully deleted.",
-      });
     } catch (error) {
       console.error("Error deleting conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete conversation. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
