@@ -32,15 +32,20 @@ export const getConversations = async (): Promise<Conversation[]> => {
     // Use optional chaining to safely access nested properties
     const contactData = isClient ? conv.clients : conv.leads;
     
-    // Default values if data is missing
-    const contactName = contactData && 'name' in contactData ? contactData.name : 'Unknown';
-    const contactAvatar = contactData && 'avatar_url' in contactData ? contactData.avatar_url : undefined;
+    // Ensure we have string values for the name and avatar
+    const contactName = contactData && 'name' in contactData && contactData.name 
+      ? String(contactData.name) 
+      : 'Unknown';
+      
+    const contactAvatar = contactData && 'avatar_url' in contactData && contactData.avatar_url 
+      ? String(contactData.avatar_url) 
+      : undefined;
     
     return {
       id: conv.id,
       contact: {
         id: isClient ? conv.client_id : conv.lead_id,
-        name: contactName || 'Unknown',
+        name: contactName,
         avatar: contactAvatar,
         phone: '', // We'll need to add this later
         type: isClient ? 'client' : 'lead'
@@ -85,15 +90,20 @@ export const getConversation = async (id: string): Promise<Conversation | null> 
   const isClient = !!data.client_id;
   const contactData = isClient ? data.clients : data.leads;
   
-  // Safely handle the potential null/undefined cases
-  const contactName = contactData && 'name' in contactData ? contactData.name : 'Unknown';
-  const contactAvatar = contactData && 'avatar_url' in contactData ? contactData.avatar_url : undefined;
+  // Ensure we have string values for the name and avatar
+  const contactName = contactData && 'name' in contactData && contactData.name 
+    ? String(contactData.name) 
+    : 'Unknown';
+    
+  const contactAvatar = contactData && 'avatar_url' in contactData && contactData.avatar_url 
+    ? String(contactData.avatar_url) 
+    : undefined;
   
   return {
     id: data.id,
     contact: {
       id: isClient ? data.client_id : data.lead_id,
-      name: contactName || 'Unknown',
+      name: contactName,
       avatar: contactAvatar,
       phone: '', // We'll need to add this later
       type: isClient ? 'client' : 'lead'
