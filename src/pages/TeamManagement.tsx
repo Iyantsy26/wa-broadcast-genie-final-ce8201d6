@@ -1,16 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,308 +17,359 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { 
   Plus, 
-  Search, 
-  MoreHorizontal, 
-  User, 
-  Users, 
-  Shield, 
-  Mail, 
-  Phone, 
-  UserPlus, 
-  UserCog, 
-  Lock, 
-  Edit, 
-  Trash2, 
-  CheckCircle, 
-  XCircle, 
-  Clock,
-  Smartphone,
-  MessageSquare,
-  BarChart3
+  Search,
+  Edit,
+  CheckCircle,
+  UserPlus,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  TeamMember, 
+  Department, 
+  Role, 
+  getTeamMembers, 
+  getDepartments, 
+  getRoles,
+  addTeamMember,
+  updateTeamMember,
+  deleteTeamMember,
+  activateTeamMember,
+  deactivateTeamMember,
+  addDepartment,
+  updateDepartment,
+  deleteDepartment,
+  updateRolePermissions
+} from "@/services/teamService";
 
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  avatar?: string;
-  role: 'admin' | 'manager' | 'agent';
-  status: 'active' | 'inactive' | 'pending';
-  whatsappAccounts: string[];
-  department?: string;
-  lastActive?: string;
-}
-
-interface Department {
-  id: string;
-  name: string;
-  description?: string;
-  memberCount: number;
-  leadName?: string;
-}
-
-interface Role {
-  id: string;
-  name: string;
-  permissions: string[];
-  description: string;
-}
-
-const teamMembers: TeamMember[] = [
-  {
-    id: '1',
-    name: 'Maria Lopez',
-    email: 'maria.lopez@example.com',
-    phone: '+1 555-123-4567',
-    role: 'admin',
-    status: 'active',
-    whatsappAccounts: ['Business Account 1', 'Marketing Account'],
-    department: 'Customer Support',
-    lastActive: '2023-06-23T10:15:00Z',
-  },
-  {
-    id: '2',
-    name: 'Robert Chen',
-    email: 'robert.chen@example.com',
-    phone: '+1 555-987-6543',
-    role: 'manager',
-    status: 'active',
-    whatsappAccounts: ['Support Account'],
-    department: 'Sales',
-    lastActive: '2023-06-23T09:30:00Z',
-  },
-  {
-    id: '3',
-    name: 'Sophia Williams',
-    email: 'sophia.williams@example.com',
-    role: 'agent',
-    status: 'active',
-    whatsappAccounts: ['Business Account 1'],
-    department: 'Customer Support',
-    lastActive: '2023-06-22T16:45:00Z',
-  },
-  {
-    id: '4',
-    name: 'James Taylor',
-    email: 'james.taylor@example.com',
-    phone: '+1 555-234-5678',
-    role: 'agent',
-    status: 'inactive',
-    whatsappAccounts: [],
-    department: 'Marketing',
-    lastActive: '2023-06-15T11:20:00Z',
-  },
-  {
-    id: '5',
-    name: 'Emma Johnson',
-    email: 'emma.johnson@example.com',
-    role: 'agent',
-    status: 'pending',
-    whatsappAccounts: [],
-  },
-];
-
-const departments: Department[] = [
-  {
-    id: '1',
-    name: 'Customer Support',
-    description: 'Handles customer inquiries and issues',
-    memberCount: 12,
-    leadName: 'Maria Lopez',
-  },
-  {
-    id: '2',
-    name: 'Sales',
-    description: 'Manages lead generation and sales processes',
-    memberCount: 8,
-    leadName: 'Robert Chen',
-  },
-  {
-    id: '3',
-    name: 'Marketing',
-    description: 'Creates and executes marketing campaigns',
-    memberCount: 6,
-    leadName: 'Sarah Parker',
-  },
-  {
-    id: '4',
-    name: 'Technical Support',
-    description: 'Provides technical assistance and troubleshooting',
-    memberCount: 5,
-  },
-];
-
-const roles: Role[] = [
-  {
-    id: '1',
-    name: 'Administrator',
-    permissions: [
-      'Manage team members',
-      'Manage WhatsApp accounts',
-      'Create and edit templates',
-      'Create and manage chatbots',
-      'Access all conversations',
-      'View analytics',
-      'Configure system settings',
-    ],
-    description: 'Full access to all system features and settings',
-  },
-  {
-    id: '2',
-    name: 'Manager',
-    permissions: [
-      'Manage team members (limited)',
-      'Create and edit templates',
-      'Create and manage chatbots',
-      'Access department conversations',
-      'View analytics',
-    ],
-    description: 'Department-level management and oversight',
-  },
-  {
-    id: '3',
-    name: 'Agent',
-    permissions: [
-      'Handle assigned conversations',
-      'Use templates',
-      'View basic analytics',
-    ],
-    description: 'Handle customer conversations and basic tasks',
-  },
-];
+// Import the components we created
+import TeamMembersList from '@/components/team/TeamMembersList';
+import AddTeamMemberDialog from '@/components/team/AddTeamMemberDialog';
+import DepartmentCard from '@/components/team/DepartmentCard';
+import DepartmentForm from '@/components/team/DepartmentForm';
+import RolePermissionsForm from '@/components/team/RolePermissionsForm';
+import TeamMemberProfile from '@/components/team/TeamMemberProfile';
 
 const TeamManagement = () => {
   const { toast } = useToast();
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('agent');
-  const [inviteDepartment, setInviteDepartment] = useState('');
-  const [isCreateDepartmentOpen, setIsCreateDepartmentOpen] = useState(false);
-  const [departmentName, setDepartmentName] = useState('');
-  const [departmentDescription, setDepartmentDescription] = useState('');
+  
+  // State for members, departments, and roles
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  
+  // State for search and filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all-status');
+  
+  // State for dialogs
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isAddDepartmentOpen, setIsAddDepartmentOpen] = useState(false);
+  const [isEditRoleOpen, setIsEditRoleOpen] = useState(false);
+  const [isViewProfileOpen, setIsViewProfileOpen] = useState(false);
+  const [isEditMemberOpen, setIsEditMemberOpen] = useState(false);
+  const [isChangeRoleOpen, setIsChangeRoleOpen] = useState(false);
+  const [isEditDepartmentOpen, setIsEditDepartmentOpen] = useState(false);
+  
+  // Selected items for editing
+  const [selectedMember, setSelectedMember] = useState<TeamMember | undefined>();
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | undefined>();
+  const [selectedRole, setSelectedRole] = useState<Role | undefined>();
 
-  const handleInviteTeamMember = () => {
-    if (!inviteEmail) {
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [teamData, departmentData, roleData] = await Promise.all([
+          getTeamMembers(),
+          getDepartments(),
+          getRoles()
+        ]);
+        
+        setMembers(teamData);
+        setDepartments(departmentData);
+        setRoles(roleData);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load team data",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    fetchData();
+  }, [toast]);
+
+  // Filter members based on search and filters
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = 
+      searchQuery === '' || 
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRole = roleFilter === 'all' || member.role === roleFilter;
+    
+    const matchesStatus = 
+      statusFilter === 'all-status' || 
+      member.status === statusFilter;
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Team Member Handlers
+  const handleAddMember = async (member: Omit<TeamMember, 'id'>) => {
+    try {
+      const newMember = await addTeamMember(member);
+      setMembers(prev => [...prev, newMember]);
+      
       toast({
-        title: "Missing information",
-        description: "Please provide an email address",
+        title: "Team member added",
+        description: `${member.name} has been added to the team`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add team member",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Invitation sent",
-      description: `An invitation has been sent to ${inviteEmail}`,
-    });
-
-    setIsInviteDialogOpen(false);
-    setInviteEmail('');
-    setInviteRole('agent');
-    setInviteDepartment('');
   };
 
-  const handleCreateDepartment = () => {
-    if (!departmentName) {
+  const handleViewProfile = (id: string) => {
+    const member = members.find(m => m.id === id);
+    setSelectedMember(member);
+    setIsViewProfileOpen(true);
+  };
+
+  const handleEditMember = (id: string) => {
+    const member = members.find(m => m.id === id);
+    setSelectedMember(member);
+    setIsEditMemberOpen(true);
+  };
+
+  const handleChangeRole = (id: string) => {
+    const member = members.find(m => m.id === id);
+    setSelectedMember(member);
+    setIsChangeRoleOpen(true);
+  };
+
+  const handleResetPassword = (id: string) => {
+    toast({
+      title: "Password reset email sent",
+      description: "An email has been sent with password reset instructions",
+    });
+  };
+
+  const handleActivateMember = async (id: string) => {
+    try {
+      const updatedMember = await activateTeamMember(id);
+      setMembers(prev => 
+        prev.map(member => member.id === id ? updatedMember : member)
+      );
+      
       toast({
-        title: "Missing information",
-        description: "Please provide a department name",
+        title: "Team member activated",
+        description: `The team member has been activated`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to activate team member",
         variant: "destructive",
       });
-      return;
     }
+  };
 
+  const handleDeactivateMember = async (id: string) => {
+    try {
+      const updatedMember = await deactivateTeamMember(id);
+      setMembers(prev => 
+        prev.map(member => member.id === id ? updatedMember : member)
+      );
+      
+      toast({
+        title: "Team member deactivated",
+        description: `The team member has been deactivated`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to deactivate team member",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMember = async (id: string) => {
+    try {
+      await deleteTeamMember(id);
+      setMembers(prev => prev.filter(member => member.id !== id));
+      
+      toast({
+        title: "Team member removed",
+        description: "The team member has been removed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove team member",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Department Handlers
+  const handleAddDepartment = async (department: Partial<Department>) => {
+    try {
+      if (!department.name) {
+        throw new Error("Department name is required");
+      }
+      
+      const newDepartment = await addDepartment({
+        name: department.name,
+        description: department.description,
+        memberCount: 0,
+        leadName: department.leadName,
+      });
+      
+      setDepartments(prev => [...prev, newDepartment]);
+      
+      toast({
+        title: "Department created",
+        description: `${department.name} department has been created`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create department",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditDepartment = (id: string) => {
+    const department = departments.find(d => d.id === id);
+    setSelectedDepartment(department);
+    setIsEditDepartmentOpen(true);
+  };
+
+  const handleUpdateDepartment = async (department: Partial<Department>) => {
+    try {
+      if (!department.id || !department.name) {
+        throw new Error("Invalid department data");
+      }
+      
+      const updatedDepartment = await updateDepartment(department.id, department);
+      
+      setDepartments(prev => 
+        prev.map(dept => dept.id === department.id ? updatedDepartment : dept)
+      );
+      
+      toast({
+        title: "Department updated",
+        description: `${department.name} has been updated`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update department",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteDepartment = async (id: string) => {
+    try {
+      await deleteDepartment(id);
+      setDepartments(prev => prev.filter(dept => dept.id !== id));
+      
+      toast({
+        title: "Department deleted",
+        description: "The department has been deleted",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete department",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddMembersToDepartment = (id: string) => {
+    const department = departments.find(d => d.id === id);
+    
     toast({
-      title: "Department created",
-      description: `${departmentName} department has been created`,
+      title: "Add members",
+      description: `You can now add members to ${department?.name}`,
     });
-
-    setIsCreateDepartmentOpen(false);
-    setDepartmentName('');
-    setDepartmentDescription('');
+    
+    // This would typically open a dialog to add members to the department
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return (
-          <Badge variant="default" className="bg-purple-500">
-            Administrator
-          </Badge>
-        );
-      case 'manager':
-        return (
-          <Badge variant="default" className="bg-blue-500">
-            Manager
-          </Badge>
-        );
-      case 'agent':
-        return (
-          <Badge variant="outline">
-            Agent
-          </Badge>
-        );
-      default:
-        return null;
-    }
+  const handleViewDepartmentAnalytics = (id: string) => {
+    toast({
+      title: "Department analytics",
+      description: "Viewing department analytics",
+    });
+    
+    // This would typically navigate to an analytics page filtered for this department
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <div className="flex items-center">
-            <div className="h-2 w-2 rounded-full bg-green-500 mr-1.5"></div>
-            <span className="text-sm text-green-600">Active</span>
-          </div>
-        );
-      case 'inactive':
-        return (
-          <div className="flex items-center">
-            <div className="h-2 w-2 rounded-full bg-gray-400 mr-1.5"></div>
-            <span className="text-sm text-gray-600">Inactive</span>
-          </div>
-        );
-      case 'pending':
-        return (
-          <div className="flex items-center">
-            <div className="h-2 w-2 rounded-full bg-amber-500 mr-1.5"></div>
-            <span className="text-sm text-amber-600">Pending</span>
-          </div>
-        );
-      default:
-        return null;
+  const handleViewDepartmentMembers = (id: string) => {
+    const department = departments.find(d => d.id === id);
+    
+    toast({
+      title: "Department members",
+      description: `Viewing members of ${department?.name}`,
+    });
+    
+    // This would typically show a dialog or navigate to a page showing the members of this department
+  };
+
+  const handleViewDepartmentConversations = (id: string) => {
+    const department = departments.find(d => d.id === id);
+    
+    toast({
+      title: "Department conversations",
+      description: `Viewing conversations for ${department?.name}`,
+    });
+    
+    // This would typically navigate to the conversations page filtered for this department
+  };
+
+  // Role Handlers
+  const handleEditRole = (id: string) => {
+    const role = roles.find(r => r.id === id);
+    setSelectedRole(role);
+    setIsEditRoleOpen(true);
+  };
+
+  const handleUpdateRolePermissions = async () => {
+    try {
+      // This would be handled by the RolePermissionsForm component
+      toast({
+        title: "Permissions updated",
+        description: "Role permissions have been updated",
+      });
+      
+      // Refresh the roles data
+      const updatedRoles = await getRoles();
+      setRoles(updatedRoles);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update permissions",
+        variant: "destructive",
+      });
     }
   };
 
@@ -334,101 +383,10 @@ const TeamManagement = () => {
           </p>
         </div>
         
-        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite Team Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation to join your WhatsApp management team
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="colleague@example.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrator</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="agent">Agent</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {inviteRole === 'admin' 
-                    ? 'Full access to all system features and settings'
-                    : inviteRole === 'manager'
-                    ? 'Department-level management and oversight'
-                    : 'Handle customer conversations and basic tasks'}
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="department">Department (Optional)</Label>
-                <Select value={inviteDepartment} onValueChange={setInviteDepartment}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((department) => (
-                      <SelectItem key={department.id} value={department.id}>
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Switch id="whatsapp-access" />
-                  <Label htmlFor="whatsapp-access">
-                    Grant WhatsApp account access
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground pl-6">
-                  The team member will be able to send and receive WhatsApp messages
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="message">Personal Message (Optional)</Label>
-                <Input
-                  id="message"
-                  placeholder="Add a personal note to the invitation email"
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleInviteTeamMember}>
-                Send Invitation
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsAddMemberOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Add Team Member
+        </Button>
       </div>
 
       <Tabs defaultValue="members">
@@ -445,11 +403,17 @@ const TeamManagement = () => {
               <Input
                 placeholder="Search team members..."
                 className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             
             <div className="flex flex-wrap gap-2">
-              <Select defaultValue="all">
+              <Select 
+                defaultValue="all"
+                value={roleFilter}
+                onValueChange={setRoleFilter}
+              >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
@@ -461,7 +425,11 @@ const TeamManagement = () => {
                 </SelectContent>
               </Select>
               
-              <Select defaultValue="all-status">
+              <Select 
+                defaultValue="all-status"
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -483,119 +451,40 @@ const TeamManagement = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>WhatsApp Accounts</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teamMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={member.avatar} />
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{member.name}</div>
-                            <div className="text-xs text-muted-foreground">{member.email}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getRoleBadge(member.role)}
-                      </TableCell>
-                      <TableCell>
-                        {member.department || '—'}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(member.status)}
-                      </TableCell>
-                      <TableCell>
-                        {member.whatsappAccounts.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {member.whatsappAccounts.map((account, index) => (
-                              <Badge key={index} variant="outline" className="bg-gray-100 border-0">
-                                <Smartphone className="h-3 w-3 mr-1" />
-                                {account}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">None</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {member.lastActive ? (
-                          new Date(member.lastActive).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        ) : (
-                          '—'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <User className="mr-2 h-4 w-4" />
-                              View Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Shield className="mr-2 h-4 w-4" />
-                              Change Role
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Lock className="mr-2 h-4 w-4" />
-                              Reset Password
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {member.status === 'active' ? (
-                              <DropdownMenuItem>
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Deactivate
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Activate
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <TeamMembersList
+                members={filteredMembers}
+                onViewProfile={handleViewProfile}
+                onEditMember={handleEditMember}
+                onChangeRole={handleChangeRole}
+                onResetPassword={handleResetPassword}
+                onActivate={handleActivateMember}
+                onDeactivate={handleDeactivateMember}
+                onDelete={handleDeleteMember}
+              />
             </CardContent>
           </Card>
+          
+          {/* Add Team Member Dialog */}
+          <AddTeamMemberDialog
+            open={isAddMemberOpen}
+            onOpenChange={setIsAddMemberOpen}
+            departments={departments}
+            onSuccess={() => {
+              // Refresh the members list
+              getTeamMembers().then(setMembers);
+            }}
+          />
+          
+          {/* Team Member Profile Dialog */}
+          <TeamMemberProfile
+            open={isViewProfileOpen}
+            onOpenChange={setIsViewProfileOpen}
+            member={selectedMember}
+            onEdit={() => {
+              setIsViewProfileOpen(false);
+              setIsEditMemberOpen(true);
+            }}
+          />
         </TabsContent>
         
         <TabsContent value="departments" className="mt-6 space-y-4">
@@ -608,150 +497,45 @@ const TeamManagement = () => {
               />
             </div>
             
-            <Dialog open={isCreateDepartmentOpen} onOpenChange={setIsCreateDepartmentOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Department
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create Department</DialogTitle>
-                  <DialogDescription>
-                    Create a new department to organize your team
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="dept-name">Department Name</Label>
-                    <Input
-                      id="dept-name"
-                      placeholder="e.g., Customer Success"
-                      value={departmentName}
-                      onChange={(e) => setDepartmentName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="dept-description">Description (Optional)</Label>
-                    <Input
-                      id="dept-description"
-                      placeholder="Briefly describe the department's function"
-                      value={departmentDescription}
-                      onChange={(e) => setDepartmentDescription(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="dept-lead">Department Lead (Optional)</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a team member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teamMembers
-                          .filter(member => member.status === 'active')
-                          .map((member) => (
-                            <SelectItem key={member.id} value={member.id}>
-                              {member.name}
-                            </SelectItem>
-                          ))
-                        }
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch id="auto-assign" />
-                      <Label htmlFor="auto-assign">
-                        Enable auto-assignment
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      Automatically assign conversations to department members based on availability
-                    </p>
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateDepartmentOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateDepartment}>
-                    Create Department
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => setIsAddDepartmentOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Department
+            </Button>
           </div>
           
           <div className="grid gap-4 md:grid-cols-2">
             {departments.map((department) => (
-              <Card key={department.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle>{department.name}</CardTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Department
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Add Members
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <BarChart3 className="mr-2 h-4 w-4" />
-                          View Analytics
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Department
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <CardDescription>
-                    {department.description || 'No description provided'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Department Lead</span>
-                      <span className="text-sm font-medium">
-                        {department.leadName || '—'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Team Members</span>
-                      <span className="text-sm font-medium">{department.memberCount}</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm">
-                    <Users className="mr-2 h-4 w-4" />
-                    View Members
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    View Conversations
-                  </Button>
-                </CardFooter>
-              </Card>
+              <DepartmentCard
+                key={department.id}
+                department={department}
+                onEdit={handleEditDepartment}
+                onAddMembers={handleAddMembersToDepartment}
+                onViewAnalytics={handleViewDepartmentAnalytics}
+                onDelete={handleDeleteDepartment}
+                onViewMembers={handleViewDepartmentMembers}
+                onViewConversations={handleViewDepartmentConversations}
+              />
             ))}
           </div>
+          
+          {/* Department Form Dialog */}
+          <DepartmentForm
+            open={isAddDepartmentOpen}
+            onOpenChange={setIsAddDepartmentOpen}
+            teamMembers={members.filter(m => m.status === 'active')}
+            onSave={handleAddDepartment}
+          />
+          
+          {/* Edit Department Dialog */}
+          {selectedDepartment && (
+            <DepartmentForm
+              open={isEditDepartmentOpen}
+              onOpenChange={setIsEditDepartmentOpen}
+              department={selectedDepartment}
+              teamMembers={members.filter(m => m.status === 'active')}
+              onSave={handleUpdateDepartment}
+            />
+          )}
         </TabsContent>
         
         <TabsContent value="roles" className="mt-6 space-y-6">
@@ -760,7 +544,11 @@ const TeamManagement = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle>{role.name}</CardTitle>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleEditRole(role.id)}
+                  >
                     <Edit className="mr-2 h-4 w-4" />
                     Edit Permissions
                   </Button>
@@ -781,6 +569,16 @@ const TeamManagement = () => {
               </CardContent>
             </Card>
           ))}
+          
+          {/* Role Permissions Form Dialog */}
+          {selectedRole && (
+            <RolePermissionsForm
+              open={isEditRoleOpen}
+              onOpenChange={setIsEditRoleOpen}
+              role={selectedRole}
+              onSuccess={handleUpdateRolePermissions}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
