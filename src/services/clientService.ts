@@ -66,10 +66,10 @@ export const getClient = async (id: string): Promise<Client | null> => {
     address: data.address,
     notes: data.notes,
     // Handle new fields that might not exist in the database
-    referredBy: (data as any).referred_by || '',
-    tags: (data as any).tags || [],
-    subscriptionPlan: (data as any).subscription_plan || '',
-    renewalDate: (data as any).renewal_date || ''
+    referredBy: data.referred_by || '',
+    tags: data.tags || [],
+    subscriptionPlan: data.subscription_plan || '',
+    renewalDate: data.renewal_date || ''
   };
 };
 
@@ -122,10 +122,10 @@ export const createClient = async (client: Omit<Client, 'id'>): Promise<Client> 
     address: data.address,
     notes: data.notes,
     // Handle new fields that might not exist in the database
-    referredBy: (data as any).referred_by || '',
-    tags: (data as any).tags || [],
-    subscriptionPlan: (data as any).subscription_plan || '',
-    renewalDate: (data as any).renewal_date || ''
+    referredBy: data.referred_by || '',
+    tags: data.tags || [],
+    subscriptionPlan: data.subscription_plan || '',
+    renewalDate: data.renewal_date || ''
   };
 };
 
@@ -178,10 +178,10 @@ export const updateClient = async (id: string, client: Partial<Client>): Promise
     address: data.address,
     notes: data.notes,
     // Handle new fields that might not exist in the database
-    referredBy: (data as any).referred_by || '',
-    tags: (data as any).tags || [],
-    subscriptionPlan: (data as any).subscription_plan || '',
-    renewalDate: (data as any).renewal_date || ''
+    referredBy: data.referred_by || '',
+    tags: data.tags || [],
+    subscriptionPlan: data.subscription_plan || '',
+    renewalDate: data.renewal_date || ''
   };
 };
 

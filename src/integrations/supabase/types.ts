@@ -70,7 +70,11 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          referred_by: string | null
+          renewal_date: string | null
           status: string | null
+          subscription_plan: string | null
+          tags: string[] | null
           updated_at: string
           value: number | null
           website: string | null
@@ -87,7 +91,11 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          referred_by?: string | null
+          renewal_date?: string | null
           status?: string | null
+          subscription_plan?: string | null
+          tags?: string[] | null
           updated_at?: string
           value?: number | null
           website?: string | null
@@ -104,7 +112,11 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          referred_by?: string | null
+          renewal_date?: string | null
           status?: string | null
+          subscription_plan?: string | null
+          tags?: string[] | null
           updated_at?: string
           value?: number | null
           website?: string | null
