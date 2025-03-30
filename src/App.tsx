@@ -11,7 +11,6 @@ import WhatsAppAccounts from "./pages/WhatsAppAccounts";
 import BroadcastCampaigns from "./pages/BroadcastCampaigns";
 import ChatbotBuilder from "./pages/ChatbotBuilder";
 import Templates from "./pages/Templates";
-import Conversations from "./pages/Conversations";
 import TeamManagement from "./pages/TeamManagement";
 import Analytics from "./pages/Analytics";
 import Tickets from "./pages/Tickets";
@@ -34,7 +33,6 @@ const App = () => (
             <Route path="/broadcasts" element={<BroadcastCampaigns />} />
             <Route path="/chatbots" element={<ChatbotBuilder />} />
             <Route path="/templates" element={<Templates />} />
-            <Route path="/conversations" element={<Conversations />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/team" element={<TeamManagement />} />

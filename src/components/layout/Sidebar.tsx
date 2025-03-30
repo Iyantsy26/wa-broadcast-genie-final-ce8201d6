@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
   BarChart3, 
-  MessageCircle, 
   Users, 
   Send, 
   Smartphone, 
@@ -52,11 +50,6 @@ const navItems: NavItem[] = [
     title: 'Chatbots',
     href: '/chatbots',
     icon: <Bot className="h-5 w-5" />,
-  },
-  {
-    title: 'Conversations',
-    href: '/conversations',
-    icon: <MessageCircle className="h-5 w-5" />,
   },
   {
     title: 'Leads',
