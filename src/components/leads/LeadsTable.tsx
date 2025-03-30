@@ -13,6 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from '@/hooks/use-toast';
 import { createConversation } from '@/services/conversationService';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -42,20 +50,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     return matchesSearch && matchesStatus;
   });
 
-  const getInitials = (name: string) => {
-    if (!name) return '';
-    return name
-      .split(' ')
-      .map(part => part.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join('');
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    return format(new Date(dateString), 'yyyy-MM-dd');
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'New':
@@ -73,6 +67,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       default:
         return 'bg-gray-50 text-gray-700';
     }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    return format(new Date(dateString), 'MMM dd, yyyy');
   };
 
   const handleMessage = async (lead: Lead) => {
@@ -116,96 +115,99 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
 
   return (
     <div className="bg-white rounded-lg border overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Name</th>
-              <th className="text-left font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Contact</th>
-              <th className="text-left font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Source</th>
-              <th className="text-left font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Status</th>
-              <th className="text-left font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Created</th>
-              <th className="text-left font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Last Contact</th>
-              <th className="text-right py-3 px-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLeads.map((lead) => (
-              <tr key={lead.id} className="border-b hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                      <span>{getInitials(lead.name)}</span>
-                    </div>
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-gray-50">
+            <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Name</TableHead>
+            <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Contact</TableHead>
+            <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Company</TableHead>
+            <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Address</TableHead>
+            <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Last Contact</TableHead>
+            <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Next Follow-up</TableHead>
+            <TableHead className="text-right py-3 px-4"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredLeads.map((lead) => (
+            <TableRow key={lead.id} className="border-b hover:bg-gray-50">
+              <TableCell className="py-4 px-4">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                    <span>{lead.initials}</span>
+                  </div>
+                  <div>
                     <span className="font-semibold">{lead.name}</span>
+                    {lead.status && (
+                      <div className="mt-1">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
+                          {lead.status}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex flex-col space-y-1">
-                    <div>{lead.email}</div>
-                    <div>{lead.phone}</div>
-                  </div>
-                </td>
-                <td className="py-4 px-4">{lead.source || '-'}</td>
-                <td className="py-4 px-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
-                    {lead.status}
-                  </span>
-                </td>
-                <td className="py-4 px-4">{formatDate(lead.created_at)}</td>
-                <td className="py-4 px-4">{formatDate(lead.last_contact)}</td>
-                <td className="py-4 px-4">
-                  <div className="flex justify-end space-x-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleMessage(lead)}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleEmail(lead)}
-                      disabled={!lead.email}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleCall(lead)}
-                      disabled={!lead.phone}
-                    >
-                      <Phone className="h-4 w-4" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-full"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </TableCell>
+              <TableCell className="py-4 px-4">
+                <div className="flex flex-col space-y-1">
+                  <div>{lead.email || '-'}</div>
+                  <div>{lead.phone || '-'}</div>
+                </div>
+              </TableCell>
+              <TableCell className="py-4 px-4">{lead.company || '-'}</TableCell>
+              <TableCell className="py-4 px-4">{lead.address || '-'}</TableCell>
+              <TableCell className="py-4 px-4">{formatDate(lead.last_contact)}</TableCell>
+              <TableCell className="py-4 px-4">{formatDate(lead.next_followup)}</TableCell>
+              <TableCell className="py-4 px-4">
+                <div className="flex justify-end space-x-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-full text-blue-600"
+                    onClick={() => handleMessage(lead)}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-full text-blue-600"
+                    onClick={() => handleEmail(lead)}
+                    disabled={!lead.email}
+                  >
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-full text-blue-600"
+                    onClick={() => handleCall(lead)}
+                    disabled={!lead.phone}
+                  >
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 rounded-full"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Edit</DropdownMenuItem>
+                      <DropdownMenuItem>View Details</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };
