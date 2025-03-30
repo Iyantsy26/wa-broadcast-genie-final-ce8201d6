@@ -91,6 +91,7 @@ const ChatPage = () => {
             conversation={activeConversation}
             isOpen={isSidebarOpen}
             onOpenChange={setIsSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
           />
         )}
       </div>

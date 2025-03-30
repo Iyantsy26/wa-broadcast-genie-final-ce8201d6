@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +18,24 @@ import { Lead } from '@/types/conversation';
 import { createConversation } from '@/services/conversationService';
 import { getLeads, createLead } from '@/services/leadService';
 import { toast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  SortingState,
+  ColumnFiltersState,
+  getPaginationRowModel,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
 
 interface DataTableSearchProps {
   leads: Lead[];
@@ -102,26 +121,6 @@ function DataTableRowActions({ lead }: DataTableRowActionsProps) {
   )
 }
 
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  SortingState,
-  ColumnFiltersState,
-  getPaginationRowModel,
-  getFilteredRowModel,
-} from "@tanstack/react-table"
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ScrollArea } from "@/components/ui/scroll-area"
-
 interface DataTableProps {
   columns: ColumnDef<Lead>[];
   data: Lead[];
@@ -163,7 +162,7 @@ function DataTable<TData, TValue>({
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
-            <LeadForm />
+            <LeadForm onComplete={() => {}} />
           </DialogContent>
         </Dialog>
       </div>
