@@ -1,17 +1,16 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   PlusCircle, 
   Search, 
   Phone, 
   Mail, 
   MessageCircle, 
-  Edit, 
-  Trash, 
   UserRound 
 } from 'lucide-react';
-import { getClients, deleteClient } from '@/services/clientService';
+import { getClients } from '@/services/clientService';
 import { Client } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,11 +33,14 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import ClientForm from '@/components/clients/ClientForm';
+import { createConversation } from '@/services/conversationService';
 
 const Clients = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
 
   // Fetch clients
   const { 
@@ -59,31 +61,11 @@ const Clients = () => {
     (client.phone && client.phone.includes(searchTerm))
   );
 
-  // Handle client deletion
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this client?')) {
-      try {
-        await deleteClient(id);
-        refetch();
-        toast({
-          title: "Client deleted",
-          description: "The client has been successfully deleted.",
-        });
-      } catch (error) {
-        console.error("Error deleting client:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete the client.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
   // Handle form submission completion
   const handleFormComplete = () => {
     setIsAddDialogOpen(false);
-    setEditingClient(null);
+    setViewingClient(null);
+    setIsViewDialogOpen(false);
     refetch();
   };
 
@@ -91,6 +73,35 @@ const Clients = () => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Handle messaging a client
+  const handleMessage = async (client: Client) => {
+    try {
+      const initialMessage = `Hello ${client.name}, how can I help you today?`;
+      const conversationId = await createConversation(client.id, 'client', initialMessage);
+      
+      // Navigate to the conversation
+      navigate(`/conversations?id=${conversationId}`);
+      
+      toast({
+        title: "Conversation created",
+        description: `Started a new conversation with ${client.name}`,
+      });
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation with client.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle viewing client details
+  const handleViewClient = (client: Client) => {
+    setViewingClient(client);
+    setIsViewDialogOpen(true);
   };
 
   if (error) {
@@ -148,7 +159,6 @@ const Clients = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Company</TableHead>
-                    <TableHead>Tags</TableHead>
                     <TableHead>Join Date</TableHead>
                     <TableHead>Renewal Date</TableHead>
                     <TableHead>Plan Details</TableHead>
@@ -160,77 +170,66 @@ const Clients = () => {
                   {filteredClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                            {client.avatar_url ? (
-                              <img 
-                                src={client.avatar_url} 
-                                alt={client.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <UserRound className="h-4 w-4 text-gray-500" />
-                            )}
+                        <div 
+                          className="flex flex-col cursor-pointer"
+                          onClick={() => handleViewClient(client)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                              {client.avatar_url ? (
+                                <img 
+                                  src={client.avatar_url} 
+                                  alt={client.name} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <UserRound className="h-4 w-4 text-gray-500" />
+                              )}
+                            </div>
+                            <span>{client.name}</span>
                           </div>
-                          <span>{client.name}</span>
+                          {client.tags && client.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1 ml-10">
+                              {client.tags.map((tag, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{client.company || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {client.tags && client.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {!client.tags?.length && '-'}
-                        </div>
-                      </TableCell>
                       <TableCell>{formatDate(client.join_date)}</TableCell>
                       <TableCell>{formatDate(client.renewal_date)}</TableCell>
                       <TableCell>{client.plan_details || '-'}</TableCell>
                       <TableCell>{client.referred_by || '-'}</TableCell>
                       <TableCell>
                         <div className="flex space-x-1">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Phone className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-8 w-8 p-0"
-                                onClick={() => setEditingClient(client)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[600px]">
-                              <DialogHeader>
-                                <DialogTitle>Edit Client</DialogTitle>
-                              </DialogHeader>
-                              {editingClient && (
-                                <ClientForm 
-                                  client={editingClient} 
-                                  onComplete={handleFormComplete} 
-                                />
-                              )}
-                            </DialogContent>
-                          </Dialog>
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className="h-8 w-8 p-0 text-red-500"
-                            onClick={() => handleDelete(client.id)}
+                            className="h-8 w-8 p-0"
+                            title="Call client"
                           >
-                            <Trash className="h-4 w-4" />
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            title="Email client"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            title="Message client"
+                            onClick={() => handleMessage(client)}
+                          >
+                            <MessageCircle className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -242,6 +241,21 @@ const Clients = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* View/Edit Client Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Client Details</DialogTitle>
+          </DialogHeader>
+          {viewingClient && (
+            <ClientForm 
+              client={viewingClient} 
+              onComplete={handleFormComplete} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
