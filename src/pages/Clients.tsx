@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +10,7 @@ import {
   UserRound,
   Filter,
   Import,
-  FileExport, // Changed from 'Export' to 'FileExport'
+  FileText,
   X
 } from 'lucide-react';
 import { getClients } from '@/services/clientService';
@@ -54,7 +53,6 @@ const Clients = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Fetch clients
   const { 
     data: clients = [], 
     isLoading, 
@@ -65,23 +63,19 @@ const Clients = () => {
     queryFn: getClients
   });
 
-  // Filter clients based on search term and filters
   const filteredClients = clients.filter((client) => {
-    // First check search term
     const matchesSearch = 
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (client.company && client.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (client.phone && client.phone.includes(searchTerm));
       
-    // Then check status filter
     const matchesStatusFilter = statusFilter === 'all' || 
       (client.tags && client.tags.includes(statusFilter));
     
     return matchesSearch && matchesStatusFilter;
   });
 
-  // Handle form submission completion
   const handleFormComplete = () => {
     setIsAddDialogOpen(false);
     setViewingClient(null);
@@ -89,19 +83,16 @@ const Clients = () => {
     refetch();
   };
 
-  // Format date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Handle messaging a client
   const handleMessage = async (client: Client) => {
     try {
       const initialMessage = `Hello ${client.name}, how can I help you today?`;
       const conversationId = await createConversation(client.id, 'client', initialMessage);
       
-      // Navigate to the conversation
       navigate(`/conversations?id=${conversationId}`);
       
       toast({
@@ -118,13 +109,11 @@ const Clients = () => {
     }
   };
 
-  // Handle viewing client details
   const handleViewClient = (client: Client) => {
     setViewingClient(client);
     setIsViewDialogOpen(true);
   };
 
-  // Handle export clients
   const handleExportClients = () => {
     try {
       const clientsToExport = filteredClients.map(client => ({
@@ -139,7 +128,6 @@ const Clients = () => {
         Tags: client.tags ? client.tags.join(', ') : ''
       }));
 
-      // Convert to CSV
       const headers = Object.keys(clientsToExport[0]);
       const csvContent = 
         headers.join(',') + 
@@ -150,7 +138,6 @@ const Clients = () => {
           ).join(',')
         ).join('\n');
 
-      // Create download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -172,7 +159,6 @@ const Clients = () => {
     }
   };
 
-  // Handle import clients
   const handleImportClick = () => {
     toast({
       title: "Import feature",
@@ -198,7 +184,7 @@ const Clients = () => {
             Import
           </Button>
           <Button variant="outline" onClick={handleExportClients}>
-            <FileExport className="mr-2 h-4 w-4" /> {/* Changed from Export to FileExport */}
+            <FileText className="mr-2 h-4 w-4" />
             Export
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -393,7 +379,6 @@ const Clients = () => {
         </CardContent>
       </Card>
 
-      {/* View/Edit Client Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
