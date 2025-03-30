@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { ChatProvider } from '@/contexts/ChatContext';
-import ChatPage from '@/components/chat/ChatPage';
+import { ConversationProvider } from '@/contexts/ConversationContext';
+import ConversationPage from '@/components/conversations/ConversationPage';
 
 const Conversations = () => {
   return (
-    <ChatProvider>
-      <ChatPage />
-    </ChatProvider>
+    <ConversationProvider>
+      <ConversationPage />
+    </ConversationProvider>
   );
 };
 
