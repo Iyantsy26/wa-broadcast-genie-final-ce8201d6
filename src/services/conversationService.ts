@@ -29,12 +29,16 @@ export const getConversations = async (): Promise<Conversation[]> => {
     const isClient = !!conv.client_id;
     const contactData = isClient ? conv.clients : conv.leads;
     
+    // Safely handle the potential null/undefined cases
+    const contactName = contactData ? contactData.name : 'Unknown';
+    const contactAvatar = contactData ? contactData.avatar_url : undefined;
+    
     return {
       id: conv.id,
       contact: {
         id: isClient ? conv.client_id : conv.lead_id,
-        name: contactData?.name || 'Unknown',
-        avatar: contactData?.avatar_url,
+        name: contactName || 'Unknown',
+        avatar: contactAvatar,
         phone: '', // We'll need to add this later
         type: isClient ? 'client' : 'lead'
       },
@@ -78,12 +82,16 @@ export const getConversation = async (id: string): Promise<Conversation | null> 
   const isClient = !!data.client_id;
   const contactData = isClient ? data.clients : data.leads;
   
+  // Safely handle the potential null/undefined cases
+  const contactName = contactData ? contactData.name : 'Unknown';
+  const contactAvatar = contactData ? contactData.avatar_url : undefined;
+  
   return {
     id: data.id,
     contact: {
       id: isClient ? data.client_id : data.lead_id,
-      name: contactData?.name || 'Unknown',
-      avatar: contactData?.avatar_url,
+      name: contactName || 'Unknown',
+      avatar: contactAvatar,
       phone: '', // We'll need to add this later
       type: isClient ? 'client' : 'lead'
     },

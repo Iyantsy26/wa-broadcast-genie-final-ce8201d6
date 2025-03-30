@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, useRef, ReactNode } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
@@ -64,25 +65,28 @@ const initialLeadContacts: Contact[] = [
 
 const allContacts = [...initialTeamContacts, ...initialClientContacts, ...initialLeadContacts];
 
-const initialConversations: Conversation[] = allContacts.map((contact, index) => ({
-  id: contact.id,
-  contact,
-  lastMessage: {
-    content: `Latest message from ${contact.name}...`,
-    timestamp: new Date(Date.now() - index * 3600000).toISOString(),
-    isOutbound: index % 3 === 0,
-    isRead: index % 2 === 0,
-  },
-  assignedTo: index % 4 === 0 ? 'Maria Lopez' : index % 4 === 1 ? 'Robert Chen' : undefined,
-  tags: contact.type === 'lead' ? ['new-lead', 'potential'] : 
-         contact.type === 'client' ? ['active-client', 'support'] : ['team', 'internal'],
-  status: index % 4 === 0 ? 'active' : index % 4 === 1 ? 'new' : index % 4 === 2 ? 'waiting' : 'resolved',
-  unreadCount: index % 3 === 0 ? 0 : Math.floor(Math.random() * 5) + 1,
-  isPinned: index === 0,
-  isArchived: false,
-  isEncrypted: contact.type === 'client',
-  chatType: contact.type,
-}));
+const initialConversations: Conversation[] = allContacts.map((contact, index) => {
+  const contactType = contact.type as ChatType;
+  return {
+    id: contact.id,
+    contact,
+    lastMessage: {
+      content: `Latest message from ${contact.name}...`,
+      timestamp: new Date(Date.now() - index * 3600000).toISOString(),
+      isOutbound: index % 3 === 0,
+      isRead: index % 2 === 0,
+    },
+    assignedTo: index % 4 === 0 ? 'Maria Lopez' : index % 4 === 1 ? 'Robert Chen' : undefined,
+    tags: contact.type === 'lead' ? ['new-lead', 'potential'] : 
+           contact.type === 'client' ? ['active-client', 'support'] : ['team', 'internal'],
+    status: index % 4 === 0 ? 'active' : index % 4 === 1 ? 'new' : index % 4 === 2 ? 'waiting' : 'resolved',
+    unreadCount: index % 3 === 0 ? 0 : Math.floor(Math.random() * 5) + 1,
+    isPinned: index === 0,
+    isArchived: false,
+    isEncrypted: contact.type === 'client',
+    chatType: contactType,
+  };
+});
 
 const initialMessages: Message[] = [
   {
@@ -90,6 +94,9 @@ const initialMessages: Message[] = [
     content: "Hello! I'm interested in your services.",
     timestamp: '2023-06-23T09:30:00Z',
     isOutbound: false,
+    status: 'read',
+    sender: 'Sarah Johnson',
+    type: 'text',
     viaWhatsApp: true,
   },
   {
@@ -100,12 +107,16 @@ const initialMessages: Message[] = [
     status: 'read',
     sender: 'Maria Lopez',
     senderId: 't1',
+    type: 'text',
   },
   {
     id: '3',
     content: "I'd like to book an appointment for a consultation.",
     timestamp: '2023-06-23T09:35:00Z',
     isOutbound: false,
+    status: 'read',
+    sender: 'Sarah Johnson',
+    type: 'text',
     viaWhatsApp: true,
   },
   {
@@ -116,12 +127,16 @@ const initialMessages: Message[] = [
     status: 'read',
     sender: 'Maria Lopez',
     senderId: 't1',
+    type: 'text',
   },
   {
     id: '5',
     content: "I'd prefer Tuesday afternoon if possible.",
     timestamp: '2023-06-23T09:40:00Z',
     isOutbound: false,
+    status: 'read',
+    sender: 'Sarah Johnson',
+    type: 'text',
     viaWhatsApp: true,
   },
   {
@@ -132,6 +147,7 @@ const initialMessages: Message[] = [
     status: 'read',
     sender: 'Maria Lopez',
     senderId: 't1',
+    type: 'text',
     reactions: [
       {
         emoji: '👍',
@@ -146,6 +162,9 @@ const initialMessages: Message[] = [
     content: '2 PM works perfectly for me.',
     timestamp: '2023-06-23T09:45:00Z',
     isOutbound: false,
+    status: 'read',
+    sender: 'Sarah Johnson',
+    type: 'text',
     viaWhatsApp: true,
   },
   {
@@ -168,6 +187,8 @@ const initialMessages: Message[] = [
     content: '',
     timestamp: '2023-06-23T09:50:00Z',
     isOutbound: false,
+    status: 'read',
+    sender: 'Sarah Johnson',
     type: 'image',
     viaWhatsApp: true,
     media: {
@@ -184,6 +205,7 @@ const initialMessages: Message[] = [
     status: 'read',
     sender: 'Maria Lopez',
     senderId: 't1',
+    type: 'text',
   },
 ];
 
@@ -269,7 +291,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(convo => 
         convo.contact.name.toLowerCase().includes(term) || 
-        convo.contact.phone.includes(term) ||
+        (convo.contact.phone && convo.contact.phone.includes(term)) ||
         convo.lastMessage.content.toLowerCase().includes(term)
       );
     }
@@ -331,6 +353,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: replyMessage.id,
           content: replyMessage.content,
           sender: replyMessage.sender || 'Unknown',
+          type: replyMessage.type,
+          status: replyMessage.status,
+          isOutbound: replyMessage.isOutbound,
+          timestamp: replyMessage.timestamp
         };
       }
     }
@@ -353,14 +379,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (fileType === 'image') mediaType = 'image';
       else if (fileType === 'video') mediaType = 'video';
-      else if (fileType === 'audio') mediaType = 'audio';
+      else if (fileType === 'audio') mediaType = 'voice';
       
       newMessage = {
         ...newMessage,
         type: mediaType,
         media: {
           url: URL.createObjectURL(file),
-          type: mediaType,
+          type: mediaType === 'voice' ? 'voice' : (mediaType === 'image' ? 'image' : mediaType === 'video' ? 'video' : 'document'),
           filename: file.name,
           size: file.size
         }

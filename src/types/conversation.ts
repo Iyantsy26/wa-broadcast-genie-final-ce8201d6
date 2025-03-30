@@ -35,6 +35,8 @@ export interface Conversation {
   isEncrypted?: boolean;
 }
 
+export type MessageType = 'text' | 'image' | 'video' | 'document' | 'voice' | 'location';
+
 export interface Message {
   id: string;
   content: string;
@@ -43,7 +45,7 @@ export interface Message {
   status: 'sent' | 'delivered' | 'read' | 'failed' | 'sending';
   sender: string;
   senderId?: string;
-  type: 'text' | 'image' | 'video' | 'document' | 'voice' | 'location';
+  type: MessageType;
   media?: {
     url: string;
     type: 'image' | 'video' | 'document' | 'voice';
@@ -51,7 +53,12 @@ export interface Message {
     duration?: number;
     size?: number;
   };
-  reactions?: { emoji: string; count: number }[];
+  reactions?: { 
+    emoji: string; 
+    userId: string;
+    userName: string;
+    timestamp: string;
+  }[];
   replyTo?: Message;
   viaWhatsApp?: boolean;
 }
