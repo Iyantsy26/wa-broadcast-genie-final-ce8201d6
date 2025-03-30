@@ -1,11 +1,9 @@
 
 import React from 'react';
-import { useChat } from '@/contexts/ChatContext';
+import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from '@/components/chat/ConversationList';
 import MessagePanel from '@/components/chat/MessagePanel';
 import ContactInfoSidebar from '@/components/chat/ContactInfoSidebar';
-import { ChatTypeSelector } from '@/components/chat/ChatTypeSelector';
-import { StorageUsage } from '@/components/chat/StorageUsage';
 
 const ChatPage = () => {
   const {
@@ -13,31 +11,12 @@ const ChatPage = () => {
     activeConversation,
     messages,
     isSidebarOpen,
-    isTyping,
-    statusFilter,
-    chatTypeFilter,
-    searchTerm,
-    dateRange,
-    assigneeFilter,
-    tagFilter,
     setActiveConversation,
     setIsSidebarOpen,
-    setStatusFilter,
-    setChatTypeFilter,
-    setSearchTerm,
-    setDateRange,
-    setAssigneeFilter,
-    setTagFilter,
-    resetAllFilters,
     handleSendMessage,
     handleVoiceMessageSent,
-    handleReaction,
-    pinConversation,
-    archiveConversation,
-    messagesEndRef,
-    storageUsed,
-    storageLimit
-  } = useChat();
+    messagesEndRef
+  } = useConversation();
 
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">
@@ -48,17 +27,6 @@ const ChatPage = () => {
             Manage your team and client conversations
           </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <ChatTypeSelector 
-            chatTypeFilter={chatTypeFilter}
-            setChatTypeFilter={setChatTypeFilter}
-          />
-          <StorageUsage 
-            used={storageUsed} 
-            limit={storageLimit} 
-          />
-        </div>
       </div>
 
       <div className="flex flex-1 gap-4 h-[calc(100vh-13rem)] overflow-hidden">
@@ -66,30 +34,15 @@ const ChatPage = () => {
           conversations={filteredConversations}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          assigneeFilter={assigneeFilter}
-          setAssigneeFilter={setAssigneeFilter}
-          tagFilter={tagFilter}
-          setTagFilter={setTagFilter}
-          resetAllFilters={resetAllFilters}
-          pinConversation={pinConversation}
-          archiveConversation={archiveConversation}
         />
         
         {activeConversation ? (
           <MessagePanel 
             conversation={activeConversation}
             messages={messages}
-            isTyping={isTyping}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
             onSendMessage={handleSendMessage}
             onVoiceMessageSent={handleVoiceMessageSent}
-            onReaction={handleReaction}
             messagesEndRef={messagesEndRef}
           />
         ) : (

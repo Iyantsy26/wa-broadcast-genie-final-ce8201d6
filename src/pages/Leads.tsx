@@ -229,6 +229,7 @@ function DataTable<TData, TValue>({
 const Leads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -249,6 +250,11 @@ const Leads = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLeadFormComplete = () => {
+    setDialogOpen(false);
+    fetchLeads();
   };
 
   const columns: ColumnDef<Lead>[] = [
@@ -301,7 +307,23 @@ const Leads = () => {
           {loading ? (
             <div>Loading leads...</div>
           ) : (
-            <DataTable columns={columns} data={leads} />
+            <div className="w-full">
+              <div className="flex items-center py-4">
+                <DataTableSearch leads={leads} setFilteredLeads={setLeads} />
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="ml-auto">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Lead
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <LeadForm onComplete={handleLeadFormComplete} />
+                  </DialogContent>
+                </Dialog>
+              </div>
+              <DataTable columns={columns} data={leads} />
+            </div>
           )}
         </TabsContent>
         <TabsContent value="active" className="space-y-2">
