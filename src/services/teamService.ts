@@ -45,13 +45,33 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
         role,
         status,
         last_active,
-        departments(id, name)
+        department_id
       `);
 
     if (teamMembersError) {
       console.error('Error fetching team members:', teamMembersError);
       throw new Error(teamMembersError.message);
     }
+
+    // Get department names for each team member
+    const departmentPromises = teamMembersData.map(async (member) => {
+      if (!member.department_id) return null;
+      
+      const { data: departmentData, error: departmentError } = await supabase
+        .from('departments')
+        .select('name')
+        .eq('id', member.department_id)
+        .single();
+
+      if (departmentError) {
+        console.error('Error fetching department:', departmentError);
+        return null;
+      }
+
+      return departmentData?.name;
+    });
+
+    const departmentNames = await Promise.all(departmentPromises);
 
     // Get WhatsApp accounts for each team member
     const whatsappPromises = teamMembersData.map(async (member) => {
@@ -81,7 +101,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
         role: member.role as 'admin' | 'manager' | 'agent',
         status: member.status as 'active' | 'inactive' | 'pending',
         whatsappAccounts: whatsappAccountsArray[index],
-        department: member.departments?.name,
+        department: departmentNames[index] || undefined,
         lastActive: member.last_active,
       };
     });
@@ -106,7 +126,7 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
         role,
         status,
         last_active,
-        departments(id, name)
+        department_id
       `)
       .eq('id', id)
       .single();
@@ -114,6 +134,20 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
     if (error) {
       console.error('Error fetching team member:', error);
       throw new Error(error.message);
+    }
+
+    // Get department name
+    let departmentName: string | undefined = undefined;
+    if (member.department_id) {
+      const { data: departmentData, error: departmentError } = await supabase
+        .from('departments')
+        .select('name')
+        .eq('id', member.department_id)
+        .single();
+
+      if (!departmentError && departmentData) {
+        departmentName = departmentData.name;
+      }
     }
 
     // Get WhatsApp accounts for the team member
@@ -137,7 +171,7 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
       role: member.role as 'admin' | 'manager' | 'agent',
       status: member.status as 'active' | 'inactive' | 'pending',
       whatsappAccounts: whatsappData.map(account => account.account_name),
-      department: member.departments?.name,
+      department: departmentName,
       lastActive: member.last_active,
     };
 
@@ -157,14 +191,9 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
         .from('departments')
         .select('id')
         .eq('name', member.department)
-        .single();
+        .maybeSingle();
 
-      if (departmentError && departmentError.code !== 'PGRST116') {
-        console.error('Error finding department:', departmentError);
-        throw new Error(departmentError.message);
-      }
-
-      if (departmentData) {
+      if (!departmentError && departmentData) {
         departmentId = departmentData.id;
       }
     }
@@ -223,11 +252,9 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
         .from('departments')
         .select('id')
         .eq('name', updates.department)
-        .single();
+        .maybeSingle();
 
-      if (departmentError && departmentError.code !== 'PGRST116') {
-        console.error('Error finding department:', departmentError);
-      } else if (departmentData) {
+      if (!departmentError && departmentData) {
         departmentId = departmentData.id;
       }
     }
@@ -322,21 +349,40 @@ export const deactivateTeamMember = async (id: string): Promise<TeamMember> => {
 // Department functions
 export const getDepartments = async (): Promise<Department[]> => {
   try {
-    // Get all departments with their lead members
+    // Get all departments
     const { data: departmentsData, error } = await supabase
       .from('departments')
       .select(`
         id,
         name,
         description,
-        lead_id,
-        team_members!departments_lead_id_fkey(name)
+        lead_id
       `);
 
     if (error) {
       console.error('Error fetching departments:', error);
       throw new Error(error.message);
     }
+
+    // Get lead names for departments with lead_id
+    const leadPromises = departmentsData.map(async (department) => {
+      if (!department.lead_id) return null;
+      
+      const { data: leadData, error: leadError } = await supabase
+        .from('team_members')
+        .select('name')
+        .eq('id', department.lead_id)
+        .single();
+
+      if (leadError) {
+        console.error('Error fetching lead:', leadError);
+        return null;
+      }
+
+      return leadData?.name;
+    });
+
+    const leadNames = await Promise.all(leadPromises);
 
     // Count members in each department
     const memberCountPromises = departmentsData.map(async (department) => {
@@ -362,7 +408,7 @@ export const getDepartments = async (): Promise<Department[]> => {
         name: department.name,
         description: department.description || undefined,
         memberCount: memberCounts[index],
-        leadName: department.team_members?.name,
+        leadName: leadNames[index] || undefined,
       };
     });
 
@@ -381,8 +427,7 @@ export const getDepartmentById = async (id: string): Promise<Department | undefi
         id,
         name,
         description,
-        lead_id,
-        team_members!departments_lead_id_fkey(name)
+        lead_id
       `)
       .eq('id', id)
       .single();
@@ -390,6 +435,20 @@ export const getDepartmentById = async (id: string): Promise<Department | undefi
     if (error) {
       console.error('Error fetching department:', error);
       throw new Error(error.message);
+    }
+
+    // Get lead name if lead_id exists
+    let leadName: string | undefined = undefined;
+    if (department.lead_id) {
+      const { data: leadData, error: leadError } = await supabase
+        .from('team_members')
+        .select('name')
+        .eq('id', department.lead_id)
+        .single();
+
+      if (!leadError && leadData) {
+        leadName = leadData.name;
+      }
     }
 
     // Count members in the department
@@ -409,7 +468,7 @@ export const getDepartmentById = async (id: string): Promise<Department | undefi
       name: department.name,
       description: department.description || undefined,
       memberCount: count || 0,
-      leadName: department.team_members?.name,
+      leadName: leadName,
     };
 
     return transformedDepartment;
@@ -428,11 +487,9 @@ export const addDepartment = async (department: Omit<Department, 'id'>): Promise
         .from('team_members')
         .select('id')
         .eq('name', department.leadName)
-        .single();
+        .maybeSingle();
 
-      if (leadError && leadError.code !== 'PGRST116') {
-        console.error('Error finding lead member:', leadError);
-      } else if (leadData) {
+      if (!leadError && leadData) {
         leadId = leadData.id;
       }
     }
@@ -476,11 +533,9 @@ export const updateDepartment = async (id: string, updates: Partial<Department>)
         .from('team_members')
         .select('id')
         .eq('name', updates.leadName)
-        .single();
+        .maybeSingle();
 
-      if (leadError && leadError.code !== 'PGRST116') {
-        console.error('Error finding lead member:', leadError);
-      } else if (leadData) {
+      if (!leadError && leadData) {
         leadId = leadData.id;
       }
     }
