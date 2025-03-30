@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Conversation } from '@/types/conversation';
 import { DateRange } from 'react-day-picker';
@@ -36,6 +37,7 @@ import {
 
 interface ConversationListProps {
   conversations: Conversation[];
+  groupedConversations: {[name: string]: Conversation[]};
   activeConversation: Conversation | null;
   setActiveConversation: (conversation: Conversation) => void;
   statusFilter: string;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -28,12 +27,14 @@ interface ContactInfoSidebarProps {
   conversation: Conversation;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  onClose?: () => void;
 }
 
 const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
   conversation,
   isOpen,
-  onOpenChange
+  onOpenChange,
+  onClose
 }) => {
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -53,7 +54,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
     }
   };
   
-  // Mock data - would come from the contact record
   const contactDetails = {
     email: conversation.chatType === 'team' ? 'employee@company.com' : 
            conversation.chatType === 'client' ? 'client@example.com' : 
@@ -69,7 +69,10 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
   };
   
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+    <Sheet open={isOpen} onOpenChange={open => {
+      if (onOpenChange) onOpenChange(open);
+      if (!open && onClose) onClose();
+    }}>
       <SheetContent className="sm:max-w-sm p-0">
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center justify-between">
@@ -82,7 +85,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
         
         <ScrollArea className="h-[calc(100vh-5rem)]">
           <div className="p-4 space-y-6">
-            {/* Contact header */}
             <div className="flex flex-col items-center text-center">
               <Avatar className="h-24 w-24 mb-3">
                 <AvatarImage src={conversation.contact.avatar} />
@@ -122,7 +124,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
             
             <Separator />
             
-            {/* Contact details */}
             <div className="space-y-3">
               <h4 className="font-medium">Contact Details</h4>
               
@@ -177,7 +178,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
               )}
             </div>
             
-            {/* Tags section */}
             {conversation.tags && conversation.tags.length > 0 && (
               <>
                 <Separator />
@@ -199,7 +199,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
               </>
             )}
             
-            {/* Notes section */}
             {contactDetails.notes && (
               <>
                 <Separator />
@@ -219,7 +218,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
               </>
             )}
             
-            {/* Statistics */}
             <Separator />
             
             <div className="space-y-3">
@@ -260,7 +258,6 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
               </div>
             </div>
             
-            {/* Shared files */}
             <Separator />
             
             <div className="space-y-3">

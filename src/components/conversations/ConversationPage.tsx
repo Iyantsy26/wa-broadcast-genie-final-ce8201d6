@@ -30,8 +30,14 @@ const ConversationPage = () => {
     setTagFilter,
     resetAllFilters,
     handleSendMessage,
-    handleVoiceMessageSent
+    handleVoiceMessageSent,
+    handleArchiveConversation
   } = useConversation();
+
+  // Define dummy pinConversation function to satisfy the interface
+  const pinConversation = (conversationId: string, isPinned: boolean) => {
+    console.log('Pin conversation not implemented:', conversationId, isPinned);
+  };
 
   return (
     <div className="flex flex-col space-y-4 h-full">
@@ -59,6 +65,8 @@ const ConversationPage = () => {
           tagFilter={tagFilter}
           setTagFilter={setTagFilter}
           resetAllFilters={resetAllFilters}
+          pinConversation={pinConversation}
+          archiveConversation={handleArchiveConversation}
         />
         
         <div className="flex-1 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden">
