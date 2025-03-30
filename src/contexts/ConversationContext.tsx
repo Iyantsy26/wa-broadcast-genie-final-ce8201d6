@@ -7,6 +7,7 @@ import { DateRange } from 'react-day-picker';
 interface ConversationContextType {
   conversations: Conversation[];
   filteredConversations: Conversation[];
+  groupedConversations: {[name: string]: Conversation[]};
   activeConversation: Conversation | null;
   messages: Message[];
   isSidebarOpen: boolean;

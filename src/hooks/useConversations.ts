@@ -11,6 +11,7 @@ export const useConversations = () => {
   const [loading, setLoading] = useState(true);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
+  const [groupedConversations, setGroupedConversations] = useState<{[name: string]: Conversation[]}>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -74,6 +75,18 @@ export const useConversations = () => {
     }
     
     setFilteredConversations(filtered);
+    
+    // Group conversations by contact name
+    const grouped = filtered.reduce((acc, conversation) => {
+      const name = conversation.contact.name;
+      if (!acc[name]) {
+        acc[name] = [];
+      }
+      acc[name].push(conversation);
+      return acc;
+    }, {} as {[name: string]: Conversation[]});
+    
+    setGroupedConversations(grouped);
   }, [conversations, statusFilter, searchTerm, dateRange, assigneeFilter, tagFilter]);
 
   const fetchConversations = async () => {
@@ -267,6 +280,7 @@ export const useConversations = () => {
   return {
     conversations,
     filteredConversations,
+    groupedConversations,
     activeConversation,
     messages,
     loading,

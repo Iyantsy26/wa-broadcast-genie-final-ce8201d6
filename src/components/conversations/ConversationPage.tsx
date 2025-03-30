@@ -1,16 +1,17 @@
 
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
-import ConversationList from '@/components/conversations/ConversationList';
-import MessageList from '@/components/conversations/MessageList';
-import MessageInput from '@/components/conversations/MessageInput';
-import ContactInfoSidebar from '@/components/conversations/ContactInfoSidebar';
-import ConversationHeader from '@/components/conversations/ConversationHeader';
-import NoConversation from '@/components/conversations/NoConversation';
+import ConversationList from './ConversationList';
+import ConversationHeader from './ConversationHeader';
+import MessageList from './MessageList';
+import MessageInput from './MessageInput';
+import NoConversation from './NoConversation';
+import ContactInfoSidebar from './ContactInfoSidebar';
 
 const ConversationPage = () => {
   const {
     filteredConversations,
+    groupedConversations,
     activeConversation,
     messages,
     isSidebarOpen,
@@ -19,6 +20,7 @@ const ConversationPage = () => {
     dateRange,
     assigneeFilter,
     tagFilter,
+    messagesEndRef,
     setActiveConversation,
     setIsSidebarOpen,
     setStatusFilter,
@@ -28,21 +30,22 @@ const ConversationPage = () => {
     setTagFilter,
     resetAllFilters,
     handleSendMessage,
-    messagesEndRef
+    handleVoiceMessageSent
   } = useConversation();
 
   return (
-    <div className="space-y-4 h-full flex flex-col animate-fade-in">
-      <div className="flex flex-col">
-        <h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
+    <div className="flex flex-col space-y-4 h-full">
+      <div className="flex-none">
+        <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
         <p className="text-muted-foreground">
-          Manage your WhatsApp conversations with customers
+          View and respond to client and lead conversations
         </p>
       </div>
-
-      <div className="flex flex-1 gap-4 h-[calc(100vh-13rem)] overflow-hidden">
+      
+      <div className="flex-1 flex space-x-4 overflow-hidden">
         <ConversationList 
           conversations={filteredConversations}
+          groupedConversations={groupedConversations}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
           statusFilter={statusFilter}
@@ -58,30 +61,32 @@ const ConversationPage = () => {
           resetAllFilters={resetAllFilters}
         />
         
-        {activeConversation ? (
-          <div className="flex-1 flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden">
-            <ConversationHeader 
-              conversation={activeConversation}
-              onOpenContactInfo={() => setIsSidebarOpen(true)}
-            />
-            
-            <MessageList 
-              messages={messages}
-              contactName={activeConversation.contact.name}
-              messagesEndRef={messagesEndRef}
-            />
-            
-            <MessageInput onSendMessage={handleSendMessage} />
-          </div>
-        ) : (
-          <NoConversation />
-        )}
+        <div className="flex-1 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden">
+          {activeConversation ? (
+            <>
+              <ConversationHeader 
+                conversation={activeConversation}
+                onInfoClick={() => setIsSidebarOpen(true)}
+              />
+              <MessageList 
+                messages={messages} 
+                contactName={activeConversation.contact.name}
+                messagesEndRef={messagesEndRef}
+              />
+              <MessageInput 
+                onSendMessage={handleSendMessage}
+                onVoiceMessageSent={handleVoiceMessageSent}
+              />
+            </>
+          ) : (
+            <NoConversation />
+          )}
+        </div>
         
-        {activeConversation && (
+        {activeConversation && isSidebarOpen && (
           <ContactInfoSidebar 
             conversation={activeConversation}
-            isOpen={isSidebarOpen}
-            onOpenChange={setIsSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
           />
         )}
       </div>

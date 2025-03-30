@@ -9,6 +9,7 @@ import EmptyConversations from './EmptyConversations';
 
 interface ConversationListProps {
   conversations: Conversation[];
+  groupedConversations: {[name: string]: Conversation[]};
   activeConversation: Conversation | null;
   setActiveConversation: (conversation: Conversation) => void;
   statusFilter: string;
@@ -26,6 +27,7 @@ interface ConversationListProps {
 
 const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
+  groupedConversations,
   activeConversation,
   setActiveConversation,
   statusFilter,
@@ -73,14 +75,21 @@ const ConversationList: React.FC<ConversationListProps> = ({
       />
       
       <div className="flex-1 overflow-auto">
-        {conversations.length > 0 ? (
-          conversations.map((conversation) => (
-            <ConversationItem 
-              key={conversation.id}
-              conversation={conversation}
-              isActive={activeConversation?.id === conversation.id}
-              onClick={() => setActiveConversation(conversation)}
-            />
+        {Object.keys(groupedConversations).length > 0 ? (
+          Object.entries(groupedConversations).map(([name, groupConversations]) => (
+            <div key={name} className="mb-2">
+              <div className="px-3 py-1 bg-muted font-medium text-sm sticky top-0">
+                {name} ({groupConversations.length})
+              </div>
+              {groupConversations.map((conversation) => (
+                <ConversationItem 
+                  key={conversation.id}
+                  conversation={conversation}
+                  isActive={activeConversation?.id === conversation.id}
+                  onClick={() => setActiveConversation(conversation)}
+                />
+              ))}
+            </div>
           ))
         ) : (
           <EmptyConversations resetAllFilters={resetAllFilters} />
