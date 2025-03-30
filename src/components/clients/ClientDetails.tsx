@@ -10,6 +10,7 @@ import { Client } from '@/types/client';
 import { useNavigate } from 'react-router-dom';
 import { createConversation } from '@/services/conversationService';
 import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface ClientDetailsProps {
   client: Client;
@@ -40,6 +41,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onEdit }) => {
         variant: "destructive",
       });
     }
+  };
+
+  // Get tag color based on tag value
+  const getTagColor = (tag: string) => {
+    const tagMap: Record<string, string> = {
+      'VIP': 'bg-purple-500',
+      'Gold': 'bg-yellow-500',
+      'Silver': 'bg-gray-400',
+      'Beginner': 'bg-blue-500',
+      'Premium': 'bg-green-500',
+      'Enterprise': 'bg-red-500'
+    };
+    
+    return tagMap[tag] || 'bg-primary';
   };
 
   return (
@@ -75,11 +90,22 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onEdit }) => {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="text-lg font-medium">Customer Name</h3>
+              <h3 className="text-lg font-medium">Client Name</h3>
               <p className="text-xl font-semibold">{client.name}</p>
+              
+              {/* Client Tags */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {client.tags && client.tags.map((tag, idx) => (
+                  <Badge key={idx} className={`${getTagColor(tag)} text-white`}>
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
+          
           <Separator className="my-4" />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h4 className="font-medium mb-2">Contact Information</h4>
@@ -92,8 +118,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onEdit }) => {
               <p className="text-sm text-muted-foreground mb-1">Industry: {client.industry}</p>
               <p className="text-sm text-muted-foreground mb-1">Value: ${client.value.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground mb-1">Since: {client.clientSince}</p>
+              <p className="text-sm text-muted-foreground mb-1">Referred By: {client.referredBy || 'N/A'}</p>
             </div>
           </div>
+          
+          <Separator className="my-4" />
+          
+          {/* Subscription details if available */}
+          {(client.subscriptionPlan || client.renewalDate) && (
+            <>
+              <div>
+                <h4 className="font-medium mb-2">Subscription Details</h4>
+                {client.subscriptionPlan && (
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Plan: {client.subscriptionPlan}
+                  </p>
+                )}
+                {client.renewalDate && (
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Renewal Date: {client.renewalDate}
+                  </p>
+                )}
+              </div>
+              <Separator className="my-4" />
+            </>
+          )}
         </CardContent>
       </Card>
       

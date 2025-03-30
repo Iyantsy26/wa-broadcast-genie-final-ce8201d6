@@ -27,7 +27,11 @@ export const getClients = async (): Promise<Client[]> => {
     status: item.status,
     website: item.website,
     address: item.address,
-    notes: item.notes
+    notes: item.notes,
+    referredBy: item.referred_by || '',
+    tags: item.tags || [],
+    subscriptionPlan: item.subscription_plan || '',
+    renewalDate: item.renewal_date || ''
   }));
 };
 
@@ -59,7 +63,11 @@ export const getClient = async (id: string): Promise<Client | null> => {
     status: data.status,
     website: data.website,
     address: data.address,
-    notes: data.notes
+    notes: data.notes,
+    referredBy: data.referred_by || '',
+    tags: data.tags || [],
+    subscriptionPlan: data.subscription_plan || '',
+    renewalDate: data.renewal_date || ''
   };
 };
 
@@ -77,7 +85,11 @@ export const createClient = async (client: Omit<Client, 'id'>): Promise<Client> 
     status: client.status,
     website: client.website,
     address: client.address,
-    notes: client.notes
+    notes: client.notes,
+    referred_by: client.referredBy,
+    tags: client.tags,
+    subscription_plan: client.subscriptionPlan,
+    renewal_date: client.renewalDate
   };
 
   const { data, error } = await supabase
@@ -105,7 +117,11 @@ export const createClient = async (client: Omit<Client, 'id'>): Promise<Client> 
     status: data.status,
     website: data.website,
     address: data.address,
-    notes: data.notes
+    notes: data.notes,
+    referredBy: data.referred_by || '',
+    tags: data.tags || [],
+    subscriptionPlan: data.subscription_plan || '',
+    renewalDate: data.renewal_date || ''
   };
 };
 
@@ -125,6 +141,10 @@ export const updateClient = async (id: string, client: Partial<Client>): Promise
   if (client.website !== undefined) dbClient.website = client.website;
   if (client.address !== undefined) dbClient.address = client.address;
   if (client.notes !== undefined) dbClient.notes = client.notes;
+  if (client.referredBy !== undefined) dbClient.referred_by = client.referredBy;
+  if (client.tags !== undefined) dbClient.tags = client.tags;
+  if (client.subscriptionPlan !== undefined) dbClient.subscription_plan = client.subscriptionPlan;
+  if (client.renewalDate !== undefined) dbClient.renewal_date = client.renewalDate;
 
   const { data, error } = await supabase
     .from('clients')
@@ -152,7 +172,11 @@ export const updateClient = async (id: string, client: Partial<Client>): Promise
     status: data.status,
     website: data.website,
     address: data.address,
-    notes: data.notes
+    notes: data.notes,
+    referredBy: data.referred_by || '',
+    tags: data.tags || [],
+    subscriptionPlan: data.subscription_plan || '',
+    renewalDate: data.renewal_date || ''
   };
 };
 
@@ -166,4 +190,46 @@ export const deleteClient = async (id: string): Promise<void> => {
     console.error('Error deleting client:', error);
     throw error;
   }
+};
+
+// Function to upload client profile photo (max 2MB)
+export const uploadClientPhoto = async (clientId: string, file: File): Promise<string> => {
+  // Check file size (2MB max)
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error('File size exceeds the 2MB limit');
+  }
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${clientId}-${Date.now()}.${fileExt}`;
+  const filePath = `client-photos/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('client-assets')
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error('Error uploading file:', uploadError);
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage
+    .from('client-assets')
+    .getPublicUrl(filePath);
+
+  // Update client with new avatar URL
+  await updateClient(clientId, { avatarUrl: data.publicUrl });
+
+  return data.publicUrl;
+};
+
+// Function to get client tags options
+export const getClientTagOptions = (): { value: string; label: string; color: string }[] => {
+  return [
+    { value: 'VIP', label: 'VIP', color: 'purple' },
+    { value: 'Gold', label: 'Gold', color: 'yellow' },
+    { value: 'Silver', label: 'Silver', color: 'gray' },
+    { value: 'Beginner', label: 'Beginner', color: 'blue' },
+    { value: 'Premium', label: 'Premium', color: 'green' },
+    { value: 'Enterprise', label: 'Enterprise', color: 'red' }
+  ];
 };

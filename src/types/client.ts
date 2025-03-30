@@ -13,4 +13,8 @@ export interface Client {
   website?: string;
   address?: string;
   notes?: string;
+  referredBy?: string;
+  tags?: string[];
+  subscriptionPlan?: string;
+  renewalDate?: string;
 }
