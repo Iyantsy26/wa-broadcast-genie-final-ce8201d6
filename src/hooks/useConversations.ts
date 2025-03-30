@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
 import { Conversation, Message } from '@/types/conversation';
@@ -27,7 +26,7 @@ export const useConversations = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [assigneeFilter, setAssigneeFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchConversations();
@@ -100,7 +99,6 @@ export const useConversations = () => {
       const data = await getConversations();
       setConversations(data);
       
-      // If there's no active conversation but we have conversations, set the first one as active
       if (!activeConversation && data.length > 0) {
         setActiveConversation(data[0]);
       }
@@ -276,13 +274,10 @@ export const useConversations = () => {
 
   const handleDeleteConversation = async (conversationId: string): Promise<void> => {
     try {
-      // Check if we're deleting the active conversation
       const isActive = activeConversation?.id === conversationId;
-
-      // First, update the local state
+      
       setConversations(prev => prev.filter(convo => convo.id !== conversationId));
       
-      // If we're deleting the active conversation, set a new active one
       if (isActive) {
         const remainingConversations = conversations.filter(c => c.id !== conversationId);
         if (remainingConversations.length > 0) {
@@ -291,11 +286,9 @@ export const useConversations = () => {
           setActiveConversation(null);
           setMessages([]);
         }
-        // Close the sidebar if it's open
         setIsSidebarOpen(false);
       }
       
-      // Then perform the actual API deletion
       await deleteConversation(conversationId);
       
       toast({
@@ -304,7 +297,6 @@ export const useConversations = () => {
       });
     } catch (error) {
       console.error("Error deleting conversation:", error);
-      // Rollback by refreshing the conversations to restore accurate state
       fetchConversations();
       toast({
         title: "Error",
@@ -317,26 +309,21 @@ export const useConversations = () => {
 
   const handleArchiveConversation = async (conversationId: string): Promise<void> => {
     try {
-      // Find the conversation to update
       const convoToUpdate = conversations.find(c => c.id === conversationId);
       if (!convoToUpdate) throw new Error("Conversation not found");
-
-      // Optimistically update UI
+      
       const updatedConvo = { ...convoToUpdate, status: 'archived' };
       setConversations(prev => 
         prev.map(c => c.id === conversationId ? updatedConvo : c)
       );
 
-      // If this is the active conversation, update it too
       if (activeConversation?.id === conversationId) {
         setActiveConversation(updatedConvo);
       }
-
-      // Perform the actual API update
+      
       await archiveConversation(conversationId);
     } catch (error) {
       console.error("Error archiving conversation:", error);
-      // Rollback by refreshing conversations
       fetchConversations();
       throw error;
     }
@@ -344,32 +331,26 @@ export const useConversations = () => {
 
   const handleAddTag = async (conversationId: string, tag: string): Promise<void> => {
     try {
-      // Find the conversation to update
       const convoToUpdate = conversations.find(c => c.id === conversationId);
       if (!convoToUpdate) throw new Error("Conversation not found");
-
-      // Prepare tags array
+      
       const currentTags = convoToUpdate.tags || [];
-      if (currentTags.includes(tag)) return; // Tag already exists
+      if (currentTags.includes(tag)) return;
       
       const updatedTags = [...currentTags, tag];
-
-      // Optimistically update UI
+      
       const updatedConvo = { ...convoToUpdate, tags: updatedTags };
       setConversations(prev => 
         prev.map(c => c.id === conversationId ? updatedConvo : c)
       );
 
-      // If this is the active conversation, update it too
       if (activeConversation?.id === conversationId) {
         setActiveConversation(updatedConvo);
       }
-
-      // Perform the actual API update
+      
       await addTagToConversation(conversationId, tag);
     } catch (error) {
       console.error("Error adding tag:", error);
-      // Rollback by refreshing conversations
       fetchConversations();
       throw error;
     }
@@ -377,26 +358,21 @@ export const useConversations = () => {
 
   const handleAssignConversation = async (conversationId: string, assignee: string): Promise<void> => {
     try {
-      // Find the conversation to update
       const convoToUpdate = conversations.find(c => c.id === conversationId);
       if (!convoToUpdate) throw new Error("Conversation not found");
-
-      // Optimistically update UI
+      
       const updatedConvo = { ...convoToUpdate, assignedTo: assignee };
       setConversations(prev => 
         prev.map(c => c.id === conversationId ? updatedConvo : c)
       );
 
-      // If this is the active conversation, update it too
       if (activeConversation?.id === conversationId) {
         setActiveConversation(updatedConvo);
       }
-
-      // Perform the actual API update
+      
       await assignConversation(conversationId, assignee);
     } catch (error) {
       console.error("Error assigning conversation:", error);
-      // Rollback by refreshing conversations
       fetchConversations();
       throw error;
     }
