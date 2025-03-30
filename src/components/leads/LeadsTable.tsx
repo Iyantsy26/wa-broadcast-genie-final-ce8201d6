@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from '@/hooks/use-toast';
 import { createConversation } from '@/services/conversationService';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
   TableBody,
@@ -145,9 +146,13 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               <TableRow key={lead.id} className="border-b hover:bg-gray-50">
                 <TableCell className="py-4 px-4">
                   <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                      <span>{lead.initials}</span>
-                    </div>
+                    <Avatar className="w-8 h-8 mr-3">
+                      {lead.avatar_url ? (
+                        <AvatarImage src={lead.avatar_url} alt={lead.name} />
+                      ) : (
+                        <AvatarFallback>{lead.initials}</AvatarFallback>
+                      )}
+                    </Avatar>
                     <div>
                       <span 
                         className="font-semibold cursor-pointer hover:text-blue-600"
@@ -221,9 +226,13 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           {selectedLead && (
             <div className="space-y-4 py-2">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-4">
-                  <span className="text-lg">{selectedLead.initials}</span>
-                </div>
+                <Avatar className="w-12 h-12 mr-4">
+                  {selectedLead.avatar_url ? (
+                    <AvatarImage src={selectedLead.avatar_url} alt={selectedLead.name} />
+                  ) : (
+                    <AvatarFallback>{selectedLead.initials}</AvatarFallback>
+                  )}
+                </Avatar>
                 <div>
                   <h3 className="text-xl font-semibold">{selectedLead.name}</h3>
                   {selectedLead.status && (
@@ -252,12 +261,24 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                   <p className="font-medium">{selectedLead.address || '-'}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-500">Source</p>
+                  <p className="font-medium">{selectedLead.source || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Referrer</p>
+                  <p className="font-medium">{selectedLead.referrer_name || '-'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-500">Last Contact</p>
                   <p className="font-medium">{formatDate(selectedLead.last_contact)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Next Follow-up</p>
                   <p className="font-medium">{formatDate(selectedLead.next_followup)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created At</p>
+                  <p className="font-medium">{selectedLead.created_at ? formatDate(selectedLead.created_at) : '-'}</p>
                 </div>
               </div>
 
@@ -282,7 +303,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       {/* Edit Lead Dialog */}
       {selectedLead && (
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Edit Lead</DialogTitle>
             </DialogHeader>
