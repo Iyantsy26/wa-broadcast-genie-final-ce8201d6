@@ -1,23 +1,29 @@
-
-export type ChatType = 'team' | 'lead' | 'client';
-
-export interface Contact {
+export interface Message {
   id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  avatar?: string;
-  status?: string;
-  company?: string;
-  isOnline?: boolean;
-  lastSeen?: string;
-  role?: string;
-  type?: string;
+  content: string;
+  timestamp: string;
+  isOutbound: boolean;
+  status: 'sent' | 'read' | 'delivered' | 'error';
+  sender?: string;
+  type: 'text' | 'image' | 'video' | 'document' | 'voice';
+  media?: {
+    url: string;
+    type: 'image' | 'video' | 'document' | 'voice';
+    filename?: string;
+    duration?: number;
+  };
 }
 
 export interface Conversation {
   id: string;
-  contact: Contact;
+  contact: {
+    id: string;
+    name: string;
+    avatar?: string;
+    phone?: string;
+    type: 'client' | 'lead' | 'team';
+    isOnline?: boolean;
+  };
   lastMessage: {
     content: string;
     timestamp: string;
@@ -25,74 +31,11 @@ export interface Conversation {
     isRead: boolean;
   };
   status: string;
-  assignedTo?: string;
-  tags?: string[];
-  type?: ChatType;
-  chatType?: ChatType;
+  chatType: 'team' | 'client' | 'lead';
   isPinned?: boolean;
   isArchived?: boolean;
   unreadCount?: number;
-  isEncrypted?: boolean;
-}
-
-export type MessageType = 'text' | 'image' | 'video' | 'document' | 'voice' | 'location';
-
-export interface Message {
-  id: string;
-  content: string;
-  timestamp: string;
-  isOutbound: boolean;
-  status: 'sent' | 'delivered' | 'read' | 'failed' | 'sending';
-  sender: string;
-  senderId?: string;
-  type: MessageType;
-  media?: {
-    url: string;
-    type: 'image' | 'video' | 'document' | 'voice';
-    filename?: string;
-    duration?: number;
-    size?: number;
-  };
-  reactions?: { 
-    emoji: string; 
-    userId: string;
-    userName: string;
-    timestamp: string;
-  }[];
-  replyTo?: Message;
-  viaWhatsApp?: boolean;
-}
-
-export interface Lead {
-  id: string;
-  name: string;
-  company?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  status: string;
-  source?: string;
-  referrer_name?: string;
-  created_at: string;
-  last_contact?: string;
-  next_followup?: string;
-  notes?: string;
-  avatar_url?: string;
-  initials?: string;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  company?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
   tags?: string[];
-  join_date?: string;
-  renewal_date?: string;
-  notes?: string;
-  plan_details?: string;
-  referred_by?: string;
-  avatar_url?: string;
+  assignedTo?: string;
 }
+

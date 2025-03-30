@@ -92,6 +92,7 @@ export type Database = {
       }
       conversations: {
         Row: {
+          assigned_to: string | null
           client_id: string | null
           created_at: string
           id: string
@@ -99,9 +100,11 @@ export type Database = {
           last_message_timestamp: string | null
           lead_id: string | null
           status: string | null
+          tags: string[] | null
           updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
           client_id?: string | null
           created_at?: string
           id?: string
@@ -109,9 +112,11 @@ export type Database = {
           last_message_timestamp?: string | null
           lead_id?: string | null
           status?: string | null
+          tags?: string[] | null
           updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
           client_id?: string | null
           created_at?: string
           id?: string
@@ -119,6 +124,7 @@ export type Database = {
           last_message_timestamp?: string | null
           lead_id?: string | null
           status?: string | null
+          tags?: string[] | null
           updated_at?: string
         }
         Relationships: []
