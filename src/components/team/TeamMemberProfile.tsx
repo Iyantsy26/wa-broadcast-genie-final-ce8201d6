@@ -88,13 +88,12 @@ const TeamMemberProfile = ({
   };
 
   const handleEdit = () => {
-    // Just call onEdit without closing the dialog
     onEdit();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[375px]">
         <DialogHeader>
           <DialogTitle>Team Member Profile</DialogTitle>
           <DialogDescription>
@@ -102,9 +101,9 @@ const TeamMemberProfile = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-2 space-y-3">
+        <div className="py-2 space-y-2">
           <div className="flex flex-col items-center space-y-2">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-14 w-14">
               <AvatarImage src={member.avatar} />
               <AvatarFallback className="bg-primary/10 text-primary text-lg">
                 {member.name.split(' ').map(n => n[0]).join('')}
@@ -121,30 +120,30 @@ const TeamMemberProfile = ({
           
           <Separator />
           
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Contact Information</h4>
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-medium text-muted-foreground">Contact Information</h4>
             <Card className="shadow-sm">
-              <CardContent className="p-2 space-y-2">
+              <CardContent className="p-2 space-y-1.5">
                 <div className="flex items-center">
-                  <Mail className="h-4 w-4 text-muted-foreground mr-2" />
-                  <span className="text-sm">{member.email}</span>
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground mr-2" />
+                  <span className="text-xs">{member.email}</span>
                 </div>
                 {member.phone && (
                   <div className="flex items-center">
-                    <Phone className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm">{member.phone}</span>
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground mr-2" />
+                    <span className="text-xs">{member.phone}</span>
                   </div>
                 )}
                 {member.department && (
                   <div className="flex items-center">
-                    <Building className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm">{member.department}</span>
+                    <Building className="h-3.5 w-3.5 text-muted-foreground mr-2" />
+                    <span className="text-xs">{member.department}</span>
                   </div>
                 )}
                 {member.lastActive && (
                   <div className="flex items-center">
-                    <Clock className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span className="text-sm">Last active: {new Date(member.lastActive).toLocaleDateString(undefined, {
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground mr-2" />
+                    <span className="text-xs">Last active: {new Date(member.lastActive).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -157,16 +156,16 @@ const TeamMemberProfile = ({
             </Card>
           </div>
           
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">WhatsApp Accounts</h4>
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-medium text-muted-foreground">WhatsApp Accounts</h4>
             {member.whatsappAccounts.length > 0 ? (
               <Card className="shadow-sm">
                 <CardContent className="p-2">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {member.whatsappAccounts.map((account, index) => (
                       <div key={index} className="flex items-center">
-                        <Smartphone className="h-4 w-4 text-muted-foreground mr-2" />
-                        <span className="text-sm">{account}</span>
+                        <Smartphone className="h-3.5 w-3.5 text-muted-foreground mr-2" />
+                        <span className="text-xs">{account}</span>
                       </div>
                     ))}
                   </div>
@@ -174,22 +173,22 @@ const TeamMemberProfile = ({
               </Card>
             ) : (
               <Card className="shadow-sm">
-                <CardContent className="p-2 text-muted-foreground text-sm">
+                <CardContent className="p-2 text-muted-foreground text-xs">
                   No WhatsApp accounts assigned
                 </CardContent>
               </Card>
             )}
           </div>
           
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Role Permissions</h4>
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-medium text-muted-foreground">Role Permissions</h4>
             <Card className="shadow-sm">
               <CardContent className="p-2">
                 <div className="flex items-start">
-                  <Shield className="h-4 w-4 text-muted-foreground mr-2 mt-0.5" />
+                  <Shield className="h-3.5 w-3.5 text-muted-foreground mr-2 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">{member.role === 'admin' ? 'Administrator' : member.role === 'manager' ? 'Manager' : 'Agent'}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs font-medium">{member.role === 'admin' ? 'Administrator' : member.role === 'manager' ? 'Manager' : 'Agent'}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {member.role === 'admin' 
                         ? 'Full access to all system features and settings' 
                         : member.role === 'manager'

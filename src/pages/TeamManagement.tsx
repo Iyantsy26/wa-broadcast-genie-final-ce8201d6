@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -76,11 +77,13 @@ const TeamManagement = () => {
   const [selectedMember, setSelectedMember] = useState<TeamMember | undefined>();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | undefined>();
   const [selectedRole, setSelectedRole] = useState<Role | undefined>();
+  const [loading, setLoading] = useState(true);
 
   const currentUserRole = 'admin';
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [teamData, departmentData, roleData] = await Promise.all([
           getTeamMembers(),
@@ -92,11 +95,14 @@ const TeamManagement = () => {
         setDepartments(departmentData);
         setRoles(roleData);
       } catch (error) {
+        console.error('Error fetching team data:', error);
         toast({
           title: "Error",
           description: "Failed to load team data",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -118,21 +124,19 @@ const TeamManagement = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleAddMember = async (member: Omit<TeamMember, 'id'>) => {
+  const handleAddMemberSuccess = async (newMember?: TeamMember) => {
     try {
-      const newMember = await addTeamMember(member);
-      setMembers(prev => [...prev, newMember]);
+      const updatedMembers = await getTeamMembers();
+      setMembers(updatedMembers);
       
-      toast({
-        title: "Team member added",
-        description: `${member.name} has been added to the team`,
-      });
+      if (newMember) {
+        toast({
+          title: "Team member added",
+          description: `${newMember.name} has been added to the team`,
+        });
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add team member",
-        variant: "destructive",
-      });
+      console.error('Error refreshing team members:', error);
     }
   };
 
@@ -161,16 +165,16 @@ const TeamManagement = () => {
 
   const handleActivateMember = async (id: string) => {
     try {
-      const updatedMember = await activateTeamMember(id);
-      setMembers(prev => 
-        prev.map(member => member.id === id ? updatedMember : member)
-      );
+      await activateTeamMember(id);
+      const updatedMembers = await getTeamMembers();
+      setMembers(updatedMembers);
       
       toast({
         title: "Team member activated",
         description: `The team member has been activated`,
       });
     } catch (error) {
+      console.error('Error activating team member:', error);
       toast({
         title: "Error",
         description: "Failed to activate team member",
@@ -181,16 +185,16 @@ const TeamManagement = () => {
 
   const handleDeactivateMember = async (id: string) => {
     try {
-      const updatedMember = await deactivateTeamMember(id);
-      setMembers(prev => 
-        prev.map(member => member.id === id ? updatedMember : member)
-      );
+      await deactivateTeamMember(id);
+      const updatedMembers = await getTeamMembers();
+      setMembers(updatedMembers);
       
       toast({
         title: "Team member deactivated",
         description: `The team member has been deactivated`,
       });
     } catch (error) {
+      console.error('Error deactivating team member:', error);
       toast({
         title: "Error",
         description: "Failed to deactivate team member",
@@ -202,13 +206,15 @@ const TeamManagement = () => {
   const handleDeleteMember = async (id: string) => {
     try {
       await deleteTeamMember(id);
-      setMembers(prev => prev.filter(member => member.id !== id));
+      const updatedMembers = await getTeamMembers();
+      setMembers(updatedMembers);
       
       toast({
         title: "Team member removed",
         description: "The team member has been removed",
       });
     } catch (error) {
+      console.error('Error deleting team member:', error);
       toast({
         title: "Error",
         description: "Failed to remove team member",
@@ -223,20 +229,22 @@ const TeamManagement = () => {
         throw new Error("Department name is required");
       }
       
-      const newDepartment = await addDepartment({
+      await addDepartment({
         name: department.name,
         description: department.description,
         memberCount: 0,
         leadName: department.leadName,
       });
       
-      setDepartments(prev => [...prev, newDepartment]);
+      const updatedDepartments = await getDepartments();
+      setDepartments(updatedDepartments);
       
       toast({
         title: "Department created",
         description: `${department.name} department has been created`,
       });
     } catch (error) {
+      console.error('Error creating department:', error);
       toast({
         title: "Error",
         description: "Failed to create department",
@@ -257,17 +265,17 @@ const TeamManagement = () => {
         throw new Error("Invalid department data");
       }
       
-      const updatedDepartment = await updateDepartment(department.id, department);
+      await updateDepartment(department.id, department);
       
-      setDepartments(prev => 
-        prev.map(dept => dept.id === department.id ? updatedDepartment : dept)
-      );
+      const updatedDepartments = await getDepartments();
+      setDepartments(updatedDepartments);
       
       toast({
         title: "Department updated",
         description: `${department.name} has been updated`,
       });
     } catch (error) {
+      console.error('Error updating department:', error);
       toast({
         title: "Error",
         description: "Failed to update department",
@@ -279,13 +287,16 @@ const TeamManagement = () => {
   const handleDeleteDepartment = async (id: string) => {
     try {
       await deleteDepartment(id);
-      setDepartments(prev => prev.filter(dept => dept.id !== id));
+      
+      const updatedDepartments = await getDepartments();
+      setDepartments(updatedDepartments);
       
       toast({
         title: "Department deleted",
         description: "The department has been deleted",
       });
     } catch (error) {
+      console.error('Error deleting department:', error);
       toast({
         title: "Error",
         description: "Failed to delete department",
@@ -354,6 +365,7 @@ const TeamManagement = () => {
       const updatedRoles = await getRoles();
       setRoles(updatedRoles);
     } catch (error) {
+      console.error('Error updating role permissions:', error);
       toast({
         title: "Error",
         description: "Failed to update permissions",
@@ -440,10 +452,16 @@ const TeamManagement = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <TeamMembersList
-                members={filteredMembers}
-                onViewProfile={handleViewProfile}
-              />
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <p className="text-muted-foreground">Loading team members...</p>
+                </div>
+              ) : (
+                <TeamMembersList
+                  members={filteredMembers}
+                  onViewProfile={handleViewProfile}
+                />
+              )}
             </CardContent>
           </Card>
           
@@ -451,9 +469,7 @@ const TeamManagement = () => {
             open={isAddMemberOpen}
             onOpenChange={setIsAddMemberOpen}
             departments={departments}
-            onSuccess={(newMember) => {
-              getTeamMembers().then(setMembers);
-            }}
+            onSuccess={handleAddMemberSuccess}
           />
           
           <TeamMemberProfile
@@ -472,10 +488,7 @@ const TeamManagement = () => {
               editMember={selectedMember}
               onSuccess={(updatedMember) => {
                 if (updatedMember) {
-                  setMembers(prev => prev.map(m => 
-                    m.id === updatedMember.id ? updatedMember : m
-                  ));
-                  
+                  handleAddMemberSuccess();
                   setSelectedMember(updatedMember);
                 }
                 
@@ -501,20 +514,26 @@ const TeamManagement = () => {
             </Button>
           </div>
           
-          <div className="grid gap-4 md:grid-cols-2">
-            {departments.map((department) => (
-              <DepartmentCard
-                key={department.id}
-                department={department}
-                onEdit={handleEditDepartment}
-                onAddMembers={handleAddMembersToDepartment}
-                onViewAnalytics={handleViewDepartmentAnalytics}
-                onDelete={handleDeleteDepartment}
-                onViewMembers={handleViewDepartmentMembers}
-                onViewConversations={handleViewDepartmentConversations}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <p className="text-muted-foreground">Loading departments...</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {departments.map((department) => (
+                <DepartmentCard
+                  key={department.id}
+                  department={department}
+                  onEdit={handleEditDepartment}
+                  onAddMembers={handleAddMembersToDepartment}
+                  onViewAnalytics={handleViewDepartmentAnalytics}
+                  onDelete={handleDeleteDepartment}
+                  onViewMembers={handleViewDepartmentMembers}
+                  onViewConversations={handleViewDepartmentConversations}
+                />
+              ))}
+            </div>
+          )}
           
           <DepartmentForm
             open={isAddDepartmentOpen}
