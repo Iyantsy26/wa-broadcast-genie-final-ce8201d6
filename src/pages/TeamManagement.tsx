@@ -136,16 +136,13 @@ const TeamManagement = () => {
     }
   };
 
-  // Modify the handleViewProfile function to save the selected member
   const handleViewProfile = (id: string) => {
     const member = members.find(m => m.id === id);
     setSelectedMember(member);
     setIsViewProfileOpen(true);
   };
 
-  // Update the edit profile handler to not close the profile dialog
   const handleEditMember = () => {
-    // Just set the edit dialog to open, the profile dialog will remain open
     setIsEditMemberOpen(true);
   };
 
@@ -454,7 +451,7 @@ const TeamManagement = () => {
             open={isAddMemberOpen}
             onOpenChange={setIsAddMemberOpen}
             departments={departments}
-            onSuccess={() => {
+            onSuccess={(newMember) => {
               getTeamMembers().then(setMembers);
             }}
           />
@@ -467,7 +464,6 @@ const TeamManagement = () => {
             onEdit={handleEditMember}
           />
           
-          {/* Add or update the edit member dialog component here */}
           {selectedMember && isEditMemberOpen && (
             <AddTeamMemberDialog
               open={isEditMemberOpen}
@@ -475,17 +471,14 @@ const TeamManagement = () => {
               departments={departments}
               editMember={selectedMember}
               onSuccess={(updatedMember) => {
-                // Update the members list with the edited member
                 if (updatedMember) {
                   setMembers(prev => prev.map(m => 
                     m.id === updatedMember.id ? updatedMember : m
                   ));
                   
-                  // Also update the selected member to reflect changes in the profile view
                   setSelectedMember(updatedMember);
                 }
                 
-                // Close only the edit dialog
                 setIsEditMemberOpen(false);
               }}
             />

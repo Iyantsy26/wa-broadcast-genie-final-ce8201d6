@@ -94,7 +94,7 @@ const TeamMemberProfile = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Team Member Profile</DialogTitle>
           <DialogDescription>
@@ -102,11 +102,11 @@ const TeamMemberProfile = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-2 space-y-4">
+        <div className="py-2 space-y-3">
           <div className="flex flex-col items-center space-y-2">
-            <Avatar className="h-20 w-20">
+            <Avatar className="h-16 w-16">
               <AvatarImage src={member.avatar} />
-              <AvatarFallback className="bg-primary/10 text-primary text-xl">
+              <AvatarFallback className="bg-primary/10 text-primary text-lg">
                 {member.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
@@ -121,10 +121,10 @@ const TeamMemberProfile = ({
           
           <Separator />
           
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Contact Information</h4>
             <Card className="shadow-sm">
-              <CardContent className="p-3 space-y-2">
+              <CardContent className="p-2 space-y-2">
                 <div className="flex items-center">
                   <Mail className="h-4 w-4 text-muted-foreground mr-2" />
                   <span className="text-sm">{member.email}</span>
@@ -157,11 +157,11 @@ const TeamMemberProfile = ({
             </Card>
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">WhatsApp Accounts</h4>
             {member.whatsappAccounts.length > 0 ? (
               <Card className="shadow-sm">
-                <CardContent className="p-3">
+                <CardContent className="p-2">
                   <div className="space-y-2">
                     {member.whatsappAccounts.map((account, index) => (
                       <div key={index} className="flex items-center">
@@ -174,17 +174,17 @@ const TeamMemberProfile = ({
               </Card>
             ) : (
               <Card className="shadow-sm">
-                <CardContent className="p-3 text-muted-foreground text-sm">
+                <CardContent className="p-2 text-muted-foreground text-sm">
                   No WhatsApp accounts assigned
                 </CardContent>
               </Card>
             )}
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Role Permissions</h4>
             <Card className="shadow-sm">
-              <CardContent className="p-3">
+              <CardContent className="p-2">
                 <div className="flex items-start">
                   <Shield className="h-4 w-4 text-muted-foreground mr-2 mt-0.5" />
                   <div>

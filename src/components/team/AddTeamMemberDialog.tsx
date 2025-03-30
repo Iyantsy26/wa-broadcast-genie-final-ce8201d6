@@ -31,14 +31,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Department, addTeamMember } from '@/services/teamService';
+import { Department, addTeamMember, TeamMember, updateTeamMember } from '@/services/teamService';
 import { useToast } from "@/hooks/use-toast";
 
 interface AddTeamMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: Department[];
-  onSuccess: () => void;
+  onSuccess: (updatedMember?: TeamMember) => void; // Made updatedMember optional
+  editMember?: TeamMember; // Added for editing existing members
 }
 
 const formSchema = z.object({
@@ -55,19 +56,20 @@ const AddTeamMemberDialog = ({
   open,
   onOpenChange,
   departments,
-  onSuccess
+  onSuccess,
+  editMember
 }: AddTeamMemberDialogProps) => {
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      role: "agent",
-      departmentId: undefined,
-      grantWhatsAppAccess: false,
+      name: editMember?.name || "",
+      email: editMember?.email || "",
+      phone: editMember?.phone || "",
+      role: (editMember?.role as "admin" | "manager" | "agent") || "agent",
+      departmentId: departments.find(d => d.name === editMember?.department)?.id || undefined,
+      grantWhatsAppAccess: editMember?.whatsappAccounts.length ? true : false,
       message: "",
     },
   });
@@ -78,28 +80,53 @@ const AddTeamMemberDialog = ({
         ? departments.find(d => d.id === values.departmentId)?.name 
         : undefined;
       
-      await addTeamMember({
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        role: values.role,
-        status: 'pending',
-        whatsappAccounts: values.grantWhatsAppAccess ? ['Default Account'] : [],
-        department: departmentName,
-      });
-      
-      toast({
-        title: "Team member added",
-        description: `${values.name} has been added to your team`,
-      });
+      if (editMember) {
+        // Update existing team member
+        const updatedMember = await updateTeamMember(editMember.id, {
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          role: values.role,
+          department: departmentName,
+          whatsappAccounts: values.grantWhatsAppAccess 
+            ? (editMember.whatsappAccounts.length ? editMember.whatsappAccounts : ['Default Account']) 
+            : [],
+        });
+        
+        toast({
+          title: "Team member updated",
+          description: `${values.name}'s information has been updated`,
+        });
+        
+        onSuccess(updatedMember);
+      } else {
+        // Add new team member
+        const newMember = await addTeamMember({
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          role: values.role,
+          status: 'pending',
+          whatsappAccounts: values.grantWhatsAppAccess ? ['Default Account'] : [],
+          department: departmentName,
+        });
+        
+        toast({
+          title: "Team member added",
+          description: `${values.name} has been added to your team`,
+        });
+        
+        onSuccess(newMember);
+      }
       
       form.reset();
-      onSuccess();
       onOpenChange(false);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to add team member",
+        description: editMember 
+          ? "Failed to update team member" 
+          : "Failed to add team member",
         variant: "destructive",
       });
     }
@@ -122,9 +149,11 @@ const AddTeamMemberDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
+          <DialogTitle>{editMember ? "Edit Team Member" : "Add Team Member"}</DialogTitle>
           <DialogDescription>
-            Add a new member to your WhatsApp management team
+            {editMember 
+              ? "Update this team member's information" 
+              : "Add a new member to your WhatsApp management team"}
           </DialogDescription>
         </DialogHeader>
         
@@ -250,30 +279,32 @@ const AddTeamMemberDialog = ({
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="message"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Welcome Message (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Add a personal note to the welcome email" 
-                      className="resize-none"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!editMember && (
+              <FormField
+                control={form.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Welcome Message (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Add a personal note to the welcome email" 
+                        className="resize-none"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit">
-                Add Team Member
+                {editMember ? "Save Changes" : "Add Team Member"}
               </Button>
             </DialogFooter>
           </form>
