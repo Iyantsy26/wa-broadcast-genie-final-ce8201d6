@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Conversation, Message } from "@/types/conversation";
 
@@ -278,6 +279,7 @@ export const createConversation = async (
 
 export const deleteConversation = async (conversationId: string): Promise<void> => {
   try {
+    // First delete all messages
     const { error: messagesError } = await supabase
       .from('messages')
       .delete()
@@ -288,6 +290,7 @@ export const deleteConversation = async (conversationId: string): Promise<void> 
       throw messagesError;
     }
 
+    // Then delete the conversation
     const { error: conversationError } = await supabase
       .from('conversations')
       .delete()
@@ -299,6 +302,79 @@ export const deleteConversation = async (conversationId: string): Promise<void> 
     }
   } catch (error) {
     console.error('Error in deleteConversation:', error);
+    throw error;
+  }
+};
+
+export const archiveConversation = async (conversationId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('conversations')
+      .update({ status: 'archived' })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error archiving conversation:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in archiveConversation:', error);
+    throw error;
+  }
+};
+
+export const addTagToConversation = async (conversationId: string, tag: string): Promise<void> => {
+  try {
+    // First get current tags if any
+    const { data, error: fetchError } = await supabase
+      .from('conversations')
+      .select('tags')
+      .eq('id', conversationId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching conversation tags:', fetchError);
+      throw fetchError;
+    }
+
+    // Prepare tags array (ensure it's an array)
+    const currentTags = data.tags || [];
+    const updatedTags = [...currentTags];
+    
+    // Add tag if not already present
+    if (!updatedTags.includes(tag)) {
+      updatedTags.push(tag);
+    }
+
+    // Update the conversation with new tags
+    const { error: updateError } = await supabase
+      .from('conversations')
+      .update({ tags: updatedTags })
+      .eq('id', conversationId);
+
+    if (updateError) {
+      console.error('Error updating conversation tags:', updateError);
+      throw updateError;
+    }
+  } catch (error) {
+    console.error('Error in addTagToConversation:', error);
+    throw error;
+  }
+};
+
+export const assignConversation = async (conversationId: string, assignee: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('conversations')
+      .update({ assigned_to: assignee })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error assigning conversation:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in assignConversation:', error);
     throw error;
   }
 };
