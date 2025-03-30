@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +10,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface DeleteConversationDialogProps {
   open: boolean;
@@ -26,19 +28,41 @@ const DeleteConversationDialog: React.FC<DeleteConversationDialogProps> = ({
   conversationId,
   onDelete
 }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDelete = async () => {
+    if (isDeleting) return;
+    
     try {
-      // Close dialog before deletion to prevent UI freezing
-      onOpenChange(false);
-      // Execute deletion after dialog is closed
+      setIsDeleting(true);
+      
       await onDelete(conversationId);
+      toast({
+        title: "Conversation deleted",
+        description: `Conversation with ${contactName} has been deleted.`,
+      });
     } catch (error) {
       console.error("Error deleting conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete conversation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      onOpenChange(false);
     }
   };
 
+  // Reset state when dialog closes
+  React.useEffect(() => {
+    if (!open) {
+      setIsDeleting(false);
+    }
+  }, [open]);
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={isDeleting ? undefined : onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
@@ -48,12 +72,20 @@ const DeleteConversationDialog: React.FC<DeleteConversationDialogProps> = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             className="bg-red-600 hover:bg-red-700"
             onClick={handleDelete}
+            disabled={isDeleting}
           >
-            Delete
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

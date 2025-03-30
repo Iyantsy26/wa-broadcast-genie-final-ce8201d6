@@ -17,6 +17,7 @@ export const useConversationActions = (
 ) => {
   const handleDeleteConversation = async (conversationId: string): Promise<void> => {
     try {
+      if (!conversationId) throw new Error("Invalid conversation ID");
       const isActive = activeConversation?.id === conversationId;
       
       // Update UI state immediately
@@ -34,29 +35,23 @@ export const useConversationActions = (
       
       // Perform API call
       await deleteConversation(conversationId);
-      
-      // Show success toast
-      toast({
-        title: "Conversation deleted",
-        description: "The conversation has been deleted successfully.",
-      });
     } catch (error) {
       console.error("Error deleting conversation:", error);
       
-      // Revert UI state on error
+      // Revert UI state on error - this could also be handled by re-fetching conversations
       toast({
         title: "Error",
         description: "Failed to delete conversation. Please try again.",
         variant: "destructive",
       });
       
-      // Refresh conversation list to revert changes
       throw error;
     }
   };
 
   const handleArchiveConversation = async (conversationId: string): Promise<void> => {
     try {
+      if (!conversationId) throw new Error("Invalid conversation ID");
       const convoToUpdate = conversations.find(c => c.id === conversationId);
       if (!convoToUpdate) throw new Error("Conversation not found");
       
@@ -72,12 +67,6 @@ export const useConversationActions = (
       
       // Perform API call
       await archiveConversation(conversationId);
-      
-      // Show success toast
-      toast({
-        title: "Conversation archived",
-        description: "The conversation has been archived successfully.",
-      });
     } catch (error) {
       console.error("Error archiving conversation:", error);
       
@@ -94,6 +83,9 @@ export const useConversationActions = (
 
   const handleAddTag = async (conversationId: string, tag: string): Promise<void> => {
     try {
+      if (!conversationId) throw new Error("Invalid conversation ID");
+      if (!tag || !tag.trim()) throw new Error("Invalid tag");
+      
       const convoToUpdate = conversations.find(c => c.id === conversationId);
       if (!convoToUpdate) throw new Error("Conversation not found");
       
@@ -120,12 +112,6 @@ export const useConversationActions = (
       
       // Perform API call
       await addTagToConversation(conversationId, tag);
-      
-      // Show success toast
-      toast({
-        title: "Tag added",
-        description: `The tag "${tag}" has been added to the conversation.`,
-      });
     } catch (error) {
       console.error("Error adding tag:", error);
       
@@ -142,6 +128,9 @@ export const useConversationActions = (
 
   const handleAssignConversation = async (conversationId: string, assignee: string): Promise<void> => {
     try {
+      if (!conversationId) throw new Error("Invalid conversation ID");
+      if (!assignee) throw new Error("Invalid assignee");
+      
       const convoToUpdate = conversations.find(c => c.id === conversationId);
       if (!convoToUpdate) throw new Error("Conversation not found");
       
@@ -157,12 +146,6 @@ export const useConversationActions = (
       
       // Perform API call
       await assignConversation(conversationId, assignee);
-      
-      // Show success toast
-      toast({
-        title: "Conversation assigned",
-        description: "The conversation has been assigned successfully.",
-      });
     } catch (error) {
       console.error("Error assigning conversation:", error);
       

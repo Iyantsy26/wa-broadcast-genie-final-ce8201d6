@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 // Mock team members data - in production this would come from a context or API
 const TEAM_MEMBERS = [
@@ -43,30 +45,39 @@ const AssignConversationDialog: React.FC<AssignConversationDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignee) return;
+    if (!assignee || isSubmitting) return;
     
     try {
       setIsSubmitting(true);
-      // Close dialog before assigning to prevent UI freezing
-      onOpenChange(false);
-      // Execute assignment after dialog is closed
+      
       await onAssign(conversationId, assignee);
+      toast({
+        title: "Conversation assigned",
+        description: `Conversation has been assigned to ${TEAM_MEMBERS.find(m => m.id === assignee)?.name}.`,
+      });
     } catch (error) {
       console.error("Error assigning conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign conversation. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
+      onOpenChange(false);
     }
   };
 
   // Reset assignee when dialog opens/closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) {
       setAssignee('');
+      setIsSubmitting(false);
     }
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign Conversation</DialogTitle>
@@ -106,7 +117,14 @@ const AssignConversationDialog: React.FC<AssignConversationDialogProps> = ({
               type="submit"
               disabled={!assignee || isSubmitting}
             >
-              Assign
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Assigning...
+                </>
+              ) : (
+                'Assign'
+              )}
             </Button>
           </DialogFooter>
         </form>

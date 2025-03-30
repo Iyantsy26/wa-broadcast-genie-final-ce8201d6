@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ArchiveConversationDialogProps {
@@ -27,17 +28,15 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
   conversationId,
   onArchive
 }) => {
-  const [isArchiving, setIsArchiving] = React.useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const handleArchive = async () => {
+    if (isArchiving) return;
+    
     try {
       setIsArchiving(true);
-      // Close dialog before archive action to prevent UI freezing
-      onOpenChange(false);
       
-      // Execute archive after dialog is closed
       await onArchive(conversationId);
-      
       toast({
         title: "Conversation archived",
         description: `Conversation with ${contactName} has been archived.`,
@@ -51,11 +50,19 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
       });
     } finally {
       setIsArchiving(false);
+      onOpenChange(false);
     }
   };
 
+  // Reset state when dialog closes
+  React.useEffect(() => {
+    if (!open) {
+      setIsArchiving(false);
+    }
+  }, [open]);
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={isArchiving ? undefined : onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Archive Conversation</AlertDialogTitle>
@@ -66,8 +73,18 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isArchiving}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleArchive} disabled={isArchiving}>
-            {isArchiving ? 'Archiving...' : 'Archive'}
+          <AlertDialogAction 
+            onClick={handleArchive}
+            disabled={isArchiving}
+          >
+            {isArchiving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Archiving...
+              </>
+            ) : (
+              'Archive'
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

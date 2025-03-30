@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface AddTagDialogProps {
   open: boolean;
@@ -29,31 +31,39 @@ const AddTagDialog: React.FC<AddTagDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tag.trim()) return;
+    if (!tag.trim() || isSubmitting) return;
     
     try {
       setIsSubmitting(true);
-      // Close dialog before adding tag to prevent UI freezing
-      onOpenChange(false);
-      // Execute tag addition after dialog is closed
+      
       await onAddTag(conversationId, tag.trim());
-      setTag('');
+      toast({
+        title: "Tag added",
+        description: `Tag "${tag}" has been added to the conversation.`,
+      });
     } catch (error) {
       console.error("Error adding tag:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add tag. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
+      onOpenChange(false);
     }
   };
 
   // Reset tag when dialog opens/closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) {
       setTag('');
+      setIsSubmitting(false);
     }
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Tag</DialogTitle>
@@ -84,7 +94,14 @@ const AddTagDialog: React.FC<AddTagDialogProps> = ({
               type="submit"
               disabled={!tag.trim() || isSubmitting}
             >
-              Add Tag
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                'Add Tag'
+              )}
             </Button>
           </DialogFooter>
         </form>
