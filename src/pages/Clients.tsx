@@ -11,7 +11,7 @@ import {
   UserRound,
   Filter,
   Import,
-  Export,
+  FileExport, // Changed from 'Export' to 'FileExport'
   X
 } from 'lucide-react';
 import { getClients } from '@/services/clientService';
@@ -198,7 +198,7 @@ const Clients = () => {
             Import
           </Button>
           <Button variant="outline" onClick={handleExportClients}>
-            <Export className="mr-2 h-4 w-4" />
+            <FileExport className="mr-2 h-4 w-4" /> {/* Changed from Export to FileExport */}
             Export
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
