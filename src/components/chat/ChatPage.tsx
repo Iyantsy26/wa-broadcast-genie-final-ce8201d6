@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
-import ConversationList from '@/components/conversations/ConversationList';
-import MessagePanel from '@/components/conversations/MessagePanel';
-import ContactInfoSidebar from '@/components/conversations/ContactInfoSidebar';
+import ConversationList from '@/components/chat/ConversationList';
+import MessagePanel from '@/components/chat/MessagePanel';
+import ContactInfoSidebar from '@/components/chat/ContactInfoSidebar';
 
 const ChatPage = () => {
   const {
     filteredConversations,
+    groupedConversations,
     activeConversation,
     messages,
     isSidebarOpen,
@@ -47,6 +48,7 @@ const ChatPage = () => {
       <div className="flex flex-1 gap-4 h-[calc(100vh-13rem)] overflow-hidden">
         <ConversationList 
           conversations={filteredConversations}
+          groupedConversations={groupedConversations}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
           statusFilter={statusFilter}

@@ -23,6 +23,8 @@ interface ConversationListProps {
   tagFilter?: string;
   setTagFilter?: (tag: string) => void;
   resetAllFilters: () => void;
+  pinConversation: (conversationId: string, isPinned: boolean) => void;
+  archiveConversation: (conversationId: string, isArchived: boolean) => void;
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({
