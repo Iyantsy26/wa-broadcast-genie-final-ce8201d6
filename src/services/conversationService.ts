@@ -1,122 +1,104 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Conversation, Message } from "@/types/conversation";
 
 export const getConversations = async (): Promise<Conversation[]> => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .select(`
-      id,
-      client_id,
-      lead_id,
-      last_message,
-      last_message_timestamp,
-      status,
-      created_at,
-      updated_at,
-      clients(name, avatar_url),
-      leads(name, avatar_url)
-    `)
-    .order('last_message_timestamp', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select(`
+        id,
+        client_id,
+        lead_id,
+        last_message,
+        last_message_timestamp,
+        status,
+        created_at,
+        updated_at
+      `)
+      .order('last_message_timestamp', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching conversations:', error);
-    throw error;
-  }
+    if (error) {
+      console.error('Error fetching conversations:', error);
+      throw error;
+    }
 
-  // Transform the data to match our Conversation type
-  return (data || []).map(conv => {
-    const isClient = !!conv.client_id;
-    
-    // Safely handle the potential null/undefined cases
-    // Use optional chaining to safely access nested properties
-    const contactData = isClient ? conv.clients : conv.leads;
-    
-    // Ensure we have string values for the name and avatar
-    const contactName = contactData && 'name' in contactData && contactData.name 
-      ? String(contactData.name) 
-      : 'Unknown';
+    // Transform the data to match our Conversation type
+    return (data || []).map(conv => {
+      const isClient = !!conv.client_id;
       
-    const contactAvatar = contactData && 'avatar_url' in contactData && contactData.avatar_url 
-      ? String(contactData.avatar_url) 
-      : undefined;
-    
-    return {
-      id: conv.id,
-      contact: {
-        id: isClient ? conv.client_id : conv.lead_id,
-        name: contactName,
-        avatar: contactAvatar,
-        phone: '', // We'll need to add this later
-        type: isClient ? 'client' : 'lead'
-      },
-      lastMessage: {
-        content: conv.last_message || '',
-        timestamp: conv.last_message_timestamp,
-        isOutbound: false, // We'll need to add this information to the database
-        isRead: true // We'll need to add this information to the database
-      },
-      status: conv.status as 'new' | 'active' | 'resolved' | 'waiting',
-      chatType: isClient ? 'client' : 'lead'
-    };
-  });
+      return {
+        id: conv.id,
+        contact: {
+          id: isClient ? conv.client_id : conv.lead_id,
+          name: 'Unknown', // We'll fetch contact details separately
+          avatar: undefined,
+          phone: '', 
+          type: isClient ? 'client' : 'lead'
+        },
+        lastMessage: {
+          content: conv.last_message || '',
+          timestamp: conv.last_message_timestamp,
+          isOutbound: false,
+          isRead: true
+        },
+        status: conv.status as 'new' | 'active' | 'resolved' | 'waiting',
+        chatType: isClient ? 'client' : 'lead'
+      };
+    });
+  } catch (error) {
+    console.error('Error in getConversations:', error);
+    return []; // Return empty array rather than crashing
+  }
 };
 
 export const getConversation = async (id: string): Promise<Conversation | null> => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .select(`
-      id,
-      client_id,
-      lead_id,
-      last_message,
-      last_message_timestamp,
-      status,
-      created_at,
-      updated_at,
-      clients(name, avatar_url),
-      leads(name, avatar_url)
-    `)
-    .eq('id', id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select(`
+        id,
+        client_id,
+        lead_id,
+        last_message,
+        last_message_timestamp,
+        status,
+        created_at,
+        updated_at
+      `)
+      .eq('id', id)
+      .single();
 
-  if (error) {
-    console.error('Error fetching conversation:', error);
-    throw error;
-  }
+    if (error) {
+      console.error('Error fetching conversation:', error);
+      throw error;
+    }
 
-  if (!data) return null;
+    if (!data) return null;
 
-  const isClient = !!data.client_id;
-  const contactData = isClient ? data.clients : data.leads;
-  
-  // Ensure we have string values for the name and avatar
-  const contactName = contactData && 'name' in contactData && contactData.name 
-    ? String(contactData.name) 
-    : 'Unknown';
+    const isClient = !!data.client_id;
     
-  const contactAvatar = contactData && 'avatar_url' in contactData && contactData.avatar_url 
-    ? String(contactData.avatar_url) 
-    : undefined;
-  
-  return {
-    id: data.id,
-    contact: {
-      id: isClient ? data.client_id : data.lead_id,
-      name: contactName,
-      avatar: contactAvatar,
-      phone: '', // We'll need to add this later
-      type: isClient ? 'client' : 'lead'
-    },
-    lastMessage: {
-      content: data.last_message || '',
-      timestamp: data.last_message_timestamp,
-      isOutbound: false, // We'll need to add this information to the database
-      isRead: true // We'll need to add this information to the database
-    },
-    status: data.status as 'new' | 'active' | 'resolved' | 'waiting',
-    chatType: isClient ? 'client' : 'lead'
-  };
+    return {
+      id: data.id,
+      contact: {
+        id: isClient ? data.client_id : data.lead_id,
+        name: 'Unknown', // We'll fetch contact details separately
+        avatar: undefined,
+        phone: '',
+        type: isClient ? 'client' : 'lead'
+      },
+      lastMessage: {
+        content: data.last_message || '',
+        timestamp: data.last_message_timestamp,
+        isOutbound: false,
+        isRead: true
+      },
+      status: data.status as 'new' | 'active' | 'resolved' | 'waiting',
+      chatType: isClient ? 'client' : 'lead'
+    };
+  } catch (error) {
+    console.error('Error in getConversation:', error);
+    return null;
+  }
 };
 
 export const getMessages = async (conversationId: string): Promise<Message[]> => {

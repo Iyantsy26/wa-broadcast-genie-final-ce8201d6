@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { 
   Form, 
@@ -17,8 +17,8 @@ import { createLead, updateLead, uploadLeadAvatar } from '@/services/leadService
 import { toast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { CalendarIcon, Clock } from 'lucide-react';
+import { format, set } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface LeadFormProps {
@@ -37,6 +37,7 @@ type FormValues = {
   referrer_name?: string;
   last_contact?: Date;
   next_followup?: Date;
+  next_followup_time?: string;
   notes?: string;
 };
 
@@ -44,6 +45,17 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(lead?.avatar_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Add time options
+  const timeOptions = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const formattedHour = hour.toString().padStart(2, '0');
+      const formattedMinute = minute.toString().padStart(2, '0');
+      timeOptions.push(`${formattedHour}:${formattedMinute}`);
+    }
+  }
 
   const defaultValues: FormValues = {
     name: lead?.name || '',
@@ -56,6 +68,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
     referrer_name: lead?.referrer_name || '',
     last_contact: lead?.last_contact ? new Date(lead.last_contact) : undefined,
     next_followup: lead?.next_followup ? new Date(lead.next_followup) : undefined,
+    next_followup_time: lead?.next_followup ? format(new Date(lead.next_followup), 'HH:mm') : '09:00',
     notes: lead?.notes || '',
   };
 
@@ -94,10 +107,18 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
       }
       
       // Process dates
+      let next_followup = values.next_followup;
+      
+      // If there's a date and time, combine them
+      if (next_followup && values.next_followup_time) {
+        const [hours, minutes] = values.next_followup_time.split(':').map(Number);
+        next_followup = set(next_followup, { hours, minutes });
+      }
+      
       const formattedValues = {
         ...values,
         last_contact: values.last_contact ? values.last_contact.toISOString() : null,
-        next_followup: values.next_followup ? values.next_followup.toISOString() : null,
+        next_followup: next_followup ? next_followup.toISOString() : null,
         avatar_url: avatarUrl
       };
       
@@ -323,12 +344,13 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                     <Calendar
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
                       initialFocus
+                      className="p-3 pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -337,44 +359,73 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="next_followup"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Next Follow-up</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="next_followup"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Next Follow-up</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="next_followup_time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Follow-up Time</FormLabel>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
+                      <select
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        {...field}
                       >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
+                        {timeOptions.map(time => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
                     </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <FormField
