@@ -20,13 +20,16 @@ import {
 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { useConversation } from '@/contexts/ConversationContext';
 
 interface MessageInputProps {
   onSendMessage: (content: string, file: File | null) => void;
+  onVoiceMessageSent?: (durationInSeconds: number) => void;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ 
+  onSendMessage,
+  onVoiceMessageSent
+}) => {
   const [messageInput, setMessageInput] = useState<string>('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -35,7 +38,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
   const [activeAttachmentType, setActiveAttachmentType] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recordingTimerRef = useRef<number | null>(null);
-  const { handleVoiceMessageSent } = useConversation();
 
   const emojis = ['😀', '😂', '😊', '😍', '🥰', '😘', '😎', '👍', '🙏', '❤️', '🔥', '⭐', '🎉', '✅', '🤔', '👏', '🌟', '💯', '🤣', '😢'];
 
@@ -82,7 +84,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
         recordingTimerRef.current = null;
       }
       
-      handleVoiceMessageSent(recordingTime);
+      if (onVoiceMessageSent) {
+        onVoiceMessageSent(recordingTime);
+      }
       
       setRecordingTime(0);
     } else {

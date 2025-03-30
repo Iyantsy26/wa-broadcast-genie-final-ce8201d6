@@ -66,7 +66,7 @@ const ConversationPage = () => {
             <>
               <ConversationHeader 
                 conversation={activeConversation}
-                onInfoClick={() => setIsSidebarOpen(true)}
+                onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
                 messages={messages} 

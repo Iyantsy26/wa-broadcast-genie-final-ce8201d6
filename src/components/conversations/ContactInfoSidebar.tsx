@@ -16,14 +16,16 @@ import { Conversation } from '@/types/conversation';
 
 interface ContactInfoSidebarProps {
   conversation: Conversation;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onClose: () => void;
 }
 
 const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
   conversation,
-  isOpen,
-  onOpenChange
+  isOpen = true,
+  onOpenChange,
+  onClose
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -56,7 +58,10 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+    <Sheet open={isOpen} onOpenChange={open => {
+      if (onOpenChange) onOpenChange(open);
+      if (!open) onClose();
+    }}>
       <SheetContent>
         <SheetHeader className="text-left mb-4">
           <SheetTitle>Contact Information</SheetTitle>
