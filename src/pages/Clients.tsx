@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
-  PlusCircle, 
+  Plus, 
   Search, 
   Phone, 
   Mail, 
@@ -11,7 +12,8 @@ import {
   Filter,
   Import,
   FileText,
-  X
+  ChevronDown,
+  Calendar
 } from 'lucide-react';
 import { getClients } from '@/services/clientService';
 import { Client } from '@/types/conversation';
@@ -26,23 +28,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ClientForm from '@/components/clients/ClientForm';
 import { createConversation } from '@/services/conversationService';
-import ActiveFilterBadges from '@/components/conversations/ActiveFilterBadges';
+import { toast } from '@/hooks/use-toast';
 
 const Clients = () => {
   const navigate = useNavigate();
@@ -51,7 +47,6 @@ const Clients = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const { 
     data: clients = [], 
@@ -175,209 +170,202 @@ const Clients = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Clients Management</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleImportClick}>
-            <Import className="mr-2 h-4 w-4" />
+        <h1 className="text-3xl font-bold">CLIENTS</h1>
+        <Button className="bg-green-600 hover:bg-green-700" size="lg">
+          <Plus className="mr-2 h-5 w-5" />
+          Add New Client
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-4 mt-6">
+        <div className="relative flex-grow max-w-xs">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search clients..."
+            className="pl-10 h-12 rounded-lg"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="relative">
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-44 h-12 pl-3 flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <SelectValue placeholder="All Statuses" />
+              <ChevronDown className="ml-auto h-4 w-4" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="VIP">VIP</SelectItem>
+              <SelectItem value="Premium">Premium</SelectItem>
+              <SelectItem value="New">New</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="ml-auto flex gap-3">
+          <Button variant="outline" className="h-12 px-5 border-gray-300" onClick={handleImportClick}>
+            <Import className="mr-2 h-5 w-5" />
             Import
           </Button>
-          <Button variant="outline" onClick={handleExportClients}>
-            <FileText className="mr-2 h-4 w-4" />
+          <Button variant="outline" className="h-12 px-5 border-gray-300" onClick={handleExportClients}>
+            <FileText className="mr-2 h-5 w-5" />
             Export
           </Button>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Client
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
-              </DialogHeader>
-              <ClientForm onComplete={handleFormComplete} />
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>All Clients</CardTitle>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="relative flex-grow">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search clients..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="gap-1">
-                  <Filter className="h-4 w-4" />
-                  Filter
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-4" align="end">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">By Status/Tags</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <Button 
-                          variant={statusFilter === 'all' ? 'default' : 'outline'} 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => {
-                            setStatusFilter('all');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          All Clients
-                        </Button>
-                      </div>
-                      <div className="flex items-center">
-                        <Button 
-                          variant={statusFilter === 'VIP' ? 'default' : 'outline'} 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => {
-                            setStatusFilter('VIP');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          VIP Clients
-                        </Button>
-                      </div>
-                      <div className="flex items-center">
-                        <Button 
-                          variant={statusFilter === 'Premium' ? 'default' : 'outline'} 
-                          size="sm" 
-                          className="w-full"
-                          onClick={() => {
-                            setStatusFilter('Premium');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Premium Clients
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+      <div className="bg-white rounded-lg border shadow">
+        {isLoading ? (
+          <div className="py-10 text-center">Loading clients...</div>
+        ) : filteredClients.length === 0 ? (
+          <div className="py-10 text-center">
+            {searchTerm || statusFilter !== 'all' ? 'No clients match your search or filters.' : 'No clients available. Add your first client!'}
           </div>
-          <ActiveFilterBadges 
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-          />
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="py-6 text-center">Loading clients...</div>
-          ) : filteredClients.length === 0 ? (
-            <div className="py-6 text-center">
-              {searchTerm || statusFilter !== 'all' ? 'No clients match your search or filters.' : 'No clients available. Add your first client!'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name & Contact</TableHead>
-                    <TableHead>Company & Address</TableHead>
-                    <TableHead>Join Date</TableHead>
-                    <TableHead>Renewal Date</TableHead>
-                    <TableHead>Plan Details</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredClients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell>
-                        <div 
-                          className="flex flex-col cursor-pointer"
-                          onClick={() => handleViewClient(client)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                              {client.avatar_url ? (
-                                <img 
-                                  src={client.avatar_url} 
-                                  alt={client.name} 
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <UserRound className="h-4 w-4 text-gray-500" />
-                              )}
-                            </div>
-                            <span className="font-medium">{client.name}</span>
-                          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="py-4 font-semibold text-gray-700">NAME</TableHead>
+                  <TableHead className="py-4 font-semibold text-gray-700">CONTACT</TableHead>
+                  <TableHead className="py-4 font-semibold text-gray-700">COMPANY</TableHead>
+                  <TableHead className="py-4 font-semibold text-gray-700">ADDRESS</TableHead>
+                  <TableHead className="py-4 font-semibold text-gray-700">PLAN DETAILS</TableHead>
+                  <TableHead className="py-4 font-semibold text-gray-700">LAST CONTACT</TableHead>
+                  <TableHead className="py-4 font-semibold text-gray-700"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow 
+                    key={client.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleViewClient(client)}
+                  >
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {client.avatar_url ? (
+                            <img 
+                              src={client.avatar_url} 
+                              alt={client.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-gray-600 font-semibold">
+                              {client.name.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold">{client.name}</div>
                           {client.tags && client.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1 ml-10">
-                              {client.tags.map((tag, index) => (
-                                <Badge key={index} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
+                            <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
+                              {client.tags[0]}
+                            </Badge>
                           )}
-                          <div className="ml-10 mt-1 text-sm text-gray-500 space-y-1">
-                            {client.email && (
-                              <div className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                <span>{client.email}</span>
-                              </div>
-                            )}
-                            {client.phone && (
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                <span>{client.phone}</span>
-                              </div>
-                            )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="space-y-1 text-sm">
+                        {client.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-gray-500" />
+                            <span>{client.email}</span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div>{client.company || '-'}</div>
-                          {client.address && (
-                            <div className="text-sm text-gray-500">{client.address}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatDate(client.join_date)}</TableCell>
-                      <TableCell>{formatDate(client.renewal_date)}</TableCell>
-                      <TableCell>{client.plan_details || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0"
-                            title="Message client"
-                            onClick={() => handleMessage(client)}
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        )}
+                        {client.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-gray-500" />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {client.company || "-"}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {client.address || "-"}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {client.plan_details || "-"}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span>{formatDate(client.join_date)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-9 w-9 rounded-full text-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMessage(client);
+                          }}
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-9 w-9 rounded-full text-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Add email action
+                            toast({
+                              title: "Email action",
+                              description: "Email functionality will be implemented soon",
+                            });
+                          }}
+                        >
+                          <Mail className="h-5 w-5" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-9 w-9 rounded-full text-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Add phone action
+                            toast({
+                              title: "Call action",
+                              description: "Call functionality will be implemented soon",
+                            });
+                          }}
+                        >
+                          <Phone className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+          </DialogHeader>
+          <ClientForm onComplete={handleFormComplete} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
