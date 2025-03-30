@@ -36,20 +36,20 @@ const ConversationPage = () => {
   } = useConversation();
 
   // Define dummy pinConversation function to satisfy the interface
-  const pinConversation = (conversationId: string, isPinned: boolean) => {
-    console.log('Pin conversation not implemented:', conversationId, isPinned);
+  const pinConversation = (conversationId: string) => {
+    console.log('Pin conversation not implemented:', conversationId);
   };
 
   return (
     <div className="flex flex-col space-y-4 h-full">
       <div className="flex-none">
-        <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
+        <h1 className="text-2xl font-bold tracking-tight">WhatsApp Chat</h1>
         <p className="text-muted-foreground">
-          View and respond to client and lead conversations
+          Chat with clients and leads through WhatsApp
         </p>
       </div>
       
-      <div className="flex-1 flex space-x-4 overflow-hidden">
+      <div className="flex-1 flex space-x-4 overflow-hidden bg-gray-50 rounded-lg p-2">
         <ConversationList 
           conversations={filteredConversations}
           groupedConversations={groupedConversations}

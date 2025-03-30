@@ -41,6 +41,8 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
         title: "Conversation archived",
         description: `Conversation with ${contactName} has been archived.`,
       });
+      
+      onOpenChange(false);
     } catch (error) {
       console.error("Error archiving conversation:", error);
       toast({
@@ -50,19 +52,11 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
       });
     } finally {
       setIsArchiving(false);
-      onOpenChange(false);
     }
   };
 
-  // Reset state when dialog closes
-  React.useEffect(() => {
-    if (!open) {
-      setIsArchiving(false);
-    }
-  }, [open]);
-
   return (
-    <AlertDialog open={open} onOpenChange={isArchiving ? undefined : onOpenChange}>
+    <AlertDialog open={open} onOpenChange={!isArchiving ? onOpenChange : undefined}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Archive Conversation</AlertDialogTitle>

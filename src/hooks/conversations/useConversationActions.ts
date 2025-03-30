@@ -35,10 +35,15 @@ export const useConversationActions = (
       
       // Perform API call
       await deleteConversation(conversationId);
+      
+      toast({
+        title: "Success",
+        description: "Conversation deleted successfully.",
+      });
     } catch (error) {
       console.error("Error deleting conversation:", error);
       
-      // Revert UI state on error - this could also be handled by re-fetching conversations
+      // Show error toast
       toast({
         title: "Error",
         description: "Failed to delete conversation. Please try again.",
@@ -67,6 +72,11 @@ export const useConversationActions = (
       
       // Perform API call
       await archiveConversation(conversationId);
+      
+      toast({
+        title: "Success",
+        description: "Conversation archived successfully.",
+      });
     } catch (error) {
       console.error("Error archiving conversation:", error);
       
@@ -112,6 +122,11 @@ export const useConversationActions = (
       
       // Perform API call
       await addTagToConversation(conversationId, tag);
+      
+      toast({
+        title: "Success",
+        description: `Tag "${tag}" added successfully.`,
+      });
     } catch (error) {
       console.error("Error adding tag:", error);
       
@@ -146,6 +161,11 @@ export const useConversationActions = (
       
       // Perform API call
       await assignConversation(conversationId, assignee);
+      
+      toast({
+        title: "Success",
+        description: `Conversation assigned to ${assignee} successfully.`,
+      });
     } catch (error) {
       console.error("Error assigning conversation:", error);
       
