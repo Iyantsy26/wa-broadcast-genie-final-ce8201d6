@@ -1,4 +1,8 @@
 
+import { v4 as uuidv4 } from 'uuid';
+import { Conversation, Message } from '@/types/conversation';
+import { supabase } from "@/integrations/supabase/client";
+
 export const getConversations = async (): Promise<Conversation[]> => {
   try {
     const { data: conversations, error } = await supabase
@@ -80,5 +84,206 @@ export const getConversations = async (): Promise<Conversation[]> => {
   } catch (error) {
     console.error('Error in getConversations:', error);
     return [];
+  }
+};
+
+export const getMessages = async (conversationId: string): Promise<Message[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('timestamp', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching messages:', error);
+      throw error;
+    }
+
+    return (data || []).map(msg => ({
+      id: msg.id,
+      content: msg.content || '',
+      timestamp: msg.timestamp,
+      isOutbound: msg.is_outbound || false,
+      status: msg.status || 'sent',
+      sender: msg.sender,
+      type: msg.message_type || 'text',
+      media: msg.media_url ? {
+        url: msg.media_url,
+        type: msg.media_type as 'image' | 'video' | 'document' | 'voice',
+        filename: msg.media_filename,
+        duration: msg.media_duration
+      } : undefined
+    }));
+  } catch (error) {
+    console.error('Error in getMessages:', error);
+    return [];
+  }
+};
+
+export const sendMessage = async (conversationId: string, messageData: Omit<Message, 'id'>): Promise<Message> => {
+  try {
+    // First, update the conversation's last message and timestamp
+    const { error: updateError } = await supabase
+      .from('conversations')
+      .update({
+        last_message: messageData.content || 'Attachment',
+        last_message_timestamp: messageData.timestamp,
+        status: 'active' // Set conversation to active when sending a message
+      })
+      .eq('id', conversationId);
+
+    if (updateError) {
+      console.error('Error updating conversation:', updateError);
+      throw updateError;
+    }
+
+    // Then, insert the new message
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        content: messageData.content,
+        timestamp: messageData.timestamp,
+        is_outbound: messageData.isOutbound,
+        status: messageData.status,
+        sender: messageData.sender,
+        message_type: messageData.type,
+        media_url: messageData.media?.url,
+        media_type: messageData.media?.type,
+        media_filename: messageData.media?.filename,
+        media_duration: messageData.media?.duration
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+
+    return {
+      id: data.id,
+      content: data.content || '',
+      timestamp: data.timestamp,
+      isOutbound: data.is_outbound || false,
+      status: data.status || 'sent',
+      sender: data.sender,
+      type: data.message_type || 'text',
+      media: data.media_url ? {
+        url: data.media_url,
+        type: data.media_type as 'image' | 'video' | 'document' | 'voice',
+        filename: data.media_filename,
+        duration: data.media_duration
+      } : undefined
+    };
+  } catch (error) {
+    console.error('Error in sendMessage:', error);
+    throw error;
+  }
+};
+
+export const deleteConversation = async (conversationId: string): Promise<void> => {
+  try {
+    // First delete all messages associated with the conversation
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', conversationId);
+
+    if (messagesError) {
+      console.error('Error deleting messages:', messagesError);
+      throw messagesError;
+    }
+
+    // Then delete the conversation
+    const { error: convError } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (convError) {
+      console.error('Error deleting conversation:', convError);
+      throw convError;
+    }
+  } catch (error) {
+    console.error('Error in deleteConversation:', error);
+    throw error;
+  }
+};
+
+export const archiveConversation = async (conversationId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('conversations')
+      .update({
+        status: 'archived'
+      })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error archiving conversation:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in archiveConversation:', error);
+    throw error;
+  }
+};
+
+export const addTagToConversation = async (conversationId: string, tag: string): Promise<void> => {
+  try {
+    // First get current tags
+    const { data, error: fetchError } = await supabase
+      .from('conversations')
+      .select('tags')
+      .eq('id', conversationId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching conversation tags:', fetchError);
+      throw fetchError;
+    }
+
+    const currentTags = data.tags || [];
+    
+    // Add new tag if it doesn't exist
+    if (!currentTags.includes(tag)) {
+      const newTags = [...currentTags, tag];
+
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({
+          tags: newTags
+        })
+        .eq('id', conversationId);
+
+      if (updateError) {
+        console.error('Error updating tags:', updateError);
+        throw updateError;
+      }
+    }
+  } catch (error) {
+    console.error('Error in addTagToConversation:', error);
+    throw error;
+  }
+};
+
+export const assignConversation = async (conversationId: string, assignee: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('conversations')
+      .update({
+        assigned_to: assignee
+      })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error assigning conversation:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in assignConversation:', error);
+    throw error;
   }
 };
