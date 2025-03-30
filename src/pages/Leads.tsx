@@ -1,234 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PlusCircle, Search, MoreHorizontal, ArrowUpRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { 
-  Dialog, 
-  DialogTrigger,
-  DialogContent
-} from "@/components/ui/dialog";
-import LeadForm from "@/components/leads/LeadForm";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Import, FileText } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { getLeads } from '@/services/leadService';
 import { Lead } from '@/types/conversation';
-import { createConversation } from '@/services/conversationService';
-import { getLeads, createLead } from '@/services/leadService';
-import { toast } from '@/hooks/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-  SortingState,
-  ColumnFiltersState,
-  getPaginationRowModel,
-  getFilteredRowModel,
-} from "@tanstack/react-table";
-
-interface DataTableSearchProps {
-  leads: Lead[];
-  setFilteredLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
-}
-
-function DataTableSearch({ leads, setFilteredLeads }: DataTableSearchProps) {
-  const [search, setSearch] = React.useState("")
-
-  React.useEffect(() => {
-    if (!search) {
-      setFilteredLeads(leads);
-      return;
-    }
-
-    const filtered = leads.filter((lead) => {
-      const searchString = `${lead.name} ${lead.email} ${lead.phone}`.toLowerCase();
-      return searchString.includes(search.toLowerCase());
-    });
-    setFilteredLeads(filtered);
-  }, [search, leads, setFilteredLeads])
-
-  return (
-    <div className="flex items-center space-x-2">
-      <Search className="h-4 w-4" />
-      <Input
-        placeholder="Filter leads..."
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
-    </div>
-  )
-}
-
-interface DataTableRowActionsProps {
-  lead: Lead;
-}
-
-function DataTableRowActions({ lead }: DataTableRowActionsProps) {
-  const navigate = useNavigate();
-
-  const handleCreateConversation = async (leadId: string) => {
-    try {
-      const conversationId = await createConversation(leadId, 'lead', `Initial contact with ${lead.name}`);
-      navigate(`/conversations`);
-      toast({
-        title: "Conversation created",
-        description: `A new conversation with ${lead.name} has been created.`,
-      });
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create conversation. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  return (
-    <div className="relative">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleCreateConversation(lead.id)}>
-            <ArrowUpRight className="mr-2 h-4 w-4" />
-            Start Conversation
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <Button variant="link">
-              View Details
-            </Button>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  )
-}
-
-interface DataTableProps {
-  columns: ColumnDef<Lead>[];
-  data: Lead[];
-}
-
-function DataTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [filteredLeads, setFilteredLeads] = React.useState<Lead[]>(data);
-
-  const table = useReactTable({
-    data: filteredLeads,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    state: {
-      sorting,
-      columnFilters,
-    },
-  })
-
-  return (
-    <div className="w-full">
-      <div className="flex items-center py-4">
-        <DataTableSearch leads={data} setFilteredLeads={setFilteredLeads} />
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Lead
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <LeadForm onComplete={() => {}} />
-          </DialogContent>
-        </Dialog>
-      </div>
-      <div className="rounded-md border">
-        <ScrollArea>
-          <div className="relative min-w-[600px]">
-            <table className="w-full table-auto">
-              <thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <th key={header.id} className="px-4 py-2 text-left">
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </th>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b last:border-b-0">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="p-4">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </ScrollArea>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
-  )
-}
+import LeadForm from "@/components/leads/LeadForm";
+import LeadsTable from "@/components/leads/LeadsTable";
 
 const Leads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     fetchLeads();
@@ -256,82 +42,95 @@ const Leads = () => {
     fetchLeads();
   };
 
-  const columns: ColumnDef<Lead>[] = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => (
-        <div className="flex items-center">
-          <Avatar className="mr-2 h-6 w-6">
-            <AvatarImage src={row.original.avatar_url} />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {row.original.initials}
-            </AvatarFallback>
-          </Avatar>
-          {row.getValue("name")}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "phone",
-      header: "Phone",
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => (
-        <DataTableRowActions lead={row.original} />
-      ),
-    },
-  ]
+  const handleImport = () => {
+    toast({
+      title: "Import feature",
+      description: "Lead import functionality will be implemented soon",
+    });
+  };
+
+  const handleExport = () => {
+    toast({
+      title: "Export feature",
+      description: "Lead export functionality will be implemented soon",
+    });
+  };
 
   return (
-    <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold tracking-tight">Leads</h1>
-        <p className="text-muted-foreground">
-          Manage and view your leads
-        </p>
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Leads</h1>
+        
+        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setDialogOpen(true)}>
+          <Plus className="mr-2 h-5 w-5" />
+          Add New Lead
+        </Button>
       </div>
-      <Tabs defaultValue="all" className="w-full space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="inactive">Inactive</TabsTrigger>
-        </TabsList>
-        <TabsContent value="all" className="space-y-2">
-          {loading ? (
-            <div>Loading leads...</div>
-          ) : (
-            <div className="w-full">
-              <div className="flex items-center py-4">
-                <DataTableSearch leads={leads} setFilteredLeads={setLeads} />
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="ml-auto">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Lead
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <LeadForm onComplete={handleLeadFormComplete} />
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <DataTable columns={columns} data={leads} />
+
+      <div className="flex justify-between items-center mt-6">
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search leads..."
+              className="pl-9 h-10 w-64 rounded-md border border-input bg-background px-3 py-2"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="absolute left-3 top-3 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
             </div>
-          )}
-        </TabsContent>
-        <TabsContent value="active" className="space-y-2">
-          <div>Active leads content</div>
-        </TabsContent>
-        <TabsContent value="inactive" className="space-y-2">
-          <div>Inactive leads content</div>
-        </TabsContent>
-      </Tabs>
+          </div>
+          
+          <div className="relative">
+            <select 
+              className="h-10 pr-10 rounded-md border border-input bg-background px-3 py-2"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Statuses</option>
+              <option value="New">New</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Qualified">Qualified</option>
+              <option value="Proposal">Proposal</option>
+              <option value="Converted">Converted</option>
+              <option value="Lost">Lost</option>
+            </select>
+            <div className="absolute right-3 top-3 pointer-events-none text-gray-400">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={handleImport} className="flex items-center">
+            <Import className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+          <Button variant="outline" onClick={handleExport} className="flex items-center">
+            <FileText className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      <LeadsTable 
+        leads={leads} 
+        loading={loading} 
+        searchTerm={searchTerm}
+        statusFilter={statusFilter}
+      />
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <LeadForm onComplete={handleLeadFormComplete} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

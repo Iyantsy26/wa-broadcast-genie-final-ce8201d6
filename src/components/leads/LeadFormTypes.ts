@@ -8,6 +8,7 @@ export type FormValues = {
   phone?: string;
   address?: string;
   status: string;
+  source?: string;
   referrer_name?: string;
   last_contact?: Date;
   next_followup?: Date;

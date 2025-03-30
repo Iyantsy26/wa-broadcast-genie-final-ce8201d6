@@ -34,7 +34,7 @@ const LeadContactInfo: React.FC<LeadContactInfoProps> = ({ form }) => {
           <FormItem>
             <FormLabel>Company</FormLabel>
             <FormControl>
-              <Input placeholder="ACME Inc." {...field} />
+              <Input placeholder="Acme Inc" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -48,7 +48,7 @@ const LeadContactInfo: React.FC<LeadContactInfoProps> = ({ form }) => {
           <FormItem>
             <FormLabel>Email</FormLabel>
             <FormControl>
-              <Input type="email" placeholder="john@example.com" {...field} />
+              <Input placeholder="john@example.com" type="email" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -62,7 +62,33 @@ const LeadContactInfo: React.FC<LeadContactInfoProps> = ({ form }) => {
           <FormItem>
             <FormLabel>Phone</FormLabel>
             <FormControl>
-              <Input placeholder="+1 123 456 7890" {...field} />
+              <Input placeholder="+1 (555) 123-4567" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="source"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Source</FormLabel>
+            <FormControl>
+              <select 
+                className="w-full rounded-md border border-input bg-background px-3 py-2" 
+                {...field}
+              >
+                <option value="">-- Select Source --</option>
+                <option value="Website">Website</option>
+                <option value="WhatsApp Campaign">WhatsApp Campaign</option>
+                <option value="WhatsApp Bot">WhatsApp Bot</option>
+                <option value="Referral">Referral</option>
+                <option value="Email Campaign">Email Campaign</option>
+                <option value="Social Media">Social Media</option>
+                <option value="Other">Other</option>
+              </select>
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -76,7 +102,7 @@ const LeadContactInfo: React.FC<LeadContactInfoProps> = ({ form }) => {
           <FormItem>
             <FormLabel>Address</FormLabel>
             <FormControl>
-              <Input placeholder="123 Main St, New York, NY" {...field} />
+              <Input placeholder="123 Main St, City, Country" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

@@ -1,9 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from 'uuid';
 import { Lead } from '@/types/conversation';
+import { generateMockLeads } from './mockLeadData';
+
+// In-memory cache for development/testing
+let mockLeads = generateMockLeads();
 
 export const getLeads = async (): Promise<Lead[]> => {
   try {
+    // Try to fetch from Supabase first
     const { data, error } = await supabase
       .from('leads')
       .select('*')
@@ -11,29 +16,24 @@ export const getLeads = async (): Promise<Lead[]> => {
 
     if (error) {
       console.error('Error fetching leads:', error);
-      throw new Error(error.message);
+      // Fall back to mock data if Supabase query fails
+      return mockLeads;
     }
 
-    return (data || []).map(lead => ({
-      id: lead.id,
-      name: lead.name,
-      email: lead.email,
-      phone: lead.phone,
-      company: lead.company,
-      address: lead.address,
-      avatar_url: lead.avatar_url,
-      status: lead.status,
-      source: lead.source,
-      referrer_name: lead.referrer_name,
-      notes: lead.notes,
-      last_contact: lead.last_contact,
-      next_followup: lead.next_followup,
-      created_at: lead.created_at,
-      initials: lead.name.split(' ').map(n => n[0]).join('')
-    }));
+    // If we got data from Supabase, use it
+    if (data && data.length > 0) {
+      return data.map(lead => ({
+        ...lead,
+        initials: getInitials(lead.name)
+      }));
+    }
+
+    // Otherwise use mock data
+    return mockLeads;
   } catch (error) {
     console.error('Error in getLeads:', error);
-    return [];
+    // Return mock data as fallback
+    return mockLeads;
   }
 };
 
