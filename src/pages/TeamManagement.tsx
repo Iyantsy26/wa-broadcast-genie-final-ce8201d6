@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -48,7 +47,6 @@ import {
   updateRolePermissions
 } from "@/services/teamService";
 
-// Import the components we created
 import TeamMembersList from '@/components/team/TeamMembersList';
 import AddTeamMemberDialog from '@/components/team/AddTeamMemberDialog';
 import DepartmentCard from '@/components/team/DepartmentCard';
@@ -59,17 +57,14 @@ import TeamMemberProfile from '@/components/team/TeamMemberProfile';
 const TeamManagement = () => {
   const { toast } = useToast();
   
-  // State for members, departments, and roles
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   
-  // State for search and filters
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all-status');
   
-  // State for dialogs
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isAddDepartmentOpen, setIsAddDepartmentOpen] = useState(false);
   const [isEditRoleOpen, setIsEditRoleOpen] = useState(false);
@@ -78,12 +73,12 @@ const TeamManagement = () => {
   const [isChangeRoleOpen, setIsChangeRoleOpen] = useState(false);
   const [isEditDepartmentOpen, setIsEditDepartmentOpen] = useState(false);
   
-  // Selected items for editing
   const [selectedMember, setSelectedMember] = useState<TeamMember | undefined>();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | undefined>();
   const [selectedRole, setSelectedRole] = useState<Role | undefined>();
 
-  // Fetch data on component mount
+  const currentUserRole = 'admin';
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -108,7 +103,6 @@ const TeamManagement = () => {
     fetchData();
   }, [toast]);
 
-  // Filter members based on search and filters
   const filteredMembers = members.filter(member => {
     const matchesSearch = 
       searchQuery === '' || 
@@ -124,7 +118,6 @@ const TeamManagement = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Team Member Handlers
   const handleAddMember = async (member: Omit<TeamMember, 'id'>) => {
     try {
       const newMember = await addTeamMember(member);
@@ -226,7 +219,6 @@ const TeamManagement = () => {
     }
   };
 
-  // Department Handlers
   const handleAddDepartment = async (department: Partial<Department>) => {
     try {
       if (!department.name) {
@@ -346,7 +338,6 @@ const TeamManagement = () => {
     // This would typically navigate to the conversations page filtered for this department
   };
 
-  // Role Handlers
   const handleEditRole = (id: string) => {
     const role = roles.find(r => r.id === id);
     setSelectedRole(role);
@@ -454,32 +445,24 @@ const TeamManagement = () => {
               <TeamMembersList
                 members={filteredMembers}
                 onViewProfile={handleViewProfile}
-                onEditMember={handleEditMember}
-                onChangeRole={handleChangeRole}
-                onResetPassword={handleResetPassword}
-                onActivate={handleActivateMember}
-                onDeactivate={handleDeactivateMember}
-                onDelete={handleDeleteMember}
               />
             </CardContent>
           </Card>
           
-          {/* Add Team Member Dialog */}
           <AddTeamMemberDialog
             open={isAddMemberOpen}
             onOpenChange={setIsAddMemberOpen}
             departments={departments}
             onSuccess={() => {
-              // Refresh the members list
               getTeamMembers().then(setMembers);
             }}
           />
           
-          {/* Team Member Profile Dialog */}
           <TeamMemberProfile
             open={isViewProfileOpen}
             onOpenChange={setIsViewProfileOpen}
             member={selectedMember}
+            currentUserRole={currentUserRole}
             onEdit={() => {
               setIsViewProfileOpen(false);
               setIsEditMemberOpen(true);
@@ -518,7 +501,6 @@ const TeamManagement = () => {
             ))}
           </div>
           
-          {/* Department Form Dialog */}
           <DepartmentForm
             open={isAddDepartmentOpen}
             onOpenChange={setIsAddDepartmentOpen}
@@ -526,7 +508,6 @@ const TeamManagement = () => {
             onSave={handleAddDepartment}
           />
           
-          {/* Edit Department Dialog */}
           {selectedDepartment && (
             <DepartmentForm
               open={isEditDepartmentOpen}
@@ -570,7 +551,6 @@ const TeamManagement = () => {
             </Card>
           ))}
           
-          {/* Role Permissions Form Dialog */}
           {selectedRole && (
             <RolePermissionsForm
               open={isEditRoleOpen}

@@ -23,15 +23,19 @@ interface TeamMemberProfileProps {
   onOpenChange: (open: boolean) => void;
   member?: TeamMember;
   onEdit: () => void;
+  currentUserRole?: string;
 }
 
 const TeamMemberProfile = ({
   open,
   onOpenChange,
   member,
-  onEdit
+  onEdit,
+  currentUserRole
 }: TeamMemberProfileProps) => {
   if (!member) return null;
+
+  const isAdmin = currentUserRole === 'admin';
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -198,9 +202,11 @@ const TeamMemberProfile = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button onClick={onEdit}>
-            Edit Profile
-          </Button>
+          {isAdmin && (
+            <Button onClick={onEdit}>
+              Edit Profile
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

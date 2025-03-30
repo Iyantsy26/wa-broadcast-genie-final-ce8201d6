@@ -1,45 +1,24 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuTrigger, DropdownMenuSeparator 
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
-  MoreHorizontal, User, Shield, Lock, Edit, Trash2, 
   CheckCircle, XCircle, Smartphone 
 } from "lucide-react";
 import type { TeamMember } from "@/services/teamService";
-import { useToast } from "@/hooks/use-toast";
 
 interface TeamMembersListProps {
   members: TeamMember[];
   onViewProfile: (id: string) => void;
-  onEditMember: (id: string) => void;
-  onChangeRole: (id: string) => void;
-  onResetPassword: (id: string) => void;
-  onActivate: (id: string) => void;
-  onDeactivate: (id: string) => void;
-  onDelete: (id: string) => void;
 }
 
 const TeamMembersList = ({
   members,
-  onViewProfile,
-  onEditMember,
-  onChangeRole,
-  onResetPassword,
-  onActivate,
-  onDeactivate,
-  onDelete
+  onViewProfile
 }: TeamMembersListProps) => {
-  const { toast } = useToast();
-
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -103,14 +82,16 @@ const TeamMembersList = ({
           <TableHead>Status</TableHead>
           <TableHead>WhatsApp Accounts</TableHead>
           <TableHead>Last Active</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {members.map((member) => (
           <TableRow key={member.id}>
             <TableCell>
-              <div className="flex items-center gap-2">
+              <div 
+                className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                onClick={() => onViewProfile(member.id)}
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={member.avatar} />
                   <AvatarFallback className="bg-primary/10 text-primary">
@@ -157,52 +138,6 @@ const TeamMembersList = ({
               ) : (
                 '—'
               )}
-            </TableCell>
-            <TableCell className="text-right">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onViewProfile(member.id)}>
-                    <User className="mr-2 h-4 w-4" />
-                    View Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onEditMember(member.id)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onChangeRole(member.id)}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Change Role
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onResetPassword(member.id)}>
-                    <Lock className="mr-2 h-4 w-4" />
-                    Reset Password
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {member.status === 'active' ? (
-                    <DropdownMenuItem onClick={() => onDeactivate(member.id)}>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Deactivate
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem onClick={() => onActivate(member.id)}>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Activate
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem 
-                    className="text-red-600"
-                    onClick={() => onDelete(member.id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </TableCell>
           </TableRow>
         ))}
