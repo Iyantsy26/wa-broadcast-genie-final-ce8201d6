@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   PlusCircle, 
   Search, 
@@ -13,7 +14,8 @@ import {
   Download,
   Upload
 } from 'lucide-react';
-import { getLeads, deleteLead, exportLeadsToCSV, importLeadsFromCSV } from '@/services/leadService';
+import { getLeads, exportLeadsToCSV, importLeadsFromCSV } from '@/services/leadService';
+import { createConversation } from '@/services/conversationService';
 import { Lead } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +46,7 @@ import {
 import LeadForm from '@/components/leads/LeadForm';
 
 const Leads = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -111,27 +114,6 @@ const Leads = () => {
     return result;
   }, [leads, searchTerm, statusFilter, sortField, sortDirection]);
 
-  // Handle lead deletion
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this lead?')) {
-      try {
-        await deleteLead(id);
-        refetch();
-        toast({
-          title: "Lead deleted",
-          description: "The lead has been successfully deleted.",
-        });
-      } catch (error) {
-        console.error("Error deleting lead:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete the lead.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
   // Handle form submission completion
   const handleFormComplete = () => {
     setIsAddDialogOpen(false);
@@ -148,6 +130,38 @@ const Leads = () => {
       // New field, default to descending
       setSortField(field);
       setSortDirection('desc');
+    }
+  };
+
+  // Handle creating a conversation with a lead
+  const handleCreateConversation = async (lead: Lead) => {
+    try {
+      if (!lead.phone) {
+        toast({
+          title: "Missing phone number",
+          description: "This lead doesn't have a phone number to start a conversation.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Creating conversation",
+        description: "Please wait while we set up the conversation...",
+      });
+
+      const initialMessage = `Hello ${lead.name}, this is a new conversation.`;
+      const conversationId = await createConversation(lead.id, 'lead', initialMessage);
+      
+      // Navigate to the conversation
+      navigate(`/conversations?id=${conversationId}`);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create a conversation with this lead.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -346,7 +360,7 @@ const Leads = () => {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-12"></TableHead>
-                    <TableHead className="w-[200px]">
+                    <TableHead className="w-[220px]">
                       <button 
                         className="flex items-center space-x-1"
                         onClick={() => handleSort('name')}
@@ -365,17 +379,6 @@ const Leads = () => {
                       >
                         <span>SOURCE</span>
                         {sortField === 'source' && (
-                          <ArrowUpDown className="h-3 w-3" />
-                        )}
-                      </button>
-                    </TableHead>
-                    <TableHead className="w-[120px]">
-                      <button 
-                        className="flex items-center space-x-1"
-                        onClick={() => handleSort('status')}
-                      >
-                        <span>STATUS</span>
-                        {sortField === 'status' && (
                           <ArrowUpDown className="h-3 w-3" />
                         )}
                       </button>
@@ -445,6 +448,11 @@ const Leads = () => {
                             )}
                           </DialogContent>
                         </Dialog>
+                        <div className="mt-1">
+                          <Badge className={getStatusColor(lead.status)}>
+                            {lead.status}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="p-3">
                         {lead.email && (
@@ -462,11 +470,6 @@ const Leads = () => {
                         {lead.source || '-'}
                       </TableCell>
                       <TableCell className="p-3">
-                        <Badge className={getStatusColor(lead.status)}>
-                          {lead.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="p-3">
                         {formatDate(lead.created_at)}
                       </TableCell>
                       <TableCell className="p-3">
@@ -474,50 +477,21 @@ const Leads = () => {
                       </TableCell>
                       <TableCell className="p-3 text-right">
                         <div className="flex justify-end space-x-1">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleCreateConversation(lead)}
+                            title="Start conversation"
+                          >
                             <MessageSquare className="h-4 w-4 text-gray-500" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Send email">
                             <Mail className="h-4 w-4 text-gray-500" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Call">
                             <Phone className="h-4 w-4 text-gray-500" />
                           </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4 text-gray-500" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <DropdownMenuItem 
-                                    onClick={() => setEditingLead(lead)}
-                                  >
-                                    Edit Lead
-                                  </DropdownMenuItem>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[600px]">
-                                  <DialogHeader>
-                                    <DialogTitle>Edit Lead</DialogTitle>
-                                  </DialogHeader>
-                                  {editingLead && (
-                                    <LeadForm 
-                                      lead={editingLead} 
-                                      onComplete={handleFormComplete} 
-                                    />
-                                  )}
-                                </DialogContent>
-                              </Dialog>
-                              <DropdownMenuItem 
-                                className="text-red-600"
-                                onClick={() => handleDelete(lead.id)}
-                              >
-                                Delete Lead
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>

@@ -33,8 +33,8 @@ export const getConversations = async (): Promise<Conversation[]> => {
       id: conv.id,
       contact: {
         id: isClient ? conv.client_id : conv.lead_id,
-        name: contactData.name,
-        avatar: contactData.avatar_url,
+        name: contactData?.name || 'Unknown',
+        avatar: contactData?.avatar_url,
         phone: '', // We'll need to add this later
         type: isClient ? 'client' : 'lead'
       },
@@ -82,8 +82,8 @@ export const getConversation = async (id: string): Promise<Conversation | null> 
     id: data.id,
     contact: {
       id: isClient ? data.client_id : data.lead_id,
-      name: contactData.name,
-      avatar: contactData.avatar_url,
+      name: contactData?.name || 'Unknown',
+      avatar: contactData?.avatar_url,
       phone: '', // We'll need to add this later
       type: isClient ? 'client' : 'lead'
     },
