@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useConversations } from '@/hooks/useConversations';
 import { Conversation, Message } from '@/types/conversation';
 import { DateRange } from 'react-day-picker';
@@ -37,18 +37,14 @@ export const ConversationContext = createContext<ConversationContextType | undef
 
 export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const conversationsState = useConversations();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    conversationsState.messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationsState.messages]);
 
   return (
-    <ConversationContext.Provider value={{
-      ...conversationsState,
-      messagesEndRef
-    }}>
+    <ConversationContext.Provider value={conversationsState}>
       {children}
     </ConversationContext.Provider>
   );
