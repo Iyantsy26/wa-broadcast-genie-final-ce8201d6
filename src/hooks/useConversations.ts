@@ -27,6 +27,7 @@ export const useConversations = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [assigneeFilter, setAssigneeFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchConversations();
@@ -99,6 +100,7 @@ export const useConversations = () => {
       const data = await getConversations();
       setConversations(data);
       
+      // If there's no active conversation but we have conversations, set the first one as active
       if (!activeConversation && data.length > 0) {
         setActiveConversation(data[0]);
       }
@@ -277,14 +279,20 @@ export const useConversations = () => {
       // Check if we're deleting the active conversation
       const isActive = activeConversation?.id === conversationId;
 
-      // Optimistically update UI first (remove from local state)
+      // First, update the local state
       setConversations(prev => prev.filter(convo => convo.id !== conversationId));
       
       // If we're deleting the active conversation, set a new active one
       if (isActive) {
         const remainingConversations = conversations.filter(c => c.id !== conversationId);
-        setActiveConversation(remainingConversations.length > 0 ? remainingConversations[0] : null);
-        setMessages([]);
+        if (remainingConversations.length > 0) {
+          setActiveConversation(remainingConversations[0]);
+        } else {
+          setActiveConversation(null);
+          setMessages([]);
+        }
+        // Close the sidebar if it's open
+        setIsSidebarOpen(false);
       }
       
       // Then perform the actual API deletion
@@ -407,6 +415,7 @@ export const useConversations = () => {
     dateRange,
     assigneeFilter,
     tagFilter,
+    messagesEndRef,
     setActiveConversation,
     setIsSidebarOpen,
     setStatusFilter,

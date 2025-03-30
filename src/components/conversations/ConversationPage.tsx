@@ -31,7 +31,8 @@ const ConversationPage = () => {
     resetAllFilters,
     handleSendMessage,
     handleVoiceMessageSent,
-    handleArchiveConversation
+    handleArchiveConversation,
+    handleDeleteConversation
   } = useConversation();
 
   // Define dummy pinConversation function to satisfy the interface
@@ -94,6 +95,8 @@ const ConversationPage = () => {
         {activeConversation && isSidebarOpen && (
           <ContactInfoSidebar 
             conversation={activeConversation}
+            isOpen={isSidebarOpen}
+            onOpenChange={setIsSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
           />
         )}

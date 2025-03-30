@@ -59,8 +59,8 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
 
   const handleDelete = async () => {
     try {
-      await handleDeleteConversation(conversation.id);
       setShowDeleteDialog(false);
+      await handleDeleteConversation(conversation.id);
       toast({
         title: "Conversation deleted",
         description: "The conversation has been successfully deleted.",
