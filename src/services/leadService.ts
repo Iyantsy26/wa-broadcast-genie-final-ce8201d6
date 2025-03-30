@@ -13,7 +13,10 @@ export const getLeads = async (): Promise<Lead[]> => {
     throw error;
   }
 
-  return data as Lead[];
+  return data.map(lead => ({
+    ...lead,
+    initials: getInitials(lead.name)
+  })) as Lead[];
 };
 
 export const getLead = async (id: string): Promise<Lead> => {
@@ -28,10 +31,13 @@ export const getLead = async (id: string): Promise<Lead> => {
     throw error;
   }
 
-  return data as Lead;
+  return {
+    ...data,
+    initials: getInitials(data.name)
+  } as Lead;
 };
 
-export const createLead = async (lead: Omit<Lead, 'id' | 'created_at'>): Promise<Lead> => {
+export const createLead = async (lead: Omit<Lead, 'id' | 'created_at' | 'initials'>): Promise<Lead> => {
   const { data, error } = await supabase
     .from('leads')
     .insert(lead)
@@ -43,7 +49,10 @@ export const createLead = async (lead: Omit<Lead, 'id' | 'created_at'>): Promise
     throw error;
   }
 
-  return data as Lead;
+  return {
+    ...data,
+    initials: getInitials(data.name)
+  } as Lead;
 };
 
 export const updateLead = async (id: string, lead: Partial<Lead>): Promise<Lead> => {
@@ -59,7 +68,10 @@ export const updateLead = async (id: string, lead: Partial<Lead>): Promise<Lead>
     throw error;
   }
 
-  return data as Lead;
+  return {
+    ...data,
+    initials: getInitials(data.name)
+  } as Lead;
 };
 
 export const deleteLead = async (id: string): Promise<void> => {
@@ -93,4 +105,115 @@ export const uploadLeadAvatar = async (file: File, leadId: string): Promise<stri
     .getPublicUrl(filePath);
 
   return data.publicUrl;
+};
+
+// Export leads to CSV
+export const exportLeadsToCSV = (): string => {
+  const leads = JSON.parse(localStorage.getItem('cached_leads') || '[]');
+  
+  if (leads.length === 0) {
+    throw new Error('No leads data available to export');
+  }
+
+  const headers = [
+    'Name', 
+    'Email', 
+    'Phone', 
+    'Company', 
+    'Source', 
+    'Status', 
+    'Created', 
+    'Last Contact'
+  ].join(',');
+  
+  const rows = leads.map((lead: Lead) => [
+    `"${lead.name}"`,
+    `"${lead.email || ''}"`,
+    `"${lead.phone || ''}"`,
+    `"${lead.company || ''}"`,
+    `"${lead.source || ''}"`,
+    `"${lead.status || ''}"`,
+    `"${new Date(lead.created_at).toLocaleDateString()}"`,
+    `"${lead.last_contact ? new Date(lead.last_contact).toLocaleDateString() : ''}"`
+  ].join(','));
+  
+  return [headers, ...rows].join('\n');
+};
+
+// Parse CSV file for importing leads
+export const parseCSVForImport = async (file: File): Promise<Omit<Lead, 'id' | 'created_at' | 'initials'>[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const leads = lines.slice(1).filter(line => line.trim()).map(line => {
+          const values = line.split(',').map(v => v.trim().replace(/^"(.*)"$/, '$1'));
+          const lead: any = {
+            status: 'New' // Default status
+          };
+          
+          headers.forEach((header, index) => {
+            if (header === 'name') lead.name = values[index];
+            else if (header === 'email') lead.email = values[index];
+            else if (header === 'phone') lead.phone = values[index];
+            else if (header === 'company') lead.company = values[index];
+            else if (header === 'source') lead.source = values[index];
+            else if (header === 'status') lead.status = values[index] || 'New';
+          });
+          
+          return lead;
+        });
+        
+        resolve(leads.filter(lead => lead.name));
+      } catch (error) {
+        reject(new Error('Failed to parse CSV file'));
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to read CSV file'));
+    };
+    
+    reader.readAsText(file);
+  });
+};
+
+// Import leads from CSV
+export const importLeadsFromCSV = async (file: File): Promise<Lead[]> => {
+  try {
+    const leadsToImport = await parseCSVForImport(file);
+    
+    const { data, error } = await supabase
+      .from('leads')
+      .insert(leadsToImport)
+      .select();
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data.map(lead => ({
+      ...lead,
+      initials: getInitials(lead.name)
+    })) as Lead[];
+  } catch (error) {
+    console.error('Error importing leads:', error);
+    throw error;
+  }
+};
+
+// Helper function to get initials from name
+export const getInitials = (name: string): string => {
+  if (!name) return '';
+  
+  return name
+    .split(' ')
+    .map(part => part.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join('');
 };

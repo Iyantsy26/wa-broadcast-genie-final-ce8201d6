@@ -9,6 +9,10 @@ export interface Contact {
   avatar?: string;
   status?: string;
   company?: string;
+  isOnline?: boolean;
+  lastSeen?: string;
+  role?: string;
+  type?: string;
 }
 
 export interface Conversation {
@@ -24,6 +28,11 @@ export interface Conversation {
   assignedTo?: string;
   tags?: string[];
   type?: ChatType;
+  chatType?: ChatType;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  unreadCount?: number;
+  isEncrypted?: boolean;
 }
 
 export interface Message {
@@ -31,15 +40,20 @@ export interface Message {
   content: string;
   timestamp: string;
   isOutbound: boolean;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'sending';
   sender: string;
+  senderId?: string;
   type: 'text' | 'image' | 'video' | 'document' | 'voice' | 'location';
   media?: {
     url: string;
     type: 'image' | 'video' | 'document' | 'voice';
     filename?: string;
     duration?: number;
+    size?: number;
   };
+  reactions?: { emoji: string; count: number }[];
+  replyTo?: Message;
+  viaWhatsApp?: boolean;
 }
 
 export interface Lead {
@@ -57,6 +71,7 @@ export interface Lead {
   next_followup?: string;
   notes?: string;
   avatar_url?: string;
+  initials?: string;
 }
 
 export interface Client {
