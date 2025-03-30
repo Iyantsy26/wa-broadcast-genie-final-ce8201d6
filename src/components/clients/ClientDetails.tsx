@@ -3,10 +3,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, FileEdit, User } from "lucide-react";
+import { Edit, FileEdit, User, MessageSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import ClientNotes from './ClientNotes';
 import { Client } from '@/types/client';
+import { useNavigate } from 'react-router-dom';
 
 interface ClientDetailsProps {
   client: Client;
@@ -14,15 +15,36 @@ interface ClientDetailsProps {
 }
 
 const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onEdit }) => {
+  const navigate = useNavigate();
+
+  const handleSendMessage = () => {
+    // Navigate to the Conversations page
+    navigate('/conversations');
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl">Client Details</CardTitle>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Edit className="mr-1 h-4 w-4" />
-            Edit Client
-          </Button>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSendMessage}
+            >
+              <MessageSquare className="mr-1 h-4 w-4" />
+              Send Message
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onEdit}
+            >
+              <Edit className="mr-1 h-4 w-4" />
+              Edit Client
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4 pb-4">
