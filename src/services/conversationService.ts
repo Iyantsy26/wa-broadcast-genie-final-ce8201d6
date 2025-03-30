@@ -27,11 +27,14 @@ export const getConversations = async (): Promise<Conversation[]> => {
   // Transform the data to match our Conversation type
   return (data || []).map(conv => {
     const isClient = !!conv.client_id;
-    const contactData = isClient ? conv.clients : conv.leads;
     
     // Safely handle the potential null/undefined cases
-    const contactName = contactData ? contactData.name : 'Unknown';
-    const contactAvatar = contactData ? contactData.avatar_url : undefined;
+    // Use optional chaining to safely access nested properties
+    const contactData = isClient ? conv.clients : conv.leads;
+    
+    // Default values if data is missing
+    const contactName = contactData && 'name' in contactData ? contactData.name : 'Unknown';
+    const contactAvatar = contactData && 'avatar_url' in contactData ? contactData.avatar_url : undefined;
     
     return {
       id: conv.id,
@@ -83,8 +86,8 @@ export const getConversation = async (id: string): Promise<Conversation | null> 
   const contactData = isClient ? data.clients : data.leads;
   
   // Safely handle the potential null/undefined cases
-  const contactName = contactData ? contactData.name : 'Unknown';
-  const contactAvatar = contactData ? contactData.avatar_url : undefined;
+  const contactName = contactData && 'name' in contactData ? contactData.name : 'Unknown';
+  const contactAvatar = contactData && 'avatar_url' in contactData ? contactData.avatar_url : undefined;
   
   return {
     id: data.id,
