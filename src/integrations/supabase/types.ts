@@ -42,6 +42,54 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          company: string | null
+          email: string | null
+          id: string
+          join_date: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          plan_details: string | null
+          referred_by: string | null
+          renewal_date: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          company?: string | null
+          email?: string | null
+          id?: string
+          join_date?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          plan_details?: string | null
+          referred_by?: string | null
+          renewal_date?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          company?: string | null
+          email?: string | null
+          id?: string
+          join_date?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          plan_details?: string | null
+          referred_by?: string | null
+          renewal_date?: string | null
+          tags?: string[] | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           client_id: string | null
@@ -72,6 +120,57 @@ export type Database = {
           lead_id?: string | null
           status?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_contact: string | null
+          name: string
+          next_followup: string | null
+          notes: string | null
+          phone: string | null
+          referrer_name: string | null
+          source: string | null
+          status: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contact?: string | null
+          name: string
+          next_followup?: string | null
+          notes?: string | null
+          phone?: string | null
+          referrer_name?: string | null
+          source?: string | null
+          status?: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_contact?: string | null
+          name?: string
+          next_followup?: string | null
+          notes?: string | null
+          phone?: string | null
+          referrer_name?: string | null
+          source?: string | null
+          status?: string
         }
         Relationships: []
       }

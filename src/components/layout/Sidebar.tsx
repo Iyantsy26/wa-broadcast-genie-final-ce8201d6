@@ -12,7 +12,9 @@ import {
   Settings, 
   FileText, 
   Ticket, 
-  Home
+  Home,
+  UserRound,
+  Building2
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -55,6 +57,16 @@ const navItems: NavItem[] = [
     title: 'Conversations',
     href: '/conversations',
     icon: <MessageCircle className="h-5 w-5" />,
+  },
+  {
+    title: 'Leads',
+    href: '/leads',
+    icon: <UserRound className="h-5 w-5" />,
+  },
+  {
+    title: 'Clients',
+    href: '/clients',
+    icon: <Building2 className="h-5 w-5" />,
   },
   {
     title: 'Team Management',

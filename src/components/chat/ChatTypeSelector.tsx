@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ChatType } from '@/types/conversation';
-import { MessageCircle, Users } from 'lucide-react';
+import { MessageCircle, Users, UserRound, Building2 } from 'lucide-react';
 
 interface ChatTypeSelectorProps {
   chatTypeFilter: ChatType | 'all';
@@ -32,6 +32,24 @@ export const ChatTypeSelector: React.FC<ChatTypeSelectorProps> = ({
       >
         <Users className="h-4 w-4 mr-2" />
         Team
+      </Button>
+      <Button
+        variant={chatTypeFilter === 'lead' ? 'default' : 'ghost'}
+        size="sm"
+        onClick={() => setChatTypeFilter('lead')}
+        className="rounded-sm px-3"
+      >
+        <UserRound className="h-4 w-4 mr-2" />
+        Leads
+      </Button>
+      <Button
+        variant={chatTypeFilter === 'client' ? 'default' : 'ghost'}
+        size="sm"
+        onClick={() => setChatTypeFilter('client')}
+        className="rounded-sm px-3"
+      >
+        <Building2 className="h-4 w-4 mr-2" />
+        Clients
       </Button>
     </div>
   );

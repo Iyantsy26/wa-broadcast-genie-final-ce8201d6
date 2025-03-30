@@ -16,6 +16,8 @@ import TeamManagement from "./pages/TeamManagement";
 import Analytics from "./pages/Analytics";
 import Tickets from "./pages/Tickets";
 import Settings from "./pages/Settings";
+import Leads from "./pages/Leads";
+import Clients from "./pages/Clients";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/chatbots" element={<ChatbotBuilder />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/conversations" element={<Conversations />} />
+            <Route path="/leads" element={<Leads />} />
+            <Route path="/clients" element={<Clients />} />
             <Route path="/team" element={<TeamManagement />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/tickets" element={<Tickets />} />
