@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 interface ArchiveConversationDialogProps {
   open: boolean;
@@ -26,14 +27,30 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
   conversationId,
   onArchive
 }) => {
+  const [isArchiving, setIsArchiving] = React.useState(false);
+
   const handleArchive = async () => {
     try {
+      setIsArchiving(true);
       // Close dialog before archive action to prevent UI freezing
       onOpenChange(false);
+      
       // Execute archive after dialog is closed
       await onArchive(conversationId);
+      
+      toast({
+        title: "Conversation archived",
+        description: `Conversation with ${contactName} has been archived.`,
+      });
     } catch (error) {
       console.error("Error archiving conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to archive conversation. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -48,9 +65,9 @@ const ArchiveConversationDialog: React.FC<ArchiveConversationDialogProps> = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleArchive}>
-            Archive
+          <AlertDialogCancel disabled={isArchiving}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleArchive} disabled={isArchiving}>
+            {isArchiving ? 'Archiving...' : 'Archive'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
