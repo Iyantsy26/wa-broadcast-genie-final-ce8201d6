@@ -28,6 +28,7 @@ export const getClients = async (): Promise<Client[]> => {
     website: item.website,
     address: item.address,
     notes: item.notes,
+    // Handle new fields that might not exist in the database
     referredBy: item.referred_by || '',
     tags: item.tags || [],
     subscriptionPlan: item.subscription_plan || '',
@@ -64,10 +65,11 @@ export const getClient = async (id: string): Promise<Client | null> => {
     website: data.website,
     address: data.address,
     notes: data.notes,
-    referredBy: data.referred_by || '',
-    tags: data.tags || [],
-    subscriptionPlan: data.subscription_plan || '',
-    renewalDate: data.renewal_date || ''
+    // Handle new fields that might not exist in the database
+    referredBy: (data as any).referred_by || '',
+    tags: (data as any).tags || [],
+    subscriptionPlan: (data as any).subscription_plan || '',
+    renewalDate: (data as any).renewal_date || ''
   };
 };
 
@@ -86,6 +88,7 @@ export const createClient = async (client: Omit<Client, 'id'>): Promise<Client> 
     website: client.website,
     address: client.address,
     notes: client.notes,
+    // Handle new fields
     referred_by: client.referredBy,
     tags: client.tags,
     subscription_plan: client.subscriptionPlan,
@@ -118,10 +121,11 @@ export const createClient = async (client: Omit<Client, 'id'>): Promise<Client> 
     website: data.website,
     address: data.address,
     notes: data.notes,
-    referredBy: data.referred_by || '',
-    tags: data.tags || [],
-    subscriptionPlan: data.subscription_plan || '',
-    renewalDate: data.renewal_date || ''
+    // Handle new fields that might not exist in the database
+    referredBy: (data as any).referred_by || '',
+    tags: (data as any).tags || [],
+    subscriptionPlan: (data as any).subscription_plan || '',
+    renewalDate: (data as any).renewal_date || ''
   };
 };
 
@@ -173,10 +177,11 @@ export const updateClient = async (id: string, client: Partial<Client>): Promise
     website: data.website,
     address: data.address,
     notes: data.notes,
-    referredBy: data.referred_by || '',
-    tags: data.tags || [],
-    subscriptionPlan: data.subscription_plan || '',
-    renewalDate: data.renewal_date || ''
+    // Handle new fields that might not exist in the database
+    referredBy: (data as any).referred_by || '',
+    tags: (data as any).tags || [],
+    subscriptionPlan: (data as any).subscription_plan || '',
+    renewalDate: (data as any).renewal_date || ''
   };
 };
 
