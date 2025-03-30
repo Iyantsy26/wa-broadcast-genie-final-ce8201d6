@@ -26,6 +26,7 @@ interface ConversationContextType {
   resetAllFilters: () => void;
   handleSendMessage: (content: string, file: File | null) => void;
   handleVoiceMessageSent: (durationInSeconds: number) => void;
+  handleDeleteConversation: (conversationId: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
 

@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
 import { Conversation, Message } from '@/types/conversation';
-import { getConversations, getMessages, sendMessage } from '@/services/conversationService';
+import { getConversations, getMessages, sendMessage, deleteConversation } from '@/services/conversationService';
 import { toast } from '@/hooks/use-toast';
 
 export const useConversations = () => {
@@ -20,19 +19,16 @@ export const useConversations = () => {
   const [assigneeFilter, setAssigneeFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
 
-  // Fetch conversations on component mount
   useEffect(() => {
     fetchConversations();
   }, []);
 
-  // Fetch messages when active conversation changes
   useEffect(() => {
     if (activeConversation) {
       fetchMessages(activeConversation.id);
     }
   }, [activeConversation]);
 
-  // Filter conversations based on filters
   useEffect(() => {
     let filtered = [...conversations];
     
@@ -76,7 +72,6 @@ export const useConversations = () => {
     
     setFilteredConversations(filtered);
     
-    // Group conversations by contact name
     const grouped = filtered.reduce((acc, conversation) => {
       const name = conversation.contact.name;
       if (!acc[name]) {
@@ -95,7 +90,6 @@ export const useConversations = () => {
       const data = await getConversations();
       setConversations(data);
       
-      // Set active conversation to the first one if none is selected
       if (!activeConversation && data.length > 0) {
         setActiveConversation(data[0]);
       }
@@ -159,20 +153,16 @@ export const useConversations = () => {
     }
     
     try {
-      // Add message optimistically to UI
       const tempId = `temp-${Date.now()}`;
       const tempMessage = { ...newMessage, id: tempId };
       setMessages(prev => [...prev, tempMessage]);
       
-      // Send to server
       const savedMessage = await sendMessage(activeConversation.id, newMessage);
       
-      // Replace temp message with saved one
       setMessages(prev => 
         prev.map(m => m.id === tempId ? savedMessage : m)
       );
       
-      // Update conversation in list
       const updatedConvo = {
         ...activeConversation,
         lastMessage: {
@@ -224,20 +214,16 @@ export const useConversations = () => {
     };
     
     try {
-      // Add message optimistically to UI
       const tempId = `temp-voice-${Date.now()}`;
       const tempMessage = { ...voiceMessage, id: tempId };
       setMessages(prev => [...prev, tempMessage]);
       
-      // Send to server
       const savedMessage = await sendMessage(activeConversation.id, voiceMessage);
       
-      // Replace temp message with saved one
       setMessages(prev => 
         prev.map(m => m.id === tempId ? savedMessage : m)
       );
       
-      // Update conversation in list
       const updatedConvo = {
         ...activeConversation,
         lastMessage: {
@@ -277,6 +263,32 @@ export const useConversations = () => {
     setSearchTerm('');
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      if (activeConversation?.id === conversationId) {
+        setActiveConversation(null);
+      }
+      
+      await deleteConversation(conversationId);
+      
+      setConversations(prev => 
+        prev.filter(convo => convo.id !== conversationId)
+      );
+      
+      toast({
+        title: "Conversation deleted",
+        description: "The conversation has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete conversation",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     conversations,
     filteredConversations,
@@ -300,6 +312,7 @@ export const useConversations = () => {
     resetAllFilters,
     handleSendMessage,
     handleVoiceMessageSent,
-    refreshConversations: fetchConversations
+    refreshConversations: fetchConversations,
+    handleDeleteConversation
   };
 };

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Conversation, Message } from "@/types/conversation";
 
@@ -23,7 +22,6 @@ export const getConversations = async (): Promise<Conversation[]> => {
       throw error;
     }
 
-    // Get all contact information separately since the relations aren't set up
     let clients = {};
     let leads = {};
 
@@ -53,7 +51,6 @@ export const getConversations = async (): Promise<Conversation[]> => {
       }
     }
 
-    // Transform the data to match our Conversation type
     return (conversations || []).map(conv => {
       const isClient = !!conv.client_id;
       const contactId = isClient ? conv.client_id : conv.lead_id;
@@ -80,7 +77,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
     });
   } catch (error) {
     console.error('Error in getConversations:', error);
-    return []; // Return empty array rather than crashing
+    return [];
   }
 };
 
@@ -111,7 +108,6 @@ export const getConversation = async (id: string): Promise<Conversation | null> 
     const isClient = !!data.client_id;
     const contactId = isClient ? data.client_id : data.lead_id;
     
-    // Get contact information
     let contactInfo;
     if (isClient) {
       const { data: clientData } = await supabase
@@ -211,7 +207,6 @@ export const sendMessage = async (
     throw error;
   }
 
-  // Update the last message in the conversation
   await supabase
     .from('conversations')
     .update({
@@ -244,7 +239,6 @@ export const createConversation = async (
   contactType: 'client' | 'lead',
   initialMessage: string
 ): Promise<string> => {
-  // Create the conversation
   const { data: conversation, error: convError } = await supabase
     .from('conversations')
     .insert([{
@@ -262,7 +256,6 @@ export const createConversation = async (
     throw convError;
   }
 
-  // Create the initial message
   const { error: msgError } = await supabase
     .from('messages')
     .insert([{
@@ -281,4 +274,31 @@ export const createConversation = async (
   }
 
   return conversation.id;
+};
+
+export const deleteConversation = async (conversationId: string): Promise<void> => {
+  try {
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', conversationId);
+
+    if (messagesError) {
+      console.error('Error deleting messages:', messagesError);
+      throw messagesError;
+    }
+
+    const { error: conversationError } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (conversationError) {
+      console.error('Error deleting conversation:', conversationError);
+      throw conversationError;
+    }
+  } catch (error) {
+    console.error('Error in deleteConversation:', error);
+    throw error;
+  }
 };
