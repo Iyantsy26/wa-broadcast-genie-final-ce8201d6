@@ -33,7 +33,6 @@ type FormValues = {
   phone?: string;
   address?: string;
   status: string;
-  source?: string;
   referrer_name?: string;
   last_contact?: Date;
   next_followup?: Date;
@@ -45,7 +44,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(lead?.avatar_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Add time options
   const timeOptions = [];
@@ -64,7 +62,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
     phone: lead?.phone || '',
     address: lead?.address || '',
     status: lead?.status || 'New',
-    source: lead?.source || '',
     referrer_name: lead?.referrer_name || '',
     last_contact: lead?.last_contact ? new Date(lead.last_contact) : undefined,
     next_followup: lead?.next_followup ? new Date(lead.next_followup) : undefined,
@@ -116,9 +113,16 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
       }
       
       const formattedValues = {
-        ...values,
+        name: values.name,
+        company: values.company,
+        email: values.email,
+        phone: values.phone,
+        address: values.address,
+        status: values.status,
+        referrer_name: values.referrer_name,
         last_contact: values.last_contact ? values.last_contact.toISOString() : null,
         next_followup: next_followup ? next_followup.toISOString() : null,
+        notes: values.notes,
         avatar_url: avatarUrl
       };
       
@@ -284,29 +288,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
 
           <FormField
             control={form.control}
-            name="source"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Source</FormLabel>
-                <FormControl>
-                  <select 
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    {...field}
-                  >
-                    <option value="">Select source...</option>
-                    <option value="Website">Website</option>
-                    <option value="Facebook">Facebook</option>
-                    <option value="Youtube">Youtube</option>
-                    <option value="Referral">Referral</option>
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="referrer_name"
             render={({ field }) => (
               <FormItem>
@@ -344,13 +325,12 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
                       initialFocus
-                      className="p-3 pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -385,13 +365,12 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
                         initialFocus
-                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -451,7 +430,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : lead ? 'Update Lead' : 'Create Lead'}
+            {isSubmitting ? 'Saving...' : lead ? 'Save Changes' : 'Create Lead'}
           </Button>
         </div>
       </form>

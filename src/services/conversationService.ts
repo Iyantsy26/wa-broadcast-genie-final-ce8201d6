@@ -1,9 +1,10 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Conversation, Message } from "@/types/conversation";
 
 export const getConversations = async (): Promise<Conversation[]> => {
   try {
-    const { data, error } = await supabase
+    const { data: conversations, error } = await supabase
       .from('conversations')
       .select(`
         id,
@@ -22,26 +23,58 @@ export const getConversations = async (): Promise<Conversation[]> => {
       throw error;
     }
 
+    // Get all contact information separately since the relations aren't set up
+    let clients = {};
+    let leads = {};
+
+    if (conversations?.some(c => c.client_id)) {
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, name, avatar_url');
+      
+      if (clientsData) {
+        clients = clientsData.reduce((acc, client) => {
+          acc[client.id] = client;
+          return acc;
+        }, {});
+      }
+    }
+
+    if (conversations?.some(c => c.lead_id)) {
+      const { data: leadsData } = await supabase
+        .from('leads')
+        .select('id, name, avatar_url, phone');
+      
+      if (leadsData) {
+        leads = leadsData.reduce((acc, lead) => {
+          acc[lead.id] = lead;
+          return acc;
+        }, {});
+      }
+    }
+
     // Transform the data to match our Conversation type
-    return (data || []).map(conv => {
+    return (conversations || []).map(conv => {
       const isClient = !!conv.client_id;
+      const contactId = isClient ? conv.client_id : conv.lead_id;
+      const contactInfo = isClient ? clients[contactId] : leads[contactId];
       
       return {
         id: conv.id,
         contact: {
-          id: isClient ? conv.client_id : conv.lead_id,
-          name: 'Unknown', // We'll fetch contact details separately
-          avatar: undefined,
-          phone: '', 
+          id: contactId,
+          name: contactInfo?.name || 'Unknown Contact',
+          avatar: contactInfo?.avatar_url,
+          phone: isClient ? '' : (contactInfo?.phone || ''),
           type: isClient ? 'client' : 'lead'
         },
         lastMessage: {
           content: conv.last_message || '',
-          timestamp: conv.last_message_timestamp,
+          timestamp: conv.last_message_timestamp || conv.created_at,
           isOutbound: false,
           isRead: true
         },
-        status: conv.status as 'new' | 'active' | 'resolved' | 'waiting',
+        status: conv.status || 'new',
         chatType: isClient ? 'client' : 'lead'
       };
     });
@@ -76,23 +109,42 @@ export const getConversation = async (id: string): Promise<Conversation | null> 
     if (!data) return null;
 
     const isClient = !!data.client_id;
+    const contactId = isClient ? data.client_id : data.lead_id;
+    
+    // Get contact information
+    let contactInfo;
+    if (isClient) {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('name, avatar_url')
+        .eq('id', contactId)
+        .single();
+      contactInfo = clientData;
+    } else {
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('name, avatar_url, phone')
+        .eq('id', contactId)
+        .single();
+      contactInfo = leadData;
+    }
     
     return {
       id: data.id,
       contact: {
-        id: isClient ? data.client_id : data.lead_id,
-        name: 'Unknown', // We'll fetch contact details separately
-        avatar: undefined,
-        phone: '',
+        id: contactId,
+        name: contactInfo?.name || 'Unknown Contact',
+        avatar: contactInfo?.avatar_url,
+        phone: isClient ? '' : (contactInfo?.phone || ''),
         type: isClient ? 'client' : 'lead'
       },
       lastMessage: {
         content: data.last_message || '',
-        timestamp: data.last_message_timestamp,
+        timestamp: data.last_message_timestamp || data.created_at,
         isOutbound: false,
         isRead: true
       },
-      status: data.status as 'new' | 'active' | 'resolved' | 'waiting',
+      status: data.status || 'new',
       chatType: isClient ? 'client' : 'lead'
     };
   } catch (error) {

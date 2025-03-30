@@ -233,7 +233,7 @@ const Leads = () => {
     switch (status) {
       case 'New':
         return 'bg-blue-100 text-blue-800';
-      case 'Contacted':
+      case 'Connected':
         return 'bg-yellow-100 text-yellow-800';
       case 'Qualified':
         return 'bg-purple-100 text-purple-800';
@@ -309,7 +309,7 @@ const Leads = () => {
                 <DropdownMenuItem onClick={() => setStatusFilter('New')}>
                   New
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('Contacted')}>
+                <DropdownMenuItem onClick={() => setStatusFilter('Connected')}>
                   Contacted
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('Qualified')}>
@@ -372,17 +372,7 @@ const Leads = () => {
                       </button>
                     </TableHead>
                     <TableHead className="w-[300px]">CONTACT</TableHead>
-                    <TableHead className="w-[170px]">
-                      <button 
-                        className="flex items-center space-x-1"
-                        onClick={() => handleSort('source')}
-                      >
-                        <span>SOURCE</span>
-                        {sortField === 'source' && (
-                          <ArrowUpDown className="h-3 w-3" />
-                        )}
-                      </button>
-                    </TableHead>
+                    <TableHead className="w-[170px]">ADDRESS</TableHead>
                     <TableHead className="w-[120px]">
                       <button 
                         className="flex items-center space-x-1"
@@ -401,6 +391,17 @@ const Leads = () => {
                       >
                         <span>LAST CONTACT</span>
                         {sortField === 'last_contact' && (
+                          <ArrowUpDown className="h-3 w-3" />
+                        )}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-[120px]">
+                      <button 
+                        className="flex items-center space-x-1"
+                        onClick={() => handleSort('next_followup')}
+                      >
+                        <span>NEXT FOLLOWUP</span>
+                        {sortField === 'next_followup' && (
                           <ArrowUpDown className="h-3 w-3" />
                         )}
                       </button>
@@ -467,13 +468,16 @@ const Leads = () => {
                         )}
                       </TableCell>
                       <TableCell className="p-3">
-                        {lead.source || '-'}
+                        {lead.address || '-'}
                       </TableCell>
                       <TableCell className="p-3">
                         {formatDate(lead.created_at)}
                       </TableCell>
                       <TableCell className="p-3">
                         {formatDate(lead.last_contact)}
+                      </TableCell>
+                      <TableCell className="p-3">
+                        {formatDate(lead.next_followup)}
                       </TableCell>
                       <TableCell className="p-3 text-right">
                         <div className="flex justify-end space-x-1">
