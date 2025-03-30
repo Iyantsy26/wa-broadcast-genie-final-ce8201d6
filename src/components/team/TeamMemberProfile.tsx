@@ -87,9 +87,14 @@ const TeamMemberProfile = ({
     }
   };
 
+  const handleEdit = () => {
+    // Just call onEdit without closing the dialog
+    onEdit();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Team Member Profile</DialogTitle>
           <DialogDescription>
@@ -97,16 +102,16 @@ const TeamMemberProfile = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4 space-y-6">
-          <div className="flex flex-col items-center space-y-3">
-            <Avatar className="h-24 w-24">
+        <div className="py-2 space-y-4">
+          <div className="flex flex-col items-center space-y-2">
+            <Avatar className="h-20 w-20">
               <AvatarImage src={member.avatar} />
-              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+              <AvatarFallback className="bg-primary/10 text-primary text-xl">
                 {member.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div className="text-center">
-              <h3 className="text-xl font-semibold">{member.name}</h3>
+              <h3 className="text-lg font-semibold">{member.name}</h3>
               <div className="flex items-center justify-center gap-2 mt-1">
                 {getRoleBadge(member.role)}
                 {getStatusBadge(member.status)}
@@ -116,30 +121,30 @@ const TeamMemberProfile = ({
           
           <Separator />
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Contact Information</h4>
-            <Card>
-              <CardContent className="p-4 space-y-4">
+            <Card className="shadow-sm">
+              <CardContent className="p-3 space-y-2">
                 <div className="flex items-center">
                   <Mail className="h-4 w-4 text-muted-foreground mr-2" />
-                  <span>{member.email}</span>
+                  <span className="text-sm">{member.email}</span>
                 </div>
                 {member.phone && (
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span>{member.phone}</span>
+                    <span className="text-sm">{member.phone}</span>
                   </div>
                 )}
                 {member.department && (
                   <div className="flex items-center">
                     <Building className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span>{member.department}</span>
+                    <span className="text-sm">{member.department}</span>
                   </div>
                 )}
                 {member.lastActive && (
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 text-muted-foreground mr-2" />
-                    <span>Last active: {new Date(member.lastActive).toLocaleDateString(undefined, {
+                    <span className="text-sm">Last active: {new Date(member.lastActive).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -152,39 +157,39 @@ const TeamMemberProfile = ({
             </Card>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">WhatsApp Accounts</h4>
             {member.whatsappAccounts.length > 0 ? (
-              <Card>
-                <CardContent className="p-4">
+              <Card className="shadow-sm">
+                <CardContent className="p-3">
                   <div className="space-y-2">
                     {member.whatsappAccounts.map((account, index) => (
                       <div key={index} className="flex items-center">
                         <Smartphone className="h-4 w-4 text-muted-foreground mr-2" />
-                        <span>{account}</span>
+                        <span className="text-sm">{account}</span>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-4 text-muted-foreground">
+              <Card className="shadow-sm">
+                <CardContent className="p-3 text-muted-foreground text-sm">
                   No WhatsApp accounts assigned
                 </CardContent>
               </Card>
             )}
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Role Permissions</h4>
-            <Card>
-              <CardContent className="p-4">
+            <Card className="shadow-sm">
+              <CardContent className="p-3">
                 <div className="flex items-start">
                   <Shield className="h-4 w-4 text-muted-foreground mr-2 mt-0.5" />
                   <div>
-                    <p className="font-medium">{member.role === 'admin' ? 'Administrator' : member.role === 'manager' ? 'Manager' : 'Agent'}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm font-medium">{member.role === 'admin' ? 'Administrator' : member.role === 'manager' ? 'Manager' : 'Agent'}</p>
+                    <p className="text-xs text-muted-foreground">
                       {member.role === 'admin' 
                         ? 'Full access to all system features and settings' 
                         : member.role === 'manager'
@@ -203,7 +208,7 @@ const TeamMemberProfile = ({
             Close
           </Button>
           {isAdmin && (
-            <Button onClick={onEdit}>
+            <Button onClick={handleEdit}>
               Edit Profile
             </Button>
           )}
