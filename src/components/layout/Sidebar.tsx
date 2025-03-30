@@ -57,11 +57,6 @@ const navItems: NavItem[] = [
     icon: <MessageCircle className="h-5 w-5" />,
   },
   {
-    title: 'Leads & Clients',
-    href: '/leads',
-    icon: <Users className="h-5 w-5" />,
-  },
-  {
     title: 'Team Management',
     href: '/team',
     icon: <Users className="h-5 w-5" />,
