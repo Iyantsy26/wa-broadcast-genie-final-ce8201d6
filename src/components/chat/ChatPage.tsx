@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
-import ConversationList from '@/components/chat/ConversationList';
-import MessagePanel from '@/components/chat/MessagePanel';
-import ContactInfoSidebar from '@/components/chat/ContactInfoSidebar';
+import ConversationList from '@/components/conversations/ConversationList';
+import MessagePanel from '@/components/conversations/MessagePanel';
+import ContactInfoSidebar from '@/components/conversations/ContactInfoSidebar';
 
 const ChatPage = () => {
   const {
@@ -11,10 +11,25 @@ const ChatPage = () => {
     activeConversation,
     messages,
     isSidebarOpen,
+    statusFilter,
+    searchTerm,
+    dateRange,
+    assigneeFilter,
+    tagFilter,
     setActiveConversation,
     setIsSidebarOpen,
+    setStatusFilter,
+    setSearchTerm,
+    setDateRange,
+    setAssigneeFilter,
+    setTagFilter,
+    resetAllFilters,
     handleSendMessage,
     handleVoiceMessageSent,
+    handleDeleteConversation,
+    handleArchiveConversation,
+    handleAddTag,
+    handleAssignConversation,
     messagesEndRef
   } = useConversation();
 
@@ -34,6 +49,19 @@ const ChatPage = () => {
           conversations={filteredConversations}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          assigneeFilter={assigneeFilter}
+          setAssigneeFilter={setAssigneeFilter}
+          tagFilter={tagFilter}
+          setTagFilter={setTagFilter}
+          resetAllFilters={resetAllFilters}
+          pinConversation={() => {}}
+          archiveConversation={handleArchiveConversation}
         />
         
         {activeConversation ? (
@@ -44,6 +72,8 @@ const ChatPage = () => {
             onSendMessage={handleSendMessage}
             onVoiceMessageSent={handleVoiceMessageSent}
             messagesEndRef={messagesEndRef}
+            isTyping={false}
+            onReaction={() => {}}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-white rounded-lg border shadow-sm">

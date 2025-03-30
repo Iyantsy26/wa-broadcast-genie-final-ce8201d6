@@ -251,10 +251,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       viaWhatsApp: true
     };
 
-    // Add message to chat
     setChatMessages((prev) => [...prev, newMessage]);
     
-    // Update last message in conversation list
     setConversations((prev) =>
       prev.map((convo) =>
         convo.id === activeChat.id
@@ -271,7 +269,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       )
     );
 
-    // Simulate received message after delay
     setTimeout(() => {
       const response: Message = {
         id: uuidv4(),
@@ -279,7 +276,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: new Date().toISOString(),
         isOutbound: false,
         status: 'delivered',
-        sender: 'John', // Changed from senderId to sender
+        sender: 'John',
         type: 'text'
       };
 
@@ -307,7 +304,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setChatMessages((prev) => [...prev, newMessage]);
 
-    // Simulate response
     setTimeout(() => {
       const response: Message = {
         id: uuidv4(),
@@ -315,7 +311,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: new Date().toISOString(),
         isOutbound: false,
         status: 'delivered',
-        sender: 'John', // Changed from senderId to sender
+        sender: 'John',
         type: 'text'
       };
 
@@ -344,7 +340,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setChatMessages((prev) => [...prev, newMessage]);
 
-    // Simulate response
     setTimeout(() => {
       const response: Message = {
         id: uuidv4(),
@@ -352,7 +347,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: new Date().toISOString(),
         isOutbound: false,
         status: 'delivered',
-        sender: 'John', // Changed from senderId to sender
+        sender: 'John',
         type: 'text'
       };
 
@@ -381,7 +376,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setChatMessages((prev) => [...prev, newMessage]);
 
-    // Simulate response
     setTimeout(() => {
       const response: Message = {
         id: uuidv4(),
@@ -389,7 +383,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: new Date().toISOString(),
         isOutbound: false,
         status: 'delivered',
-        sender: 'John', // Changed from senderId to sender
+        sender: 'John',
         type: 'text'
       };
 
@@ -454,7 +448,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const muteChat = (chatId: string) => {
-    // Mock mute functionality
     toast({
       title: "Mute Chat",
       description: "Chat muted successfully.",
@@ -462,7 +455,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addContact = (contact: Contact) => {
-    // Mock add contact functionality
     toast({
       title: "Add Contact",
       description: `${contact.name} added to contacts.`,
@@ -470,7 +462,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const removeContact = (contactId: string) => {
-    // Mock remove contact functionality
     toast({
       title: "Remove Contact",
       description: "Contact removed successfully.",
@@ -510,7 +501,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const leaveGroupChat = (chatId: string) => {
-    // Mock leave group chat functionality
     toast({
       title: "Leave Group Chat",
       description: "You have left the group chat.",
@@ -526,13 +516,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       timestamp: new Date().toISOString(),
       isOutbound: true,
       status: 'sent',
-      sender: 'You', // Changed from senderId to sender
+      sender: 'You',
       type: 'text'
     };
 
     setChatMessages((prev) => [...prev, mockTemplateMessage]);
 
-    // Simulate response
     setTimeout(() => {
       const response: Message = {
         id: uuidv4(),
@@ -551,7 +540,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const handleFileUpload = (file: File) => {
     const fileType = file.type.split('/')[0];
 
-    if (!['image', 'audio', 'video'].includes(fileType) && file.type !== 'application/pdf') {
+    if (!['image', 'voice', 'video'].includes(fileType) && file.type !== 'application/pdf') {
       toast({
         title: "Error",
         description: "Unsupported file type.",
@@ -561,14 +550,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     if (fileType === 'image') {
-      // Image
       const imageMessage: Message = {
         id: uuidv4(),
         content: '',
         timestamp: new Date().toISOString(),
         isOutbound: true,
         status: 'sending',
-        sender: 'You', // Changed from senderId to sender
+        sender: 'You',
         type: 'image',
         media: {
           url: URL.createObjectURL(file),
@@ -593,19 +581,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         setChatMessages((prev) => [...prev, response]);
       }, 1500);
-    } else if (fileType === 'audio' || fileType === 'video') {
-      // Audio/Video
+    } else if (fileType === 'voice' || fileType === 'video') {
+      const mediaType: 'voice' | 'video' = fileType === 'voice' ? 'voice' : 'video';
       const mediaMessage: Message = {
         id: uuidv4(),
         content: '',
         timestamp: new Date().toISOString(),
         isOutbound: true,
         status: 'sending',
-        sender: 'You', // Changed from senderId to sender
-        type: fileType,
+        sender: 'You',
+        type: mediaType,
         media: {
           url: URL.createObjectURL(file),
-          type: fileType,
+          type: mediaType,
           filename: file.name,
           size: file.size
         }
@@ -627,14 +615,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setChatMessages((prev) => [...prev, response]);
       }, 2000);
     } else {
-      // Document
       const documentMessage: Message = {
         id: uuidv4(),
         content: '',
         timestamp: new Date().toISOString(),
         isOutbound: true,
         status: 'sending',
-        sender: 'You', // Changed from senderId to sender
+        sender: 'You',
         type: 'document',
         media: {
           url: URL.createObjectURL(file),
