@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import ClientNotes from './ClientNotes';
 import { Client } from '@/types/client';
 import { useNavigate } from 'react-router-dom';
+import { createConversation } from '@/services/conversationService';
+import { toast } from '@/hooks/use-toast';
 
 interface ClientDetailsProps {
   client: Client;
@@ -17,9 +19,27 @@ interface ClientDetailsProps {
 const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onEdit }) => {
   const navigate = useNavigate();
 
-  const handleSendMessage = () => {
-    // Navigate to the Conversations page
-    navigate('/conversations');
+  const handleSendMessage = async () => {
+    try {
+      // Create a new conversation with this client
+      const initialMessage = `Hello ${client.name}, how can I assist you today?`;
+      await createConversation(client.id, 'client', initialMessage);
+      
+      // Navigate to the Conversations page
+      navigate('/conversations');
+      
+      toast({
+        title: "Conversation created",
+        description: `Started a conversation with ${client.name}`,
+      });
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

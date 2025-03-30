@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import LeadNotes from './LeadNotes';
 import { Lead } from '@/types/lead';
 import { useNavigate } from 'react-router-dom';
+import { createConversation } from '@/services/conversationService';
+import { toast } from '@/hooks/use-toast';
 
 interface LeadDetailsProps {
   lead: Lead;
@@ -17,9 +19,27 @@ interface LeadDetailsProps {
 const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onEdit }) => {
   const navigate = useNavigate();
 
-  const handleSendMessage = () => {
-    // Navigate to the Conversations page
-    navigate('/conversations');
+  const handleSendMessage = async () => {
+    try {
+      // Create a new conversation with this lead
+      const initialMessage = `Hello ${lead.name}, thank you for your interest in our services.`;
+      await createConversation(lead.id, 'lead', initialMessage);
+      
+      // Navigate to the Conversations page
+      navigate('/conversations');
+      
+      toast({
+        title: "Conversation created",
+        description: `Started a conversation with ${lead.name}`,
+      });
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
