@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { Conversation, Message } from '@/types/conversation';
+import { Conversation, Message, MessageStatus, MessageType } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 
 export const getConversations = async (): Promise<Conversation[]> => {
@@ -105,14 +105,15 @@ export const getMessages = async (conversationId: string): Promise<Message[]> =>
       content: msg.content || '',
       timestamp: msg.timestamp,
       isOutbound: msg.is_outbound || false,
-      status: msg.status || 'sent',
+      status: (msg.status || 'sent') as MessageStatus,
       sender: msg.sender,
-      type: msg.message_type || 'text',
+      type: (msg.message_type || 'text') as MessageType,
       media: msg.media_url ? {
         url: msg.media_url,
         type: msg.media_type as 'image' | 'video' | 'document' | 'voice',
         filename: msg.media_filename,
-        duration: msg.media_duration
+        duration: msg.media_duration,
+        size: 0 // Default value since it's not in the database
       } : undefined
     }));
   } catch (error) {
@@ -167,9 +168,9 @@ export const sendMessage = async (conversationId: string, messageData: Omit<Mess
       content: data.content || '',
       timestamp: data.timestamp,
       isOutbound: data.is_outbound || false,
-      status: data.status || 'sent',
+      status: data.status as MessageStatus || 'sent',
       sender: data.sender,
-      type: data.message_type || 'text',
+      type: data.message_type as MessageType || 'text',
       media: data.media_url ? {
         url: data.media_url,
         type: data.media_type as 'image' | 'video' | 'document' | 'voice',
@@ -284,6 +285,53 @@ export const assignConversation = async (conversationId: string, assignee: strin
     }
   } catch (error) {
     console.error('Error in assignConversation:', error);
+    throw error;
+  }
+};
+
+export const createConversation = async (contactId: string, contactType: 'client' | 'lead', initialMessage?: string): Promise<string> => {
+  try {
+    const timestamp = new Date().toISOString();
+    const conversationData: any = {
+      status: 'new',
+      last_message: initialMessage || '',
+      last_message_timestamp: timestamp,
+    };
+    
+    if (contactType === 'client') {
+      conversationData.client_id = contactId;
+    } else {
+      conversationData.lead_id = contactId;
+    }
+    
+    const { data, error } = await supabase
+      .from('conversations')
+      .insert(conversationData)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
+    
+    if (initialMessage) {
+      await supabase
+        .from('messages')
+        .insert({
+          conversation_id: data.id,
+          content: initialMessage,
+          timestamp: timestamp,
+          is_outbound: true,
+          status: 'sent',
+          sender: 'System',
+          message_type: 'text'
+        });
+    }
+    
+    return data.id;
+  } catch (error) {
+    console.error('Error in createConversation:', error);
     throw error;
   }
 };

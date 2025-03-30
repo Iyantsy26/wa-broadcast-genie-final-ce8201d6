@@ -1,22 +1,40 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Lead } from "@/types/conversation";
+import { v4 as uuidv4 } from 'uuid';
+import { Lead } from '@/types/conversation';
 
 export const getLeads = async (): Promise<Lead[]> => {
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error("Error fetching leads:", error);
-    throw error;
+    if (error) {
+      console.error('Error fetching leads:', error);
+      throw new Error(error.message);
+    }
+
+    return (data || []).map(lead => ({
+      id: lead.id,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      company: lead.company,
+      address: lead.address,
+      avatar_url: lead.avatar_url,
+      status: lead.status,
+      source: lead.source,
+      referrer_name: lead.referrer_name,
+      notes: lead.notes,
+      last_contact: lead.last_contact,
+      next_followup: lead.next_followup,
+      created_at: lead.created_at,
+      initials: lead.name.split(' ').map(n => n[0]).join('')
+    }));
+  } catch (error) {
+    console.error('Error in getLeads:', error);
+    return [];
   }
-
-  return data.map(lead => ({
-    ...lead,
-    initials: getInitials(lead.name)
-  })) as Lead[];
 };
 
 export const getLead = async (id: string): Promise<Lead> => {
@@ -38,21 +56,52 @@ export const getLead = async (id: string): Promise<Lead> => {
 };
 
 export const createLead = async (lead: Omit<Lead, 'id' | 'created_at' | 'initials'>): Promise<Lead> => {
-  const { data, error } = await supabase
-    .from('leads')
-    .insert(lead)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('leads')
+      .insert({
+        name: lead.name || '',
+        email: lead.email,
+        phone: lead.phone,
+        company: lead.company,
+        address: lead.address,
+        avatar_url: lead.avatar_url,
+        status: lead.status || 'New',
+        source: lead.source,
+        referrer_name: lead.referrer_name,
+        notes: lead.notes,
+        last_contact: lead.last_contact,
+        next_followup: lead.next_followup
+      })
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Error creating lead:", error);
+    if (error) {
+      console.error('Error creating lead:', error);
+      throw new Error(error.message);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      company: data.company,
+      address: data.address,
+      avatar_url: data.avatar_url,
+      status: data.status,
+      source: data.source,
+      referrer_name: data.referrer_name,
+      notes: data.notes,
+      last_contact: data.last_contact,
+      next_followup: data.next_followup,
+      created_at: data.created_at,
+      initials: data.name.split(' ').map(n => n[0]).join('')
+    };
+  } catch (error) {
+    console.error('Error in createLead:', error);
     throw error;
   }
-
-  return {
-    ...data,
-    initials: getInitials(data.name)
-  } as Lead;
 };
 
 export const updateLead = async (id: string, lead: Partial<Lead>): Promise<Lead> => {
@@ -107,7 +156,6 @@ export const uploadLeadAvatar = async (file: File, leadId: string): Promise<stri
   return data.publicUrl;
 };
 
-// Export leads to CSV
 export const exportLeadsToCSV = (): string => {
   const leads = JSON.parse(localStorage.getItem('cached_leads') || '[]');
   
@@ -140,7 +188,6 @@ export const exportLeadsToCSV = (): string => {
   return [headers, ...rows].join('\n');
 };
 
-// Parse CSV file for importing leads
 export const parseCSVForImport = async (file: File): Promise<Omit<Lead, 'id' | 'created_at' | 'initials'>[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -183,31 +230,39 @@ export const parseCSVForImport = async (file: File): Promise<Omit<Lead, 'id' | '
   });
 };
 
-// Import leads from CSV
-export const importLeadsFromCSV = async (file: File): Promise<Lead[]> => {
+export const importLeads = async (leads: Omit<Lead, 'id' | 'created_at' | 'initials'>[]): Promise<number> => {
   try {
-    const leadsToImport = await parseCSVForImport(file);
-    
+    // Convert leads to match database schema
+    const dbLeads = leads.map(lead => ({
+      name: lead.name || 'Unknown',
+      email: lead.email,
+      phone: lead.phone,
+      company: lead.company,
+      address: lead.address,
+      status: lead.status || 'New',
+      source: lead.source,
+      referrer_name: lead.referrer_name,
+      notes: lead.notes,
+      last_contact: lead.last_contact,
+      next_followup: lead.next_followup
+    }));
+
     const { data, error } = await supabase
       .from('leads')
-      .insert(leadsToImport)
-      .select();
-      
+      .insert(dbLeads);
+
     if (error) {
-      throw error;
+      console.error('Error importing leads:', error);
+      throw new Error(error.message);
     }
-    
-    return data.map(lead => ({
-      ...lead,
-      initials: getInitials(lead.name)
-    })) as Lead[];
+
+    return dbLeads.length;
   } catch (error) {
-    console.error('Error importing leads:', error);
+    console.error('Error in importLeads:', error);
     throw error;
   }
 };
 
-// Helper function to get initials from name
 export const getInitials = (name: string): string => {
   if (!name) return '';
   

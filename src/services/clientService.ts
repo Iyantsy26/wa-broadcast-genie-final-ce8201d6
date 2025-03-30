@@ -1,19 +1,38 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Client } from "@/types/conversation";
+import { v4 as uuidv4 } from 'uuid';
+import { Client } from '@/types/conversation';
 
 export const getClients = async (): Promise<Client[]> => {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('*')
-    .order('join_date', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('name');
 
-  if (error) {
-    console.error("Error fetching clients:", error);
-    throw error;
+    if (error) {
+      console.error('Error fetching clients:', error);
+      throw new Error(error.message);
+    }
+
+    return (data || []).map(client => ({
+      id: client.id,
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+      company: client.company,
+      address: client.address,
+      avatar_url: client.avatar_url,
+      join_date: client.join_date,
+      renewal_date: client.renewal_date,
+      plan_details: client.plan_details,
+      referred_by: client.referred_by,
+      notes: client.notes,
+      tags: client.tags
+    }));
+  } catch (error) {
+    console.error('Error in getClients:', error);
+    return [];
   }
-
-  return data as Client[];
 };
 
 export const getClient = async (id: string): Promise<Client> => {
@@ -32,18 +51,50 @@ export const getClient = async (id: string): Promise<Client> => {
 };
 
 export const createClient = async (client: Omit<Client, 'id'>): Promise<Client> => {
-  const { data, error } = await supabase
-    .from('clients')
-    .insert(client)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .insert({
+        name: client.name || '',
+        email: client.email,
+        phone: client.phone,
+        company: client.company,
+        address: client.address,
+        avatar_url: client.avatar_url,
+        join_date: client.join_date,
+        renewal_date: client.renewal_date,
+        plan_details: client.plan_details,
+        referred_by: client.referred_by,
+        notes: client.notes,
+        tags: client.tags
+      })
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Error creating client:", error);
+    if (error) {
+      console.error('Error creating client:', error);
+      throw new Error(error.message);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      company: data.company,
+      address: data.address,
+      avatar_url: data.avatar_url,
+      join_date: data.join_date,
+      renewal_date: data.renewal_date,
+      plan_details: data.plan_details,
+      referred_by: data.referred_by,
+      notes: data.notes,
+      tags: data.tags
+    };
+  } catch (error) {
+    console.error('Error in createClient:', error);
     throw error;
   }
-
-  return data as Client;
 };
 
 export const updateClient = async (id: string, client: Partial<Client>): Promise<Client> => {
