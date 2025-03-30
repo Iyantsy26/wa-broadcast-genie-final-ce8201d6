@@ -20,6 +20,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ClientFormProps {
   client?: Client;
@@ -30,7 +37,8 @@ type FormValues = {
   name: string;
   company?: string;
   email?: string;
-  phone?: string;
+  countryCode?: string;
+  phoneNumber?: string;
   address?: string;
   tags?: string;
   join_date?: Date;
@@ -40,16 +48,45 @@ type FormValues = {
   referred_by?: string;
 };
 
+// Country codes for phone numbers
+const countryCodes = [
+  { value: "+1", label: "United States (+1)" },
+  { value: "+44", label: "United Kingdom (+44)" },
+  { value: "+91", label: "India (+91)" },
+  { value: "+61", label: "Australia (+61)" },
+  { value: "+86", label: "China (+86)" },
+  { value: "+49", label: "Germany (+49)" },
+  { value: "+33", label: "France (+33)" },
+  { value: "+81", label: "Japan (+81)" },
+  { value: "+55", label: "Brazil (+55)" },
+  { value: "+52", label: "Mexico (+52)" },
+  { value: "+27", label: "South Africa (+27)" },
+  { value: "+39", label: "Italy (+39)" },
+  { value: "+34", label: "Spain (+34)" },
+  { value: "+7", label: "Russia (+7)" },
+  { value: "+31", label: "Netherlands (+31)" },
+];
+
 const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatar_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isJoinDateOpen, setIsJoinDateOpen] = useState(false);
+  const [isRenewalDateOpen, setIsRenewalDateOpen] = useState(false);
+
+  // Split phone into country code and number if it exists
+  const existingPhone = client?.phone || '';
+  const phoneMatch = existingPhone.match(/^(\+\d+)(.*)$/);
+  
+  const defaultCountryCode = phoneMatch ? phoneMatch[1] : "+1";
+  const defaultPhoneNumber = phoneMatch ? phoneMatch[2].trim() : existingPhone;
 
   const defaultValues: FormValues = {
     name: client?.name || '',
     company: client?.company || '',
     email: client?.email || '',
-    phone: client?.phone || '',
+    countryCode: defaultCountryCode,
+    phoneNumber: defaultPhoneNumber,
     address: client?.address || '',
     tags: client?.tags ? client.tags.join(', ') : '',
     join_date: client?.join_date ? new Date(client.join_date) : undefined,
@@ -98,14 +135,24 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
         ? values.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
         : undefined;
       
+      // Combine country code and phone number
+      const phone = values.countryCode && values.phoneNumber 
+        ? `${values.countryCode} ${values.phoneNumber}` 
+        : undefined;
+      
       // Process dates
       const formattedValues = {
         ...values,
+        phone,
         tags,
         join_date: values.join_date ? values.join_date.toISOString() : null,
         renewal_date: values.renewal_date ? values.renewal_date.toISOString() : null,
         avatar_url: avatarUrl
       };
+      
+      // Remove temporary fields not in the client model
+      delete formattedValues.countryCode;
+      delete formattedValues.phoneNumber;
       
       // Create or update the client
       if (client) {
@@ -215,19 +262,49 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone</FormLabel>
-                <FormControl>
-                  <Input placeholder="+1 123 456 7890" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="flex space-x-2">
+            <FormField
+              control={form.control}
+              name="countryCode"
+              render={({ field }) => (
+                <FormItem className="w-1/3">
+                  <FormLabel>Country Code</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="+1" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {countryCodes.map((code) => (
+                        <SelectItem key={code.value} value={code.value}>
+                          {code.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 456 7890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}
@@ -263,7 +340,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Join Date</FormLabel>
-                <Popover>
+                <Popover open={isJoinDateOpen} onOpenChange={setIsJoinDateOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -286,8 +363,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setIsJoinDateOpen(false); // Close the popover after selection
+                      }}
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -302,7 +383,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Renewal Date</FormLabel>
-                <Popover>
+                <Popover open={isRenewalDateOpen} onOpenChange={setIsRenewalDateOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -325,8 +406,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setIsRenewalDateOpen(false); // Close the popover after selection
+                      }}
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -343,20 +428,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onComplete }) => {
                 <FormLabel>Plan Details</FormLabel>
                 <FormControl>
                   <Input placeholder="Premium Plan, Expires 2025-12-31" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="referred_by"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Referred By</FormLabel>
-                <FormControl>
-                  <Input placeholder="Jane Smith" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
