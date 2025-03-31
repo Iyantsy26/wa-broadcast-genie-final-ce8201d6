@@ -3,13 +3,38 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getRedirectPathForRole } from '@/services/auth/roleUtils';
 import { isAuthenticated } from '@/services/auth/authService';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useToast } from '@/components/ui/use-toast';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-// This is a placeholder component for the Login page
-// In a real implementation, this would have the login form
+// Create a schema for form validation
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 const Login = () => {
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
+  
+  // Setup form with validation
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -27,23 +52,53 @@ const Login = () => {
     checkAuth();
   }, [navigate]);
   
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Simulate login for demonstration
-    // In a real app, this would call a Supabase auth method
-    
-    // After login, redirect to the appropriate dashboard
-    const redirectPath = await getRedirectPathForRole();
-    
-    // Get redirect from URL if available
-    const urlParams = new URLSearchParams(location.search);
-    const redirect = urlParams.get('redirect');
-    
-    if (redirect) {
-      navigate(redirect);
-    } else {
-      navigate(redirectPath);
+  const handleLogin = async (values: LoginFormValues) => {
+    try {
+      setSubmitting(true);
+      
+      // Actual login with Supabase
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+      
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        console.error('Login error:', error);
+        return;
+      }
+      
+      // After successful login, redirect to the appropriate dashboard
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+      
+      // Get redirect from URL if available
+      const urlParams = new URLSearchParams(location.search);
+      const redirect = urlParams.get('redirect');
+      
+      // Determine where to redirect the user based on their role
+      const redirectPath = await getRedirectPathForRole();
+      
+      if (redirect) {
+        navigate(redirect);
+      } else {
+        navigate(redirectPath);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "An error occurred",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -63,67 +118,77 @@ const Login = () => {
           <p className="mt-2 text-gray-600">Enter your credentials to access your account</p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleLogin)} className="mt-8 space-y-6">
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="Enter your email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email address</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email" 
+                        placeholder="Enter your email" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
+              
+              <FormField
+                control={form.control}
                 name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                placeholder="Enter your password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder="Enter your password" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Remember me
-              </label>
             </div>
             
-            <div className="text-sm">
-              <a href="#" className="font-medium text-primary hover:text-primary-dark">
-                Forgot your password?
-              </a>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
+              </div>
+              
+              <div className="text-sm">
+                <a href="#" className="font-medium text-primary hover:text-primary-dark">
+                  Forgot your password?
+                </a>
+              </div>
             </div>
-          </div>
-          
-          <div>
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              Sign in
-            </button>
-          </div>
-        </form>
+            
+            <div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={submitting}
+              >
+                {submitting ? 'Signing in...' : 'Sign in'}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );
