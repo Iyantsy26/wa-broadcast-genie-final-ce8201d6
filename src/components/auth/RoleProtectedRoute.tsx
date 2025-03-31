@@ -64,11 +64,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
         }
       } catch (error) {
         console.error("Error checking auth and role:", error);
-        toast({
-          title: "Authentication Error",
-          description: "There was a problem verifying your credentials",
-          variant: "destructive",
-        });
+        // Don't call toast in the render path - move to useEffect
       } finally {
         setLoading(false);
       }
@@ -80,14 +76,28 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
       setHasRequiredRole(true);
       setLoading(false);
       console.log("Super Admin access granted from login state");
-      toast({
-        title: "Super Admin Access",
-        description: "You have been granted Super Admin privileges",
-      });
+      // Don't call toast here - it could cause re-renders during render
     } else {
       checkAuthAndRole();
     }
-  }, [requiredRole, location.state, toast]);
+  }, [requiredRole, location.state]);
+
+  // Handle notifications in a separate useEffect to avoid render-time state updates
+  useEffect(() => {
+    if (!loading) {
+      if (!authenticated) {
+        // Don't show toast for authentication failures, just redirect
+      } else if (!hasRequiredRole && requiredRole) {
+        toast({
+          title: "Access Denied",
+          description: `You don't have ${requiredRole} privileges`,
+          variant: "destructive",
+        });
+      } else if (authenticated && hasRequiredRole) {
+        console.log(`Access granted to ${requiredRole || 'protected'} route`);
+      }
+    }
+  }, [loading, authenticated, hasRequiredRole, requiredRole, toast]);
 
   if (loading) {
     return (
@@ -103,19 +113,9 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   }
   
   if (!hasRequiredRole) {
-    // Notify user about insufficient permissions
-    toast({
-      title: "Access Denied",
-      description: `You don't have ${requiredRole} privileges`,
-      variant: "destructive",
-    });
-    
-    // Redirect to unauthorized or dashboard
+    // Redirect to unauthorized or dashboard without toast in render path
     return <Navigate to="/" replace />;
   }
-
-  // Log successful access
-  console.log(`Access granted to ${requiredRole || 'protected'} route`);
   
   return <>{children}</>;
 };
