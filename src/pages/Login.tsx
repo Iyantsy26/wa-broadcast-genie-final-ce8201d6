@@ -131,11 +131,6 @@ const Login = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold">Login to Dashboard</h1>
           <p className="mt-2 text-gray-600">Enter your credentials to access your account</p>
-          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
-            <p className="font-medium text-blue-800">Super Admin Login</p>
-            <p className="text-blue-600">Email: {getDefaultSuperAdminEmail()}</p>
-            <p className="text-blue-600">Password: 123456</p>
-          </div>
         </div>
         
         <Form {...form}>
