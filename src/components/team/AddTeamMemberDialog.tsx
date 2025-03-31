@@ -207,7 +207,7 @@ const AddTeamMemberDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{editMember ? "Edit Team Member" : "Add Team Member"}</DialogTitle>
           <DialogDescription>

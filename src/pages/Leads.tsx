@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -127,7 +126,7 @@ const Leads = () => {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] w-[600px] max-h-[700px]">
+        <DialogContent>
           <LeadForm onComplete={handleLeadFormComplete} />
         </DialogContent>
       </Dialog>
