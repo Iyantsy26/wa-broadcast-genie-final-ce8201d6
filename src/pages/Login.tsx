@@ -63,8 +63,8 @@ const Login = () => {
           description: "Welcome, Super Admin!",
         });
         
-        // Redirect to the super admin dashboard
-        navigate('/super-admin');
+        // Set state to indicate super admin status for the RoleProtectedRoute
+        navigate('/super-admin', { state: { isSuperAdmin: true } });
         return;
       }
       

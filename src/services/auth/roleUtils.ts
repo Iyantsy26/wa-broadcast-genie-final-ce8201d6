@@ -21,6 +21,7 @@ export const checkRoleLocally = async (
     
     // If requesting super_admin role and user is the default super admin
     if (role === 'super_admin' && isDefaultSuperAdmin) {
+      console.log("Default Super Admin role granted locally");
       return true;
     }
     
@@ -59,6 +60,7 @@ export const getRedirectPathForRole = async (): Promise<string> => {
     
     // Special case for default Super Admin
     if (user.email === getDefaultSuperAdminEmail()) {
+      console.log("Redirecting to Super Admin dashboard");
       return '/super-admin';
     }
     
@@ -94,6 +96,7 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
     
     // Check for default Super Admin
     if (user.email === getDefaultSuperAdminEmail() && role === 'super_admin') {
+      console.log("Default Super Admin role granted");
       return true;
     }
     

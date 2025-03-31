@@ -39,6 +39,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
       setAuthenticated(true);
       setHasRequiredRole(true);
       setLoading(false);
+      console.log("Super Admin access granted from login state");
     } else {
       checkAuthAndRole();
     }
@@ -62,6 +63,9 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
+  // Log successful access
+  console.log(`Access granted to ${requiredRole || 'protected'} route`);
+  
   return <>{children}</>;
 };
 
