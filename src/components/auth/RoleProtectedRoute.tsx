@@ -33,8 +33,16 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
       setLoading(false);
     };
 
-    checkAuthAndRole();
-  }, [requiredRole]);
+    // Check for Super Admin in URL state (passed from login)
+    const isSuperAdminFromLogin = location.state?.isSuperAdmin;
+    if (isSuperAdminFromLogin && requiredRole === 'super_admin') {
+      setAuthenticated(true);
+      setHasRequiredRole(true);
+      setLoading(false);
+    } else {
+      checkAuthAndRole();
+    }
+  }, [requiredRole, location.state]);
 
   if (loading) {
     return (

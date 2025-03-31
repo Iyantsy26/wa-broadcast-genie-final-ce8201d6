@@ -1,6 +1,11 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
 import { checkUserHasRole } from "./roleUtils";
+
+// Default Super Admin credentials
+const DEFAULT_SUPER_ADMIN_EMAIL = "ssadmin@admin.com";
+const DEFAULT_SUPER_ADMIN_PASSWORD = "123456";
 
 /**
  * Check if the current user has a specific role
@@ -77,4 +82,19 @@ export const signOut = async (): Promise<boolean> => {
     console.error('Error signing out:', error);
     return false;
   }
+};
+
+/**
+ * Check if the provided credentials match the default Super Admin
+ * NOTE: This is for demo purposes only and should not be used in production
+ */
+export const isDefaultSuperAdmin = (email: string, password: string): boolean => {
+  return email === DEFAULT_SUPER_ADMIN_EMAIL && password === DEFAULT_SUPER_ADMIN_PASSWORD;
+};
+
+/**
+ * Get the default Super Admin email
+ */
+export const getDefaultSuperAdminEmail = (): string => {
+  return DEFAULT_SUPER_ADMIN_EMAIL;
 };

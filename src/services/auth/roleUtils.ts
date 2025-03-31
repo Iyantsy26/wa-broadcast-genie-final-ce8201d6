@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
+import { getDefaultSuperAdminEmail } from "./authService";
 
 /**
  * Helper function to simulate role check when RPC function is unavailable
@@ -13,6 +14,15 @@ export const checkRoleLocally = async (
   try {
     // For demo purposes only - this would typically query the user_roles table
     // In production, use proper RPC functions in Supabase
+    
+    // Get current user email to check for default Super Admin
+    const { data: { user } } = await supabase.auth.getUser();
+    const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
+    
+    // If requesting super_admin role and user is the default super admin
+    if (role === 'super_admin' && isDefaultSuperAdmin) {
+      return true;
+    }
     
     // Dummy implementation - in a real app, this would check the database
     if (role === 'white_label') {
@@ -47,6 +57,11 @@ export const getRedirectPathForRole = async (): Promise<string> => {
     
     if (!user) return '/login';
     
+    // Special case for default Super Admin
+    if (user.email === getDefaultSuperAdminEmail()) {
+      return '/super-admin';
+    }
+    
     // Check for super_admin first (highest privilege)
     const isSuperAdmin = await checkRoleLocally(user.id, 'super_admin');
     if (isSuperAdmin) return '/super-admin';
@@ -76,6 +91,11 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) return false;
+    
+    // Check for default Super Admin
+    if (user.email === getDefaultSuperAdminEmail() && role === 'super_admin') {
+      return true;
+    }
     
     // Try using the available RPC function for checking super_admin status
     if (role === 'super_admin') {

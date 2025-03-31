@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getRedirectPathForRole } from '@/services/auth/roleUtils';
-import { isAuthenticated } from '@/services/auth/authService';
+import { isAuthenticated, isDefaultSuperAdmin, getDefaultSuperAdminEmail } from '@/services/auth/authService';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,18 @@ const Login = () => {
   const handleLogin = async (values: LoginFormValues) => {
     try {
       setSubmitting(true);
+      
+      // Check if this is the default Super Admin login
+      if (isDefaultSuperAdmin(values.email, values.password)) {
+        toast({
+          title: "Super Admin Login",
+          description: "Welcome, Super Admin!",
+        });
+        
+        // Redirect to the super admin dashboard
+        navigate('/super-admin');
+        return;
+      }
       
       // Actual login with Supabase
       const { error } = await supabase.auth.signInWithPassword({
@@ -116,6 +128,11 @@ const Login = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold">Login to Dashboard</h1>
           <p className="mt-2 text-gray-600">Enter your credentials to access your account</p>
+          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
+            <p className="font-medium text-blue-800">Super Admin Login</p>
+            <p className="text-blue-600">Email: {getDefaultSuperAdminEmail()}</p>
+            <p className="text-blue-600">Password: 123456</p>
+          </div>
         </div>
         
         <Form {...form}>
