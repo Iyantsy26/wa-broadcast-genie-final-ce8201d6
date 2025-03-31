@@ -33,7 +33,7 @@ import {
   AlertCircle,
   MoreVertical,
   Loader2,
-  Globe, // Replaced Browser with Globe
+  Globe,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,50 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-
-interface WhatsAppAccount {
-  id: string;
-  name: string;
-  phone: string;
-  status: 'connected' | 'disconnected' | 'expired';
-  type: 'qr' | 'otp' | 'api';
-  lastActive: string;
-}
-
-const accounts: WhatsAppAccount[] = [
-  {
-    id: '1',
-    name: 'Business Account 1',
-    phone: '+1 (555) 123-4567',
-    status: 'connected',
-    type: 'qr',
-    lastActive: '2023-06-20T15:30:00Z',
-  },
-  {
-    id: '2',
-    name: 'Marketing Account',
-    phone: '+1 (555) 987-6543',
-    status: 'connected',
-    type: 'api',
-    lastActive: '2023-06-22T10:15:00Z',
-  },
-  {
-    id: '3',
-    name: 'Support Account',
-    phone: '+1 (555) 456-7890',
-    status: 'disconnected',
-    type: 'otp',
-    lastActive: '2023-06-15T09:45:00Z',
-  },
-  {
-    id: '4',
-    name: 'Sales Account',
-    phone: '+1 (555) 789-0123',
-    status: 'expired',
-    type: 'qr',
-    lastActive: '2023-05-10T14:20:00Z',
-  },
-];
+import { getWhatsAppAccounts, addWhatsAppAccount, updateWhatsAppAccountStatus, WhatsAppAccount } from '@/services/whatsAppService';
 
 // Array of country codes for the phone tab
 const countryCodes = [
@@ -104,6 +61,7 @@ const countryCodes = [
 
 const WhatsAppAccounts = () => {
   const { toast } = useToast();
+  const [accounts, setAccounts] = useState<WhatsAppAccount[]>([]);
   const [newAccountName, setNewAccountName] = useState('');
   const [businessId, setBusinessId] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -113,9 +71,40 @@ const WhatsAppAccounts = () => {
   const [codeSent, setCodeSent] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchingAccounts, setFetchingAccounts] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrLoader, setShowQrLoader] = useState(true);
   const [webBrowserOpen, setWebBrowserOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Fetch WhatsApp accounts on initial load
+  useEffect(() => {
+    fetchWhatsAppAccounts();
+  }, []);
+
+  const fetchWhatsAppAccounts = async () => {
+    try {
+      setFetchingAccounts(true);
+      const fetchedAccounts = await getWhatsAppAccounts();
+      setAccounts(fetchedAccounts);
+    } catch (error) {
+      console.error("Error fetching WhatsApp accounts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load WhatsApp accounts",
+        variant: "destructive",
+      });
+    } finally {
+      setFetchingAccounts(false);
+    }
+  };
+
+  // Generate QR code on dialog open
+  useEffect(() => {
+    if (dialogOpen) {
+      generateQrCode();
+    }
+  }, [dialogOpen]);
 
   // Mock function to simulate QR code generation
   const generateQrCode = () => {
@@ -127,75 +116,95 @@ const WhatsAppAccounts = () => {
     }, 1500);
   };
 
-  // On initial load, generate QR code
-  useEffect(() => {
-    generateQrCode();
-  }, []);
-
-  const handleConnect = (accountId: string) => {
-    setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+  const handleConnect = async (accountId: string) => {
+    try {
+      setLoading(true);
+      await updateWhatsAppAccountStatus(accountId, 'connected');
+      
+      // Update the local state
+      setAccounts(prevAccounts => 
+        prevAccounts.map(acc => 
+          acc.id === accountId ? { ...acc, status: 'connected' } : acc
+        )
+      );
+      
       toast({
         title: "Account reconnected",
         description: "Successfully reconnected WhatsApp account.",
       });
-    }, 1500);
-  };
-
-  const handleAddAccount = (type: string) => {
-    setLoading(true);
-    
-    // Validate inputs based on connection type
-    if (type === 'QR code' && !newAccountName) {
+    } catch (error) {
+      console.error("Error reconnecting account:", error);
       toast({
-        title: "Missing information",
-        description: "Please provide an account name.",
+        title: "Error",
+        description: "Failed to reconnect WhatsApp account",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-    
-    if (type === 'phone verification') {
-      if (!newAccountName || !phoneNumber) {
+  };
+
+  const handleAddAccount = async (type: string) => {
+    try {
+      setLoading(true);
+      
+      // Validate inputs based on connection type
+      if (type === 'QR code' && !newAccountName) {
         toast({
           title: "Missing information",
-          description: "Please provide both account name and phone number.",
+          description: "Please provide an account name.",
           variant: "destructive",
         });
-        setLoading(false);
         return;
       }
       
-      if (codeSent && !verificationCode) {
-        toast({
-          title: "Missing verification code",
-          description: "Please enter the verification code sent to your phone.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+      if (type === 'phone verification') {
+        if (!newAccountName || !phoneNumber) {
+          toast({
+            title: "Missing information",
+            description: "Please provide both account name and phone number.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (codeSent && !verificationCode) {
+          toast({
+            title: "Missing verification code",
+            description: "Please enter the verification code sent to your phone.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
-    }
-    
-    if (type === 'Business API') {
-      if (!newAccountName || !businessId || !apiKey) {
-        toast({
-          title: "Missing information",
-          description: "Please provide account name, business ID, and API key.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+      
+      if (type === 'Business API') {
+        if (!newAccountName || !businessId || !apiKey) {
+          toast({
+            title: "Missing information",
+            description: "Please provide account name, business ID, and API key.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
-    }
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+      
+      // Create the account object based on type
+      const newAccount: Omit<WhatsAppAccount, 'id'> = {
+        name: newAccountName,
+        phone: type === 'phone verification' ? `${countryCode} ${phoneNumber}` : 'Business Account',
+        status: 'connected',
+        type: type === 'QR code' ? 'qr' : type === 'phone verification' ? 'otp' : 'api',
+        last_active: new Date().toISOString(),
+        business_id: type === 'Business API' ? businessId : undefined,
+      };
+      
+      // Add the account to the database
+      const addedAccount = await addWhatsAppAccount(newAccount);
+      
+      // Update the local state
+      setAccounts(prevAccounts => [addedAccount, ...prevAccounts]);
+      
       toast({
         title: "Account added",
         description: `Successfully added WhatsApp account via ${type}.`,
@@ -210,12 +219,22 @@ const WhatsAppAccounts = () => {
       setVerificationCode('');
       setCodeSent(false);
       setVerifying(false);
+      setDialogOpen(false);
       
       // Force refresh QR code if that method was used
       if (type === 'QR code') {
         generateQrCode();
       }
-    }, 2000);
+    } catch (error) {
+      console.error("Error adding account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add WhatsApp account",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendVerificationCode = () => {
@@ -270,6 +289,31 @@ const WhatsAppAccounts = () => {
     setWebBrowserOpen(true);
   };
 
+  const handleDisconnect = async (accountId: string) => {
+    try {
+      await updateWhatsAppAccountStatus(accountId, 'disconnected');
+      
+      // Update the local state
+      setAccounts(prevAccounts => 
+        prevAccounts.map(acc => 
+          acc.id === accountId ? { ...acc, status: 'disconnected' } : acc
+        )
+      );
+      
+      toast({
+        title: "Account disconnected",
+        description: "Successfully disconnected WhatsApp account.",
+      });
+    } catch (error) {
+      console.error("Error disconnecting account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect WhatsApp account",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -280,7 +324,7 @@ const WhatsAppAccounts = () => {
           </p>
         </div>
         
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -331,7 +375,7 @@ const WhatsAppAccounts = () => {
                       Refresh QR Code
                     </Button>
                     <Button variant="outline" size="sm" onClick={openWebWhatsApp}>
-                      <Globe className="mr-2 h-3 w-3" /> {/* Changed from Browser to Globe */}
+                      <Globe className="mr-2 h-3 w-3" />
                       Open in Browser
                     </Button>
                   </div>
@@ -508,95 +552,120 @@ const WhatsAppAccounts = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {accounts.map((account) => (
-          <Card key={account.id} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{account.name}</CardTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
-                      Disconnect
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <CardDescription>{account.phone}</CardDescription>
-            </CardHeader>
-            <CardContent className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      account.status === 'connected'
-                        ? 'bg-green-500'
-                        : account.status === 'disconnected'
-                        ? 'bg-red-500'
-                        : 'bg-yellow-500'
-                    }`}
-                  />
-                  <span className="text-sm capitalize">{account.status}</span>
+      {fetchingAccounts ? (
+        <div className="flex justify-center items-center h-48">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-8 border rounded-lg bg-muted/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
+            <Smartphone className="h-6 w-6 text-primary" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No WhatsApp Accounts</h3>
+          <p className="text-center text-muted-foreground mb-4">
+            You don't have any connected WhatsApp accounts yet. Add your first account to get started.
+          </p>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Account
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {accounts.map((account) => (
+            <Card key={account.id} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg">{account.name}</CardTitle>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => toast({ title: "Edit", description: "Feature coming soon" })}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-600"
+                        onClick={() => handleDisconnect(account.id)}
+                      >
+                        Disconnect
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div className="flex items-center gap-2">
-                  {account.type === 'qr' && <QrCode className="h-4 w-4" />}
-                  {account.type === 'otp' && <PhoneCall className="h-4 w-4" />}
-                  {account.type === 'api' && <Key className="h-4 w-4" />}
-                  <span className="text-sm">{account.type === 'qr' ? 'QR Code' : account.type === 'otp' ? 'Phone Verification' : 'Business API'}</span>
+                <CardDescription>{account.phone}</CardDescription>
+              </CardHeader>
+              <CardContent className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        account.status === 'connected'
+                          ? 'bg-green-500'
+                          : account.status === 'disconnected'
+                          ? 'bg-red-500'
+                          : 'bg-yellow-500'
+                      }`}
+                    />
+                    <span className="text-sm capitalize">{account.status}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {account.type === 'qr' && <QrCode className="h-4 w-4" />}
+                    {account.type === 'otp' && <PhoneCall className="h-4 w-4" />}
+                    {account.type === 'api' && <Key className="h-4 w-4" />}
+                    <span className="text-sm">{account.type === 'qr' ? 'QR Code' : account.type === 'otp' ? 'Phone Verification' : 'Business API'}</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Last active</span>
-                  <span>{new Date(account.lastActive).toLocaleDateString()}</span>
+                
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Last active</span>
+                    <span>{new Date(account.last_active || account.created_at || '').toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Messages sent</span>
+                    <span>-</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Messages sent</span>
-                  <span>2,458</span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="pt-2">
-              {account.status !== 'connected' ? (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => handleConnect(account.id)}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Reconnecting...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Reconnect
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="w-full text-green-600"
-                  disabled
-                >
-                  <Check className="mr-2 h-4 w-4" />
-                  Connected
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+              <CardFooter className="pt-2">
+                {account.status !== 'connected' ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleConnect(account.id)}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Reconnecting...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Reconnect
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full text-green-600"
+                    disabled
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Connected
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* WhatsApp Web Browser Sheet */}
       <Sheet open={webBrowserOpen} onOpenChange={setWebBrowserOpen}>

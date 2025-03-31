@@ -1,13 +1,21 @@
 
-// This file is maintained for backward compatibility
-// It re-exports all functionality from the modularized conversation services
+import { getConversations } from './conversations/getConversations';
+import { getMessages } from './conversations/getMessages';
+import { sendMessage } from './conversations/sendMessage';
+import { createConversation } from './conversations/createConversation';
+import { deleteConversation } from './conversations/deleteConversation';
+import { archiveConversation } from './conversations/archiveConversation';
+import { addTag, removeTag } from './conversations/tagOperations';
+import { assignConversation } from './conversations/assignOperations';
+
 export {
   getConversations,
   getMessages,
   sendMessage,
+  createConversation,
   deleteConversation,
   archiveConversation,
-  addTagToConversation,
-  assignConversation,
-  createConversation
-} from './conversations';
+  addTag,
+  removeTag,
+  assignConversation
+};
