@@ -21,13 +21,13 @@ export const checkRoleLocally = async (
     }
     
     if (role === 'super_admin') {
-      // For demo - you can change this to true to test super admin features
-      return false;
+      // For demo - set this to true to test super admin features
+      return true;
     }
     
     if (role === 'admin') {
       // For demo - you can change this to true to test admin features
-      return false;
+      return true;
     }
     
     // Default regular user
