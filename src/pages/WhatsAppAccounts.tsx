@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ import {
   Key,
   AlertCircle,
   MoreVertical,
+  Loader2,
+  Browser,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 interface WhatsAppAccount {
   id: string;
@@ -84,25 +88,186 @@ const accounts: WhatsAppAccount[] = [
   },
 ];
 
+// Array of country codes for the phone tab
+const countryCodes = [
+  { code: '+1', country: 'United States' },
+  { code: '+44', country: 'United Kingdom' },
+  { code: '+91', country: 'India' },
+  { code: '+61', country: 'Australia' },
+  { code: '+86', country: 'China' },
+  { code: '+49', country: 'Germany' },
+  { code: '+33', country: 'France' },
+  { code: '+81', country: 'Japan' },
+  { code: '+52', country: 'Mexico' },
+  { code: '+55', country: 'Brazil' },
+];
+
 const WhatsAppAccounts = () => {
   const { toast } = useToast();
   const [newAccountName, setNewAccountName] = useState('');
   const [businessId, setBusinessId] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('+1');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [showQrLoader, setShowQrLoader] = useState(true);
+  const [webBrowserOpen, setWebBrowserOpen] = useState(false);
+
+  // Mock function to simulate QR code generation
+  const generateQrCode = () => {
+    setShowQrLoader(true);
+    setTimeout(() => {
+      // In a real app, this would be a real QR code URL from WhatsApp API
+      setQrCodeUrl('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp://connection/example');
+      setShowQrLoader(false);
+    }, 1500);
+  };
+
+  // On initial load, generate QR code
+  useEffect(() => {
+    generateQrCode();
+  }, []);
 
   const handleConnect = (accountId: string) => {
-    toast({
-      title: "Reconnecting account",
-      description: "Attempting to reconnect WhatsApp account...",
-    });
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Account reconnected",
+        description: "Successfully reconnected WhatsApp account.",
+      });
+    }, 1500);
   };
 
   const handleAddAccount = (type: string) => {
-    toast({
-      title: "Account creation initiated",
-      description: `Creating new WhatsApp account via ${type}...`,
-    });
+    setLoading(true);
+    
+    // Validate inputs based on connection type
+    if (type === 'QR code' && !newAccountName) {
+      toast({
+        title: "Missing information",
+        description: "Please provide an account name.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
+    if (type === 'phone verification') {
+      if (!newAccountName || !phoneNumber) {
+        toast({
+          title: "Missing information",
+          description: "Please provide both account name and phone number.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      if (codeSent && !verificationCode) {
+        toast({
+          title: "Missing verification code",
+          description: "Please enter the verification code sent to your phone.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+    }
+    
+    if (type === 'Business API') {
+      if (!newAccountName || !businessId || !apiKey) {
+        toast({
+          title: "Missing information",
+          description: "Please provide account name, business ID, and API key.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Account added",
+        description: `Successfully added WhatsApp account via ${type}.`,
+      });
+      
+      // Reset form state
+      setNewAccountName('');
+      setBusinessId('');
+      setApiKey('');
+      setPhoneNumber('');
+      setCountryCode('+1');
+      setVerificationCode('');
+      setCodeSent(false);
+      setVerifying(false);
+      
+      // Force refresh QR code if that method was used
+      if (type === 'QR code') {
+        generateQrCode();
+      }
+    }, 2000);
+  };
+
+  const handleSendVerificationCode = () => {
+    if (!phoneNumber) {
+      toast({
+        title: "Missing phone number",
+        description: "Please enter a valid phone number to receive the verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setVerifying(true);
+    
+    // Simulate sending verification code
+    setTimeout(() => {
+      setVerifying(false);
+      setCodeSent(true);
+      toast({
+        title: "Verification code sent",
+        description: `A verification code has been sent to ${countryCode} ${phoneNumber}.`,
+      });
+    }, 1500);
+  };
+
+  const handleVerifyCode = () => {
+    if (!verificationCode) {
+      toast({
+        title: "Missing verification code",
+        description: "Please enter the verification code you received.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setVerifying(true);
+    
+    // Simulate verifying code
+    setTimeout(() => {
+      setVerifying(false);
+      handleAddAccount('phone verification');
+    }, 1500);
+  };
+
+  const handleRefreshQrCode = () => {
+    setShowQrLoader(true);
+    setQrCodeUrl('');
+    generateQrCode();
+  };
+
+  const openWebWhatsApp = () => {
+    setWebBrowserOpen(true);
   };
 
   return (
@@ -149,19 +314,45 @@ const WhatsAppAccounts = () => {
                 </div>
                 
                 <div className="border rounded-md p-6 flex flex-col items-center justify-center">
-                  <QrCode className="h-32 w-32 text-muted-foreground/50" />
+                  {showQrLoader ? (
+                    <div className="flex flex-col items-center justify-center h-32 w-32">
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                      <p className="text-sm text-muted-foreground mt-4">Generating QR code...</p>
+                    </div>
+                  ) : (
+                    <img src={qrCodeUrl} alt="WhatsApp QR Code" className="h-32 w-32" />
+                  )}
                   <p className="text-sm text-muted-foreground mt-4 text-center">
                     Scan this QR code with your WhatsApp app to connect
                   </p>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    <RefreshCw className="mr-2 h-3 w-3" />
-                    Refresh QR Code
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="outline" size="sm" onClick={handleRefreshQrCode}>
+                      <RefreshCw className="mr-2 h-3 w-3" />
+                      Refresh QR Code
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={openWebWhatsApp}>
+                      <Browser className="mr-2 h-3 w-3" />
+                      Open in Browser
+                    </Button>
+                  </div>
                 </div>
                 
-                <Button className="w-full" onClick={() => handleAddAccount('QR code')}>
-                  <Check className="mr-2 h-4 w-4" />
-                  Confirm Connection
+                <Button 
+                  className="w-full" 
+                  onClick={() => handleAddAccount('QR code')}
+                  disabled={loading || !newAccountName}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Confirm Connection
+                    </>
+                  )}
                 </Button>
               </TabsContent>
               
@@ -178,27 +369,88 @@ const WhatsAppAccounts = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="phone-number">Phone Number</Label>
-                  <Input
-                    id="phone-number"
-                    placeholder="+1 (555) 123-4567"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                  />
-                </div>
-                
-                <div className="border rounded-md p-4">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-blue-500" />
-                    <p className="text-sm">
-                      We'll send a one-time password to this number to verify.
-                    </p>
+                  <div className="flex gap-2">
+                    <select
+                      className="max-w-[100px] h-10 rounded-md border border-input bg-background px-3 py-2"
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                    >
+                      {countryCodes.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.code} ({country.country.substring(0, 2)})
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      id="phone-number"
+                      placeholder="123-456-7890"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="flex-1"
+                    />
                   </div>
                 </div>
                 
-                <Button className="w-full" onClick={() => handleAddAccount('phone verification')}>
-                  <PhoneCall className="mr-2 h-4 w-4" />
-                  Send Verification Code
-                </Button>
+                {codeSent ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="verification-code">Verification Code</Label>
+                      <Input
+                        id="verification-code"
+                        placeholder="Enter 6-digit code"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        maxLength={6}
+                      />
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleVerifyCode}
+                      disabled={verifying || !verificationCode}
+                    >
+                      {verifying ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Verify Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="border rounded-md p-4">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-blue-500" />
+                        <p className="text-sm">
+                          We'll send a one-time password to this number to verify.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSendVerificationCode}
+                      disabled={verifying || !phoneNumber || !newAccountName}
+                    >
+                      {verifying ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <PhoneCall className="mr-2 h-4 w-4" />
+                          Send Verification Code
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
               </TabsContent>
               
               <TabsContent value="api" className="space-y-4 py-4">
@@ -233,9 +485,22 @@ const WhatsAppAccounts = () => {
                   />
                 </div>
                 
-                <Button className="w-full" onClick={() => handleAddAccount('Business API')}>
-                  <Key className="mr-2 h-4 w-4" />
-                  Connect API
+                <Button 
+                  className="w-full" 
+                  onClick={() => handleAddAccount('Business API')}
+                  disabled={loading || !newAccountName || !businessId || !apiKey}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="mr-2 h-4 w-4" />
+                      Connect API
+                    </>
+                  )}
                 </Button>
               </TabsContent>
             </Tabs>
@@ -304,9 +569,19 @@ const WhatsAppAccounts = () => {
                   variant="outline"
                   className="w-full"
                   onClick={() => handleConnect(account.id)}
+                  disabled={loading}
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Reconnect
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Reconnecting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Reconnect
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button
@@ -322,6 +597,41 @@ const WhatsAppAccounts = () => {
           </Card>
         ))}
       </div>
+
+      {/* WhatsApp Web Browser Sheet */}
+      <Sheet open={webBrowserOpen} onOpenChange={setWebBrowserOpen}>
+        <SheetContent className="w-[90%] sm:max-w-[540px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle>Connect to WhatsApp Web</SheetTitle>
+            <SheetDescription>
+              Use your WhatsApp Web to connect your account
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 flex flex-col items-center justify-center h-[80vh]">
+            <div className="border rounded p-4 w-full h-full bg-gray-50 flex flex-col items-center justify-center">
+              <iframe 
+                src="https://web.whatsapp.com" 
+                title="WhatsApp Web" 
+                className="w-full h-full border-0"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground mt-4 text-center">
+              Once you scan the QR code on WhatsApp Web, click the button below to complete the connection
+            </p>
+            <Button 
+              className="mt-4" 
+              onClick={() => {
+                setWebBrowserOpen(false);
+                handleAddAccount('QR code');
+              }}
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Confirm Connection
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
