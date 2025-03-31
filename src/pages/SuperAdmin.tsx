@@ -80,14 +80,41 @@ const SuperAdmin = () => {
         }
         
         if (localStorage.getItem('isSuperAdmin') === 'true') {
-          console.log("Super admin mode detected from localStorage, creating mock user");
-          const mockUser = {
+          console.log("Super admin mode detected from localStorage");
+          let mockUser = {
             id: 'super-admin',
             email: getDefaultSuperAdminEmail(),
             user_metadata: {
               name: 'Super Admin'
             }
           };
+          
+          const savedProfile = localStorage.getItem('superAdminProfile');
+          if (savedProfile) {
+            try {
+              const profileData = JSON.parse(savedProfile);
+              mockUser = {
+                ...mockUser,
+                email: profileData.email || mockUser.email,
+                user_metadata: {
+                  ...mockUser.user_metadata,
+                  name: profileData.name || mockUser.user_metadata.name,
+                  phone: profileData.phone,
+                  company: profileData.company,
+                  address: profileData.address,
+                  bio: profileData.bio
+                }
+              };
+            } catch (parseError) {
+              console.error("Error parsing saved profile:", parseError);
+            }
+          }
+          
+          const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
+          if (savedAvatar) {
+            mockUser.user_metadata.avatar_url = savedAvatar;
+          }
+          
           setCurrentUser(mockUser);
           
           try {
@@ -98,7 +125,12 @@ const SuperAdmin = () => {
                 ...user,
                 user_metadata: {
                   ...user.user_metadata,
-                  name: user.user_metadata?.name || 'Super Admin'
+                  name: user.user_metadata?.name || mockUser.user_metadata.name,
+                  phone: user.user_metadata?.phone || mockUser.user_metadata.phone,
+                  company: user.user_metadata?.company || mockUser.user_metadata.company,
+                  address: user.user_metadata?.address || mockUser.user_metadata.address,
+                  bio: user.user_metadata?.bio || mockUser.user_metadata.bio,
+                  avatar_url: user.user_metadata?.avatar_url || mockUser.user_metadata.avatar_url
                 }
               };
               setCurrentUser(enhancedUser);
@@ -121,6 +153,11 @@ const SuperAdmin = () => {
             setCurrentUser(user);
           } else {
             console.warn("No user found, but no error reported");
+            toast({
+              title: "Authentication Required",
+              description: "Please sign in to access this page.",
+              variant: "destructive",
+            });
           }
         }
       } catch (error) {

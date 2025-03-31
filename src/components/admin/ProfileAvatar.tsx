@@ -24,32 +24,6 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
         return;
       }
       
-      // Check for user before proceeding
-      if (!user) {
-        // Special case for Super Admin
-        if (localStorage.getItem('isSuperAdmin') === 'true') {
-          // For Super Admin mode with no user object, just show the avatar preview
-          // but don't attempt to upload to Supabase
-          const file = event.target.files[0];
-          const objectUrl = URL.createObjectURL(file);
-          setAvatarUrl(objectUrl);
-          
-          toast({
-            title: "Avatar Preview",
-            description: "Avatar preview updated for Super Admin.",
-          });
-          return;
-        }
-        
-        console.error("No user found when uploading avatar");
-        toast({
-          title: "Error",
-          description: "You need to be logged in to update your avatar.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       const file = event.target.files[0];
       
       if (file.size > MAX_FILE_SIZE) {
@@ -62,26 +36,78 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       }
       
       setUploading(true);
+      
+      // Check if we're in Super Admin mode without a real authenticated user
+      const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+      
+      // For Super Admin mode or any other special case without authentication
+      if (isSuperAdmin && (!user || user.id === 'super-admin')) {
+        console.log("Super Admin mode detected - setting local avatar preview");
+        // Create a URL for the file to preview
+        const objectUrl = URL.createObjectURL(file);
+        setAvatarUrl(objectUrl);
+        
+        // Save to localStorage for persistence
+        try {
+          // Convert file to data URL for localStorage
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64data = reader.result;
+            localStorage.setItem('superAdminAvatarUrl', base64data as string);
+          };
+          reader.readAsDataURL(file);
+        } catch (storageError) {
+          console.error("Error saving avatar to localStorage:", storageError);
+        }
+        
+        toast({
+          title: "Avatar updated",
+          description: "Your avatar has been updated for Super Admin mode.",
+        });
+        
+        setUploading(false);
+        return;
+      }
+      
+      // Normal user flow with authentication
+      if (!user) {
+        console.error("No user found when uploading avatar");
+        toast({
+          title: "Error",
+          description: "You need to be logged in to update your avatar.",
+          variant: "destructive",
+        });
+        setUploading(false);
+        return;
+      }
+      
       console.log("Starting avatar upload for user:", user.id);
       
       // Create a URL for the file to preview
       const objectUrl = URL.createObjectURL(file);
       setAvatarUrl(objectUrl);
       
-      // Prepare file details
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
-      
       try {
-        // Check if storage bucket exists
+        // Use existing Supabase code for authenticated users
+        // Prepare file details
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}.${fileExt}`;
+        
         console.log("Checking if avatars bucket exists");
         const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('avatars');
         
         if (bucketError) {
-          console.log("Error checking bucket, will try to create: ", bucketError);
+          console.log("Error checking bucket:", bucketError);
+          // If bucket doesn't exist and we can't create it, we'll just use local preview
+          toast({
+            title: "Avatar Preview Only",
+            description: "Storage unavailable. Avatar updated in preview mode only.",
+          });
+          setUploading(false);
+          return;
         }
         
-        if (!bucketData || bucketError) {
+        if (!bucketData) {
           console.log("Creating avatars bucket");
           // Create bucket if it doesn't exist
           const { error: createError } = await supabase.storage.createBucket('avatars', {
@@ -90,7 +116,12 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
           
           if (createError) {
             console.error("Error creating bucket:", createError);
-            throw createError;
+            toast({
+              title: "Avatar Preview Only",
+              description: "Storage unavailable. Avatar updated in preview mode only.",
+            });
+            setUploading(false);
+            return;
           }
         }
         
@@ -102,7 +133,12 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
           
         if (uploadError) {
           console.error("Upload error:", uploadError);
-          throw uploadError;
+          toast({
+            title: "Upload Issue",
+            description: "File preview available, but couldn't save to storage.",
+          });
+          setUploading(false);
+          return;
         }
         
         // Get public URL
@@ -120,7 +156,12 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
           
           if (updateError) {
             console.error("Update metadata error:", updateError);
-            throw updateError;
+            toast({
+              title: "Profile Partially Updated",
+              description: "Avatar is visible but we couldn't save it to your profile.",
+            });
+            setUploading(false);
+            return;
           }
           
           toast({
@@ -130,7 +171,10 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
         }
       } catch (storageError) {
         console.error("Storage error:", storageError);
-        throw storageError;
+        toast({
+          title: "Avatar Preview Only",
+          description: "Your avatar is updated in the interface but not saved.",
+        });
       }
     } catch (error) {
       console.error("Error uploading avatar:", error);
@@ -146,6 +190,16 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
 
   // Use super admin fallback for avatar if no user or avatarUrl
   const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+  
+  // Try to get avatar from localStorage for Super Admin mode
+  React.useEffect(() => {
+    if (isSuperAdmin && (!avatarUrl || avatarUrl === null)) {
+      const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
+      if (savedAvatar) {
+        setAvatarUrl(savedAvatar);
+      }
+    }
+  }, [isSuperAdmin, avatarUrl]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -165,7 +219,7 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
           variant="outline" 
           size="sm"
           className="text-xs"
-          disabled={uploading || (!user && !isSuperAdmin)}
+          disabled={uploading}
           onClick={() => document.getElementById('avatar-upload')?.click()}
         >
           <Upload className="h-3 w-3 mr-1" />
