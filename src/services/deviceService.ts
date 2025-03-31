@@ -59,7 +59,6 @@ export const getDeviceAccounts = async (): Promise<DeviceAccount[]> => {
   try {
     // Using mock data as fallback if database access fails
     try {
-      // @ts-ignore - Temporarily ignore TypeScript errors until database types are updated
       const { data, error } = await supabase
         .from('device_accounts')
         .select('*');
@@ -84,7 +83,6 @@ export const getDeviceAccounts = async (): Promise<DeviceAccount[]> => {
 export const addDeviceAccount = async (account: Omit<DeviceAccount, 'id'>): Promise<DeviceAccount> => {
   try {
     try {
-      // @ts-ignore - Temporarily ignore TypeScript errors until database types are updated
       const { data, error } = await supabase
         .from('device_accounts')
         .insert({
@@ -130,7 +128,6 @@ export const addDeviceAccount = async (account: Omit<DeviceAccount, 'id'>): Prom
 export const updateDeviceStatus = async (id: string, status: 'connected' | 'disconnected' | 'expired'): Promise<void> => {
   try {
     try {
-      // @ts-ignore - Temporarily ignore TypeScript errors until database types are updated
       const { error } = await supabase
         .from('device_accounts')
         .update({
@@ -151,11 +148,27 @@ export const updateDeviceStatus = async (id: string, status: 'connected' | 'disc
   }
 };
 
-// Delete a device account
-export const deleteDeviceAccount = async (id: string): Promise<void> => {
+// Delete a device account with improved error handling
+export const deleteDeviceAccount = async (id: string): Promise<boolean> => {
+  if (!id) {
+    console.error('Invalid ID provided for deletion');
+    return false;
+  }
+
   try {
     try {
-      // @ts-ignore - Temporarily ignore TypeScript errors until database types are updated
+      // First check if the account exists to prevent freezing on non-existent IDs
+      const { data: existingAccount, error: checkError } = await supabase
+        .from('device_accounts')
+        .select('id')
+        .eq('id', id)
+        .single();
+      
+      if (checkError || !existingAccount) {
+        console.warn('Account not found for deletion:', id);
+        return true; // Return true since the account is already gone
+      }
+      
       const { error } = await supabase
         .from('device_accounts')
         .delete()
@@ -163,13 +176,18 @@ export const deleteDeviceAccount = async (id: string): Promise<void> => {
       
       if (error) {
         console.error('Error in deleteDeviceAccount:', error);
+        return false;
       }
+      
+      return true;
     } catch (dbError) {
       console.log('Using mock delete for development:', dbError);
+      // For mock data, simulate successful deletion
+      return true;
     }
   } catch (error) {
     console.error('Error in deleteDeviceAccount:', error);
-    throw error;
+    return false;
   }
 };
 

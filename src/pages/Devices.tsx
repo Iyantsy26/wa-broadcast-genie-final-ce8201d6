@@ -396,19 +396,27 @@ const Devices = () => {
     
     try {
       setLoading(true);
-      await deleteDeviceAccount(accountToDelete);
+      const success = await deleteDeviceAccount(accountToDelete);
       
-      setAccounts(prevAccounts => 
-        prevAccounts.filter(acc => acc.id !== accountToDelete)
-      );
-      
-      toast({
-        title: "Device removed",
-        description: "Successfully removed WhatsApp device.",
-      });
-      
-      const updatedLimits = await checkAccountLimit();
-      setAccountLimit(updatedLimits);
+      if (success) {
+        setAccounts(prevAccounts => 
+          prevAccounts.filter(acc => acc.id !== accountToDelete)
+        );
+        
+        toast({
+          title: "Device removed",
+          description: "Successfully removed WhatsApp device.",
+        });
+        
+        const updatedLimits = await checkAccountLimit();
+        setAccountLimit(updatedLimits);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to remove WhatsApp device. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error deleting device:", error);
       toast({
