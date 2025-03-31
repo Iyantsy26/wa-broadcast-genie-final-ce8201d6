@@ -30,8 +30,18 @@ export interface Organization {
   name: string;
   slug: string;
   created_at?: string;
+  updated_at?: string;
   owner_id?: string;
   is_active: boolean;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member';
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface OrganizationBranding {
@@ -44,6 +54,8 @@ export interface OrganizationBranding {
   accent_color?: string;
   custom_domain?: string;
   custom_domain_verified?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Plan {
@@ -52,6 +64,8 @@ export interface Plan {
   description?: string;
   price?: number;
   interval?: 'monthly' | 'yearly';
+  created_at?: string;
+  updated_at?: string;
   is_active: boolean;
   is_custom: boolean;
   features: {
@@ -70,5 +84,26 @@ export interface OrganizationSubscription {
   status: 'active' | 'trialing' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'unpaid';
   current_period_start: string;
   current_period_end: string;
+  created_at?: string;
+  updated_at?: string;
+  cancel_at?: string;
+  canceled_at?: string;
+  payment_provider?: string;
+  payment_provider_subscription_id?: string;
   plan?: Plan;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  phone?: string;
+  role: string;
+  status: string;
+  department_id?: string;
+  last_active?: string;
+  created_at?: string;
+  updated_at?: string;
+  is_super_admin?: boolean;
 }

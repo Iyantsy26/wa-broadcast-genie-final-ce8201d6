@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import {
-  Buildings,
+  Building,
   CreditCard,
   Plus,
   Users,

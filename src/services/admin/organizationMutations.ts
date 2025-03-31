@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Organization, 
   OrganizationBranding, 
-  Plan
+  Plan,
+  TeamMember
 } from "../devices/deviceTypes";
 
 /**
