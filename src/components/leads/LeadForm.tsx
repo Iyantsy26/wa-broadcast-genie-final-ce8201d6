@@ -37,6 +37,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
     phone: lead?.phone || '',
     address: lead?.address || '',
     status: lead?.status || 'New',
+    source: lead?.source || '',
     referrer_name: lead?.referrer_name || '',
     last_contact: lead?.last_contact ? new Date(lead.last_contact) : undefined,
     next_followup: lead?.next_followup ? new Date(lead.next_followup) : undefined,
@@ -79,6 +80,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
         phone: values.phone,
         address: values.address,
         status: values.status,
+        source: values.source,
         referrer_name: values.referrer_name,
         last_contact: values.last_contact ? values.last_contact.toISOString() : null,
         next_followup: next_followup ? next_followup.toISOString() : null,
@@ -116,7 +118,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 max-h-[500px] overflow-y-auto">
         <LeadAvatar 
           avatarUrl={lead?.avatar_url || null} 
           onAvatarChange={handleAvatarChange} 

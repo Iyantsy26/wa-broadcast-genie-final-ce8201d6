@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { MessageSquare, Mail, Phone, Edit } from 'lucide-react';
@@ -303,7 +302,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       {/* Edit Lead Dialog */}
       {selectedLead && (
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Edit Lead</DialogTitle>
             </DialogHeader>

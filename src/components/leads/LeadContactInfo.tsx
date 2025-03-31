@@ -62,7 +62,35 @@ const LeadContactInfo: React.FC<LeadContactInfoProps> = ({ form }) => {
           <FormItem>
             <FormLabel>Phone</FormLabel>
             <FormControl>
-              <Input placeholder="+1 (555) 123-4567" {...field} />
+              <div className="flex">
+                <select 
+                  className="w-24 rounded-l-md border border-input bg-background px-2 py-2 border-r-0"
+                  defaultValue="+1"
+                  onChange={(e) => {
+                    const countryCode = e.target.value;
+                    const phoneNumber = field.value?.replace(/^\+\d+\s/, '') || '';
+                    field.onChange(`${countryCode} ${phoneNumber}`);
+                  }}
+                >
+                  <option value="+1">+1 (US)</option>
+                  <option value="+44">+44 (UK)</option>
+                  <option value="+91">+91 (IN)</option>
+                  <option value="+61">+61 (AU)</option>
+                  <option value="+86">+86 (CN)</option>
+                  <option value="+52">+52 (MX)</option>
+                  <option value="+971">+971 (UAE)</option>
+                  <option value="+65">+65 (SG)</option>
+                </select>
+                <Input 
+                  placeholder="(555) 123-4567" 
+                  className="rounded-l-none"
+                  value={field.value?.replace(/^\+\d+\s/, '') || ''}
+                  onChange={(e) => {
+                    const countryCode = field.value?.match(/^\+\d+/)?.[0] || '+1';
+                    field.onChange(`${countryCode} ${e.target.value}`);
+                  }}
+                />
+              </div>
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -79,6 +107,7 @@ const LeadContactInfo: React.FC<LeadContactInfoProps> = ({ form }) => {
               <select 
                 className="w-full rounded-md border border-input bg-background px-3 py-2" 
                 {...field}
+                value={field.value || ""}
               >
                 <option value="">-- Select Source --</option>
                 <option value="Website">Website</option>
