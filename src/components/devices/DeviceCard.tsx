@@ -39,6 +39,7 @@ interface DeviceCardProps {
   onConnect: (accountId: string) => void;
   onDisconnect: (accountId: string) => void;
   onDelete: (accountId: string) => void;
+  onEdit: (account: DeviceAccount) => void;
 }
 
 const DeviceCard = ({ 
@@ -46,7 +47,8 @@ const DeviceCard = ({
   loading, 
   onConnect, 
   onDisconnect, 
-  onDelete 
+  onDelete,
+  onEdit
 }: DeviceCardProps) => {
   const { toast } = useToast();
 
@@ -84,7 +86,7 @@ const DeviceCard = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => toast({ title: "Edit", description: "Feature coming soon" })}>
+              <DropdownMenuItem onClick={() => onEdit(account)}>
                 <Settings2 className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>

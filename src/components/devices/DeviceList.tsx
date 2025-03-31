@@ -12,6 +12,7 @@ interface DeviceListProps {
   onConnect: (accountId: string) => void;
   onDisconnect: (accountId: string) => void;
   onDelete: (accountId: string) => void;
+  onEdit: (account: DeviceAccount) => void;
   onOpenAddDialog: () => void;
   canAddDevices: boolean;
 }
@@ -23,6 +24,7 @@ const DeviceList = ({
   onConnect,
   onDisconnect,
   onDelete,
+  onEdit,
   onOpenAddDialog,
   canAddDevices
 }: DeviceListProps) => {
@@ -65,6 +67,7 @@ const DeviceList = ({
           onConnect={onConnect}
           onDisconnect={onDisconnect}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
     </div>

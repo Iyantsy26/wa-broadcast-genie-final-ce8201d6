@@ -10,13 +10,15 @@ import {
   deleteDeviceAccount,
   checkAccountLimit,
   getUserPlan,
+  updateDeviceAccount
 } from '@/services/deviceService';
 
-// Import new component files
+// Import components
 import DeviceList from '@/components/devices/DeviceList';
 import DeviceUsageCard from '@/components/devices/DeviceUsageCard';
 import AddDeviceDialog from '@/components/devices/AddDeviceDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
+import EditDeviceDialog from '@/components/devices/EditDeviceDialog';
 import WebWhatsAppSheet from '@/components/devices/WebWhatsAppSheet';
 import DemoAlert from '@/components/devices/DemoAlert';
 
@@ -59,6 +61,9 @@ const Devices = () => {
   const [accountLimit, setAccountLimit] = useState({ canAdd: true, currentCount: 0, limit: 2 });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deviceToEdit, setDeviceToEdit] = useState<DeviceAccount | null>(null);
+  const [deleteDeviceName, setDeleteDeviceName] = useState('this device');
 
   useEffect(() => {
     fetchDeviceAccounts();
@@ -327,7 +332,9 @@ const Devices = () => {
   };
 
   const openDeleteDialog = (accountId: string) => {
+    const device = accounts.find(acc => acc.id === accountId);
     setAccountToDelete(accountId);
+    setDeleteDeviceName(device?.name || 'this device');
     setDeleteDialogOpen(true);
   };
 
@@ -368,6 +375,49 @@ const Devices = () => {
       setLoading(false);
       setDeleteDialogOpen(false);
       setAccountToDelete(null);
+    }
+  };
+
+  const openEditDialog = (device: DeviceAccount) => {
+    setDeviceToEdit(device);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditAccount = async (id: string, updates: Partial<DeviceAccount>) => {
+    try {
+      setLoading(true);
+      const success = await updateDeviceAccount(id, updates);
+      
+      if (success) {
+        setAccounts(prevAccounts => 
+          prevAccounts.map(acc => 
+            acc.id === id ? { ...acc, ...updates } : acc
+          )
+        );
+        
+        toast({
+          title: "Device updated",
+          description: "Successfully updated WhatsApp device.",
+        });
+        
+        setEditDialogOpen(false);
+        setDeviceToEdit(null);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update WhatsApp device. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating device:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update WhatsApp device",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -435,6 +485,7 @@ const Devices = () => {
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
         onDelete={openDeleteDialog}
+        onEdit={openEditDialog}
         onOpenAddDialog={() => setDialogOpen(true)}
         canAddDevices={accountLimit.canAdd}
       />
@@ -450,6 +501,15 @@ const Devices = () => {
         onOpenChange={setDeleteDialogOpen}
         onDelete={handleDeleteAccount}
         loading={loading}
+        deviceName={deleteDeviceName}
+      />
+
+      <EditDeviceDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleEditAccount}
+        loading={loading}
+        device={deviceToEdit}
       />
     </div>
   );
