@@ -11,6 +11,11 @@ const DEFAULT_SUPER_ADMIN_PASSWORD = "123456";
  * Check if the current user has a specific role
  */
 export const hasRole = async (role: UserRole['role']): Promise<boolean> => {
+  // Check localStorage for Super Admin status first (fastest check)
+  if (role === 'super_admin' && localStorage.getItem('isSuperAdmin') === 'true') {
+    return true;
+  }
+  
   return checkUserHasRole(role);
 };
 

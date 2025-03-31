@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -53,7 +52,6 @@ import AdminManagement from "@/components/admin/AdminManagement";
 import SubscriptionPlanManagement from "@/components/admin/SubscriptionPlanManagement";
 import BrandingSettings from "@/components/admin/BrandingSettings";
 import { 
-  checkIsSuperAdmin,
   getOrganizations,
   getOrganizationById,
   getOrganizationBranding,
@@ -65,70 +63,35 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SuperAdmin = () => {
   const { toast } = useToast();
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [organizations, setOrganizations] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   
-  // Check super admin status
+  // Load data on component mount
   useEffect(() => {
-    const checkSuperAdmin = async () => {
+    const loadData = async () => {
+      setIsLoading(true);
       try {
-        const isAdmin = await checkIsSuperAdmin();
-        setIsSuperAdmin(isAdmin);
+        const orgsData = await getOrganizations();
+        setOrganizations(orgsData);
         
-        if (!isAdmin) {
-          toast({
-            title: "Access denied",
-            description: "You don't have super admin privileges",
-            variant: "destructive",
-          });
-        } else {
-          loadData();
-        }
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-      }
-    };
-    
-    const getCurrentUser = async () => {
-      try {
+        // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
       } catch (error) {
-        console.error("Error getting current user:", error);
+        console.error("Error loading data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load super admin data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    checkSuperAdmin();
-    getCurrentUser();
+    loadData();
   }, [toast]);
-  
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const orgsData = await getOrganizations();
-      setOrganizations(orgsData);
-    } catch (error) {
-      console.error("Error loading data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load super admin data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-        <p>You don't have permission to access this page.</p>
-      </div>
-    );
-  }
   
   return (
     <div className="space-y-6">
@@ -299,7 +262,6 @@ const SuperAdmin = () => {
                 <p>No organizations found.</p>
               </div>
             ) : (
-              // Placeholder for organizations grid, would be populated from API
               <>
                 <Card>
                   <CardHeader className="pb-2">

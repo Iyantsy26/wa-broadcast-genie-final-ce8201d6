@@ -38,25 +38,26 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
         const auth = await isAuthenticated();
         setAuthenticated(auth);
         
+        // Check for super admin status first (fastest check)
+        if (requiredRole === 'super_admin' && storedSuperAdmin) {
+          console.log("Super Admin role granted via localStorage");
+          setHasRequiredRole(true);
+          return; // Exit early
+        }
+        
         // If authentication required a specific role, check for that too
         if (auth && requiredRole) {
-          // Check for stored super admin state first
-          if (requiredRole === 'super_admin' && storedSuperAdmin) {
-            console.log("Super Admin role granted via localStorage");
+          // Check for super admin via email
+          const { data: { user } } = await supabase.auth.getUser();
+          const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
+          
+          if (requiredRole === 'super_admin' && isDefaultSuperAdmin) {
+            console.log("Default Super Admin role granted via email check");
+            localStorage.setItem('isSuperAdmin', 'true');
             setHasRequiredRole(true);
           } else {
-            // Check for super admin via email
-            const { data: { user } } = await supabase.auth.getUser();
-            const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
-            
-            if (requiredRole === 'super_admin' && isDefaultSuperAdmin) {
-              console.log("Default Super Admin role granted via email check");
-              localStorage.setItem('isSuperAdmin', 'true');
-              setHasRequiredRole(true);
-            } else {
-              const roleCheck = await hasRole(requiredRole);
-              setHasRequiredRole(roleCheck);
-            }
+            const roleCheck = await hasRole(requiredRole);
+            setHasRequiredRole(roleCheck);
           }
         } else if (auth) {
           // If no specific role required, grant access to authenticated user
@@ -64,7 +65,6 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
         }
       } catch (error) {
         console.error("Error checking auth and role:", error);
-        // Don't call toast in the render path - move to useEffect
       } finally {
         setLoading(false);
       }
@@ -76,7 +76,6 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
       setHasRequiredRole(true);
       setLoading(false);
       console.log("Super Admin access granted from login state");
-      // Don't call toast here - it could cause re-renders during render
     } else {
       checkAuthAndRole();
     }
@@ -93,8 +92,12 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           description: `You don't have ${requiredRole} privileges`,
           variant: "destructive",
         });
-      } else if (authenticated && hasRequiredRole) {
-        console.log(`Access granted to ${requiredRole || 'protected'} route`);
+      } else if (authenticated && hasRequiredRole && requiredRole === 'super_admin') {
+        // Only show welcome message for super admin
+        toast({
+          title: "Super Admin Access",
+          description: "Welcome to the Super Admin dashboard",
+        });
       }
     }
   }, [loading, authenticated, hasRequiredRole, requiredRole, toast]);

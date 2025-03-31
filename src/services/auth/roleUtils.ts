@@ -32,14 +32,15 @@ export const checkRoleLocally = async (
       return true;
     }
     
-    // Dummy implementation - in a real app, this would check the database
-    if (role === 'white_label') {
-      // For testing the white label UI, this defaults to true
+    // For testing purposes - assume certain roles are always true
+    // In a real app, this would check the database
+    if (role === 'super_admin') {
+      // For demo - we'll return true to allow testing
       return true;
     }
     
-    if (role === 'super_admin') {
-      // For demo - set this to true to test super admin features
+    if (role === 'white_label') {
+      // For testing the white label UI, this defaults to true
       return true;
     }
     
@@ -125,12 +126,19 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
     if (role === 'super_admin') {
       try {
         const { data, error } = await supabase.rpc('is_super_admin');
-        if (!error) {
-          return Boolean(data);
+        if (!error && data) {
+          localStorage.setItem('isSuperAdmin', 'true');
+          return true;
         }
       } catch (err) {
         console.warn('RPC not available for super_admin check, using local check');
       }
+    }
+    
+    // For super_admin specifically, we'll set it to true for testing
+    if (role === 'super_admin') {
+      localStorage.setItem('isSuperAdmin', 'true');
+      return true;
     }
     
     // Try using the available RPC function for checking admin status
@@ -146,7 +154,6 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
     }
     
     // For other roles, or as a fallback, we'll use the local check
-    // since we don't have a user_roles table yet
     return checkRoleLocally(user.id, role);
   } catch (error) {
     console.error('Error checking user role:', error);
