@@ -1,8 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { isAuthenticated, hasRole } from '@/services/auth/authService';
+import { isAuthenticated, hasRole, getDefaultSuperAdminEmail } from '@/services/auth/authService';
 import { UserRole } from '@/services/devices/deviceTypes';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -15,22 +17,44 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
-  const [hasRequiredRole, setHasRequiredRole] = useState(true);
+  const [hasRequiredRole, setHasRequiredRole] = useState(false);
   const location = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkAuthAndRole = async () => {
-      // First check if user is authenticated
-      const auth = await isAuthenticated();
-      setAuthenticated(auth);
-      
-      // If authentication required a specific role, check for that too
-      if (auth && requiredRole) {
-        const roleCheck = await hasRole(requiredRole);
-        setHasRequiredRole(roleCheck);
+      try {
+        // First check if user is authenticated
+        const auth = await isAuthenticated();
+        setAuthenticated(auth);
+        
+        // If authentication required a specific role, check for that too
+        if (auth && requiredRole) {
+          // Check for super admin via email
+          const { data: { user } } = await supabase.auth.getUser();
+          const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
+          
+          if (requiredRole === 'super_admin' && isDefaultSuperAdmin) {
+            console.log("Default Super Admin role granted via email check");
+            setHasRequiredRole(true);
+          } else {
+            const roleCheck = await hasRole(requiredRole);
+            setHasRequiredRole(roleCheck);
+          }
+        } else if (auth) {
+          // If no specific role required, grant access to authenticated user
+          setHasRequiredRole(true);
+        }
+      } catch (error) {
+        console.error("Error checking auth and role:", error);
+        toast({
+          title: "Authentication Error",
+          description: "There was a problem verifying your credentials",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     // Check for Super Admin in URL state (passed from login)
@@ -40,10 +64,14 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
       setHasRequiredRole(true);
       setLoading(false);
       console.log("Super Admin access granted from login state");
+      toast({
+        title: "Super Admin Access",
+        description: "You have been granted Super Admin privileges",
+      });
     } else {
       checkAuthAndRole();
     }
-  }, [requiredRole, location.state]);
+  }, [requiredRole, location.state, toast]);
 
   if (loading) {
     return (
@@ -59,6 +87,13 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   }
   
   if (!hasRequiredRole) {
+    // Notify user about insufficient permissions
+    toast({
+      title: "Access Denied",
+      description: `You don't have ${requiredRole} privileges`,
+      variant: "destructive",
+    });
+    
     // Redirect to unauthorized or dashboard
     return <Navigate to="/" replace />;
   }
