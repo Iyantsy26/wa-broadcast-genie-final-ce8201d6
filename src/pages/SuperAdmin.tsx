@@ -67,17 +67,43 @@ const SuperAdmin = () => {
   const [organizations, setOrganizations] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   
-  // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const orgsData = await getOrganizations();
-        setOrganizations(orgsData);
+        try {
+          const orgsData = await getOrganizations();
+          setOrganizations(orgsData);
+        } catch (orgError) {
+          console.error("Error fetching organizations:", orgError);
+        }
         
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        setCurrentUser(user);
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error("Error fetching user:", error);
+          toast({
+            title: "Authentication Error",
+            description: "Failed to load user data. Please try signing in again.",
+            variant: "destructive",
+          });
+        } else if (user) {
+          console.log("User data loaded successfully:", user);
+          setCurrentUser(user);
+        } else {
+          console.warn("No user found, but no error reported");
+          if (localStorage.getItem('isSuperAdmin') === 'true') {
+            console.log("Super admin mode detected from localStorage");
+            const mockUser = {
+              id: 'super-admin',
+              email: 'ssadmin@admin.com',
+              user_metadata: {
+                name: 'Super Admin'
+              }
+            };
+            setCurrentUser(mockUser);
+          }
+        }
       } catch (error) {
         console.error("Error loading data:", error);
         toast({
@@ -114,7 +140,6 @@ const SuperAdmin = () => {
           <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
         
-        {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -236,7 +261,6 @@ const SuperAdmin = () => {
           </div>
         </TabsContent>
         
-        {/* Organizations Tab */}
         <TabsContent value="organizations" className="space-y-4">
           <div className="flex justify-between">
             <div className="relative w-full md:w-80">
@@ -333,22 +357,18 @@ const SuperAdmin = () => {
           </div>
         </TabsContent>
         
-        {/* Plans Tab */}
         <TabsContent value="plans" className="space-y-4">
           <SubscriptionPlanManagement />
         </TabsContent>
         
-        {/* Admins Tab */}
         <TabsContent value="admins" className="space-y-4">
           <AdminManagement />
         </TabsContent>
         
-        {/* Branding Tab */}
         <TabsContent value="branding" className="space-y-4">
           <BrandingSettings />
         </TabsContent>
         
-        {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
           <Card>
             <CardHeader>
@@ -358,7 +378,17 @@ const SuperAdmin = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProfileSettingsForm user={currentUser} />
+              {isLoading ? (
+                <div className="flex justify-center p-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : currentUser ? (
+                <ProfileSettingsForm user={currentUser} />
+              ) : (
+                <div className="p-4 text-center">
+                  <p className="text-red-500">User data not available. Please try refreshing the page.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
           

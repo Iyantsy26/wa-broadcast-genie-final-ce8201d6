@@ -24,8 +24,9 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
         return;
       }
       
-      // Make sure we have a valid user
+      // Check for user before proceeding
       if (!user) {
+        console.error("No user found when uploading avatar");
         toast({
           title: "Error",
           description: "You need to be logged in to update your avatar.",
@@ -137,7 +138,7 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
           variant="outline" 
           size="sm"
           className="text-xs"
-          disabled={uploading}
+          disabled={uploading || !user}
           onClick={() => document.getElementById('avatar-upload')?.click()}
         >
           <Upload className="h-3 w-3 mr-1" />

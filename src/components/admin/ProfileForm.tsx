@@ -69,6 +69,7 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
   // Initialize form with user data
   useEffect(() => {
     if (user) {
+      console.log("Initializing form with user data:", user);
       form.reset({
         name: user.user_metadata?.name || "",
         email: user.email || "",
@@ -77,6 +78,8 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         address: user.user_metadata?.address || "",
         bio: user.user_metadata?.bio || "",
       });
+    } else {
+      console.log("No user data available for form initialization");
     }
   }, [user, form]);
 
@@ -84,8 +87,9 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
     try {
       setIsSaving(true);
       
-      // Make sure we have a valid user
+      // Check for user before proceeding
       if (!user) {
+        console.error("No user found when submitting form");
         toast({
           title: "Error",
           description: "You need to be logged in to update your profile.",
