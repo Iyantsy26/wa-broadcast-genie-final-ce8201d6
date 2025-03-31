@@ -13,6 +13,30 @@ export interface DeviceAccount {
   plan_tier?: 'starter' | 'professional' | 'enterprise';
 }
 
+// Mock data for device accounts since we don't have the actual table in Supabase
+const mockDeviceAccounts: DeviceAccount[] = [
+  {
+    id: '1',
+    name: 'Marketing Account',
+    phone: '+1 123-456-7890',
+    status: 'connected',
+    type: 'browser_qr',
+    last_active: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    plan_tier: 'starter'
+  },
+  {
+    id: '2',
+    name: 'Support Team',
+    phone: '+1 234-567-8901',
+    status: 'disconnected',
+    type: 'browser_web',
+    last_active: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+    created_at: new Date(Date.now() - 86400000 * 30).toISOString(), // 30 days ago
+    plan_tier: 'starter'
+  }
+];
+
 // Get the user's current plan
 export const getUserPlan = async (): Promise<'starter' | 'professional' | 'enterprise'> => {
   // This would normally fetch from a user_plans table
@@ -33,17 +57,9 @@ export const getAccountLimits = (plan: 'starter' | 'professional' | 'enterprise'
 // Get all device accounts
 export const getDeviceAccounts = async (): Promise<DeviceAccount[]> => {
   try {
-    const { data, error } = await supabase
-      .from('device_accounts')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching device accounts:', error);
-      throw error;
-    }
-
-    return data || [];
+    // Simulating API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return [...mockDeviceAccounts];
   } catch (error) {
     console.error('Error in getDeviceAccounts:', error);
     return [];
@@ -53,26 +69,24 @@ export const getDeviceAccounts = async (): Promise<DeviceAccount[]> => {
 // Add a device account
 export const addDeviceAccount = async (account: Omit<DeviceAccount, 'id'>): Promise<DeviceAccount> => {
   try {
-    const { data, error } = await supabase
-      .from('device_accounts')
-      .insert({
-        name: account.name,
-        phone: account.phone,
-        status: account.status,
-        type: account.type,
-        last_active: account.last_active || new Date().toISOString(),
-        business_id: account.business_id,
-        plan_tier: account.plan_tier || 'starter'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding device account:', error);
-      throw error;
-    }
-
-    return data;
+    // Simulating API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newAccount: DeviceAccount = {
+      id: Date.now().toString(),
+      name: account.name,
+      phone: account.phone,
+      status: account.status,
+      type: account.type,
+      last_active: account.last_active || new Date().toISOString(),
+      business_id: account.business_id,
+      created_at: new Date().toISOString(),
+      plan_tier: account.plan_tier || 'starter'
+    };
+    
+    mockDeviceAccounts.unshift(newAccount);
+    
+    return newAccount;
   } catch (error) {
     console.error('Error in addDeviceAccount:', error);
     throw error;
@@ -82,17 +96,13 @@ export const addDeviceAccount = async (account: Omit<DeviceAccount, 'id'>): Prom
 // Update device account status
 export const updateDeviceStatus = async (id: string, status: 'connected' | 'disconnected' | 'expired'): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('device_accounts')
-      .update({ 
-        status: status, 
-        last_active: new Date().toISOString() 
-      })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error updating device account status:', error);
-      throw error;
+    // Simulating API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const accountIndex = mockDeviceAccounts.findIndex(acc => acc.id === id);
+    if (accountIndex >= 0) {
+      mockDeviceAccounts[accountIndex].status = status;
+      mockDeviceAccounts[accountIndex].last_active = new Date().toISOString();
     }
   } catch (error) {
     console.error('Error in updateDeviceStatus:', error);
@@ -103,14 +113,12 @@ export const updateDeviceStatus = async (id: string, status: 'connected' | 'disc
 // Delete a device account
 export const deleteDeviceAccount = async (id: string): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('device_accounts')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting device account:', error);
-      throw error;
+    // Simulating API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const accountIndex = mockDeviceAccounts.findIndex(acc => acc.id === id);
+    if (accountIndex >= 0) {
+      mockDeviceAccounts.splice(accountIndex, 1);
     }
   } catch (error) {
     console.error('Error in deleteDeviceAccount:', error);
@@ -121,19 +129,13 @@ export const deleteDeviceAccount = async (id: string): Promise<void> => {
 // Check if adding another account would exceed the plan limit
 export const checkAccountLimit = async (): Promise<{ canAdd: boolean, currentCount: number, limit: number }> => {
   try {
+    // Simulating API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     const plan = await getUserPlan();
     const limit = getAccountLimits(plan);
+    const currentCount = mockDeviceAccounts.length;
     
-    const { count, error } = await supabase
-      .from('device_accounts')
-      .select('*', { count: 'exact', head: true });
-    
-    if (error) {
-      console.error('Error checking account limit:', error);
-      throw error;
-    }
-    
-    const currentCount = count || 0;
     return {
       canAdd: currentCount < limit,
       currentCount,

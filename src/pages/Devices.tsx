@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -38,8 +37,9 @@ import {
   Info,
   Trash2,
   Settings2,
-  AlertTriangle
-} from "lucide-react";
+  AlertTriangle,
+  Building2
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -144,7 +144,6 @@ const Devices = () => {
       console.log("Fetched accounts:", fetchedAccounts);
       setAccounts(fetchedAccounts);
       
-      // Update account limits after fetching accounts
       const limits = await checkAccountLimit();
       setAccountLimit(limits);
     } catch (error) {
@@ -199,7 +198,6 @@ const Devices = () => {
     try {
       setLoading(true);
       
-      // Check if account limit is reached
       const { canAdd, currentCount, limit } = await checkAccountLimit();
       
       if (!canAdd) {
@@ -211,7 +209,6 @@ const Devices = () => {
         return;
       }
       
-      // Validation checks
       if (!newAccountName) {
         toast({
           title: "Missing information",
@@ -273,11 +270,9 @@ const Devices = () => {
           description: `Successfully added WhatsApp device.`,
         });
         
-        // Update account limits after adding an account
         const updatedLimits = await checkAccountLimit();
         setAccountLimit(updatedLimits);
         
-        // Reset form fields
         setNewAccountName('');
         setBusinessId('');
         setApiKey('');
@@ -412,7 +407,6 @@ const Devices = () => {
         description: "Successfully removed WhatsApp device.",
       });
       
-      // Update account limits after deleting an account
       const updatedLimits = await checkAccountLimit();
       setAccountLimit(updatedLimits);
     } catch (error) {
@@ -782,7 +776,6 @@ const Devices = () => {
         </div>
       </div>
 
-      {/* Plan information */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Device Usage</CardTitle>
@@ -812,7 +805,7 @@ const Devices = () => {
             )}
             
             {accountLimit.currentCount >= accountLimit.limit * 0.8 && accountLimit.currentCount < accountLimit.limit && (
-              <Alert variant="warning">
+              <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   You're approaching your plan limit. Consider upgrading soon to add more devices.
@@ -951,7 +944,6 @@ const Devices = () => {
         </div>
       )}
 
-      {/* Web browser sheet for QR code scanning */}
       <Sheet open={webBrowserOpen} onOpenChange={setWebBrowserOpen}>
         <SheetContent className="w-[90%] sm:max-w-[540px] sm:w-[540px]">
           <SheetHeader>
@@ -992,7 +984,6 @@ const Devices = () => {
         </SheetContent>
       </Sheet>
 
-      {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
