@@ -179,6 +179,42 @@ export type Database = {
           },
         ]
       }
+      device_accounts: {
+        Row: {
+          business_id: string | null
+          created_at: string | null
+          id: string
+          last_active: string | null
+          name: string
+          phone: string
+          plan_tier: string | null
+          status: string
+          type: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_active?: string | null
+          name: string
+          phone: string
+          plan_tier?: string | null
+          status: string
+          type: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_active?: string | null
+          name?: string
+          phone?: string
+          plan_tier?: string | null
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           address: string | null
