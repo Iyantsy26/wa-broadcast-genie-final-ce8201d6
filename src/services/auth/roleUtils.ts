@@ -15,6 +15,12 @@ export const checkRoleLocally = async (
     // For demo purposes only - this would typically query the user_roles table
     // In production, use proper RPC functions in Supabase
     
+    // Check localStorage for Super Admin status first (fastest check)
+    if (role === 'super_admin' && localStorage.getItem('isSuperAdmin') === 'true') {
+      console.log("Super Admin role granted from localStorage");
+      return true;
+    }
+    
     // Get current user email to check for default Super Admin
     const { data: { user } } = await supabase.auth.getUser();
     const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
@@ -22,6 +28,7 @@ export const checkRoleLocally = async (
     // If requesting super_admin role and user is the default super admin
     if (role === 'super_admin' && isDefaultSuperAdmin) {
       console.log("Default Super Admin role granted locally");
+      localStorage.setItem('isSuperAdmin', 'true');
       return true;
     }
     
@@ -54,6 +61,12 @@ export const checkRoleLocally = async (
  */
 export const getRedirectPathForRole = async (): Promise<string> => {
   try {
+    // Check localStorage for Super Admin status first (fastest check)
+    if (localStorage.getItem('isSuperAdmin') === 'true') {
+      console.log("Redirecting to Super Admin dashboard from localStorage");
+      return '/super-admin';
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) return '/login';
@@ -61,6 +74,7 @@ export const getRedirectPathForRole = async (): Promise<string> => {
     // Special case for default Super Admin
     if (user.email === getDefaultSuperAdminEmail()) {
       console.log("Redirecting to Super Admin dashboard");
+      localStorage.setItem('isSuperAdmin', 'true');
       return '/super-admin';
     }
     
@@ -90,6 +104,12 @@ export const getRedirectPathForRole = async (): Promise<string> => {
  */
 export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean> => {
   try {
+    // Check localStorage for Super Admin status first (fastest check)
+    if (role === 'super_admin' && localStorage.getItem('isSuperAdmin') === 'true') {
+      console.log("Super Admin role granted from localStorage");
+      return true;
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) return false;
@@ -97,6 +117,7 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
     // Check for default Super Admin
     if (user.email === getDefaultSuperAdminEmail() && role === 'super_admin') {
       console.log("Default Super Admin role granted");
+      localStorage.setItem('isSuperAdmin', 'true');
       return true;
     }
     

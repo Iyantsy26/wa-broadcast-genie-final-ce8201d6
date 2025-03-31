@@ -14,8 +14,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, Bell, LogOut, Settings, ShieldCheck, Building, Globe } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from "@/hooks/use-toast";
-import { signOut, isAuthenticated, checkUserRole } from "@/services/auth/authService";
+import { signOut, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
 import { UserRole } from "@/services/devices/deviceTypes";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -28,6 +29,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   
   const [authenticated, setAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -35,8 +37,25 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
       setAuthenticated(auth);
       
       if (auth) {
-        const role = await checkUserRole();
-        setUserRole(role);
+        // Check for super admin in localStorage
+        if (localStorage.getItem('isSuperAdmin') === 'true') {
+          setUserRole({
+            id: 'system',
+            user_id: 'system',
+            role: 'super_admin'
+          });
+          
+          // Try to get user email
+          const { data: { user } } = await supabase.auth.getUser();
+          setUserEmail(user?.email || getDefaultSuperAdminEmail());
+        } else {
+          const role = await checkUserRole();
+          setUserRole(role);
+          
+          // Get user email
+          const { data: { user } } = await supabase.auth.getUser();
+          setUserEmail(user?.email || null);
+        }
       }
     };
     
@@ -93,15 +112,17 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">User</p>
+                      <p className="text-sm font-medium leading-none">
+                        {userRole?.role === 'super_admin' ? 'Super Admin' : 'User'}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        user@example.com
+                        {userEmail || 'user@example.com'}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  {userRole?.role === 'super_admin' && (
+                  {(userRole?.role === 'super_admin' || localStorage.getItem('isSuperAdmin') === 'true') && (
                     <DropdownMenuItem onClick={() => navigate('/super-admin')}>
                       <ShieldCheck className="mr-2 h-4 w-4" />
                       <span>Super Admin</span>

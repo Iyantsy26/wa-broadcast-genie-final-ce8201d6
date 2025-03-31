@@ -22,6 +22,16 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
+    // Store the super admin state in localStorage to persist across page refreshes
+    const storedSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+    const fromLoginState = location.state?.isSuperAdmin;
+    
+    // If coming from login with super admin state, store it
+    if (fromLoginState) {
+      localStorage.setItem('isSuperAdmin', 'true');
+      console.log("Super Admin state stored in localStorage");
+    }
+
     const checkAuthAndRole = async () => {
       try {
         // First check if user is authenticated
@@ -30,16 +40,23 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
         
         // If authentication required a specific role, check for that too
         if (auth && requiredRole) {
-          // Check for super admin via email
-          const { data: { user } } = await supabase.auth.getUser();
-          const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
-          
-          if (requiredRole === 'super_admin' && isDefaultSuperAdmin) {
-            console.log("Default Super Admin role granted via email check");
+          // Check for stored super admin state first
+          if (requiredRole === 'super_admin' && storedSuperAdmin) {
+            console.log("Super Admin role granted via localStorage");
             setHasRequiredRole(true);
           } else {
-            const roleCheck = await hasRole(requiredRole);
-            setHasRequiredRole(roleCheck);
+            // Check for super admin via email
+            const { data: { user } } = await supabase.auth.getUser();
+            const isDefaultSuperAdmin = user?.email === getDefaultSuperAdminEmail();
+            
+            if (requiredRole === 'super_admin' && isDefaultSuperAdmin) {
+              console.log("Default Super Admin role granted via email check");
+              localStorage.setItem('isSuperAdmin', 'true');
+              setHasRequiredRole(true);
+            } else {
+              const roleCheck = await hasRole(requiredRole);
+              setHasRequiredRole(roleCheck);
+            }
           }
         } else if (auth) {
           // If no specific role required, grant access to authenticated user
@@ -58,8 +75,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     };
 
     // Check for Super Admin in URL state (passed from login)
-    const isSuperAdminFromLogin = location.state?.isSuperAdmin;
-    if (isSuperAdminFromLogin && requiredRole === 'super_admin') {
+    if (fromLoginState && requiredRole === 'super_admin') {
       setAuthenticated(true);
       setHasRequiredRole(true);
       setLoading(false);

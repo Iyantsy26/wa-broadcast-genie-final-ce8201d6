@@ -19,6 +19,18 @@ export const hasRole = async (role: UserRole['role']): Promise<boolean> => {
  */
 export const checkUserRole = async (): Promise<UserRole | null> => {
   try {
+    // Check for Super Admin in localStorage first
+    if (localStorage.getItem('isSuperAdmin') === 'true') {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return {
+          id: 'system',
+          user_id: user.id,
+          role: 'super_admin'
+        };
+      }
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) return null;
@@ -67,6 +79,11 @@ export const checkUserRole = async (): Promise<UserRole | null> => {
  * Check if current user is authenticated
  */
 export const isAuthenticated = async (): Promise<boolean> => {
+  // Check for Super Admin in localStorage first
+  if (localStorage.getItem('isSuperAdmin') === 'true') {
+    return true;
+  }
+  
   const { data: { session } } = await supabase.auth.getSession();
   return !!session;
 };
@@ -76,6 +93,9 @@ export const isAuthenticated = async (): Promise<boolean> => {
  */
 export const signOut = async (): Promise<boolean> => {
   try {
+    // Clear super admin status
+    localStorage.removeItem('isSuperAdmin');
+    
     const { error } = await supabase.auth.signOut();
     return !error;
   } catch (error) {

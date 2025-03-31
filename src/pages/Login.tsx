@@ -63,6 +63,9 @@ const Login = () => {
           description: "Welcome, Super Admin!",
         });
         
+        // Set localStorage to indicate super admin status
+        localStorage.setItem('isSuperAdmin', 'true');
+        
         // Set state to indicate super admin status for the RoleProtectedRoute
         navigate('/super-admin', { state: { isSuperAdmin: true } });
         return;
