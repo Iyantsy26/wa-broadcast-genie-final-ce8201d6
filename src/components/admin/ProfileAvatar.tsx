@@ -41,27 +41,20 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       const objectUrl = URL.createObjectURL(file);
       setAvatarUrl(objectUrl);
       
-      // Check if we have a valid session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error("You need to be logged in to update your avatar");
-      }
-      
-      if (user) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}.${fileExt}`;
+      try {
+        // Check if storage bucket exists
+        const { data: bucketData } = await supabase.storage.getBucket('avatars');
         
-        try {
-          // Check if storage bucket exists
-          const { data: bucketData } = await supabase.storage.getBucket('avatars');
-          
-          if (!bucketData) {
-            // Create bucket if it doesn't exist
-            await supabase.storage.createBucket('avatars', {
-              public: true
-            });
-          }
+        if (!bucketData) {
+          // Create bucket if it doesn't exist
+          await supabase.storage.createBucket('avatars', {
+            public: true
+          });
+        }
+        
+        if (user) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}.${fileExt}`;
           
           // Upload the file
           const { error: uploadError } = await supabase.storage
@@ -77,19 +70,27 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
             
           if (urlData) {
             // Update user avatar URL in metadata
-            await supabase.auth.updateUser({
+            const { error: updateError } = await supabase.auth.updateUser({
               data: { avatar_url: urlData.publicUrl }
             });
+            
+            if (updateError) throw updateError;
+            
+            toast({
+              title: "Avatar updated",
+              description: "Your avatar has been updated successfully.",
+            });
           }
-          
+        } else {
           toast({
-            title: "Avatar updated",
-            description: "Your avatar has been updated successfully.",
+            title: "User not found",
+            description: "Please log in to update your avatar.",
+            variant: "destructive",
           });
-        } catch (storageError) {
-          console.error("Storage error:", storageError);
-          throw storageError;
         }
+      } catch (storageError) {
+        console.error("Storage error:", storageError);
+        throw storageError;
       }
     } catch (error) {
       console.error("Error uploading avatar:", error);

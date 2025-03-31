@@ -84,14 +84,17 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
     try {
       setIsSaving(true);
       
-      // Check for valid session before proceeding
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("You need to be logged in to update your profile");
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You need to be logged in to update your profile.",
+          variant: "destructive",
+        });
+        return;
       }
       
       // Update user email if it's changed and user is super admin
-      if (isSuperAdmin && data.email !== user?.email) {
+      if (isSuperAdmin && data.email !== user.email) {
         const { error: emailError } = await supabase.auth.updateUser({
           email: data.email,
         });
