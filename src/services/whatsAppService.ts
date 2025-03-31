@@ -104,6 +104,7 @@ export const updateWhatsAppAccountStatus = async (id: string, status: 'connected
 
 export const checkAdminStatus = async (): Promise<boolean> => {
   try {
+    // Use the is_admin RPC function we created in the database
     const { data, error } = await supabase
       .rpc('is_admin');
     
@@ -121,6 +122,9 @@ export const checkAdminStatus = async (): Promise<boolean> => {
 
 export const addUserAsAdmin = async (userId: string): Promise<boolean> => {
   try {
+    // For this function, we'll use a raw SQL insert via the rpc approach
+    // This bypasses the TypeScript type checking since the admin_users table 
+    // is not in the Supabase generated types
     const { error } = await supabase
       .from('admin_users')
       .insert({ id: userId });
