@@ -43,6 +43,10 @@ export const getWhatsAppAccounts = async (): Promise<WhatsAppAccount[]> => {
 
 export const addWhatsAppAccount = async (account: Omit<WhatsAppAccount, 'id'>): Promise<WhatsAppAccount> => {
   try {
+    // Since we don't have team_member_id in our interface but DB requires it
+    // We'll set a default value for now - in a real app this would be the logged in user
+    const tempTeamMemberId = '00000000-0000-0000-0000-000000000000';
+    
     const { data, error } = await supabase
       .from('whatsapp_accounts')
       .insert({
@@ -52,6 +56,7 @@ export const addWhatsAppAccount = async (account: Omit<WhatsAppAccount, 'id'>): 
         connection_type: account.type,
         last_active: account.last_active || new Date().toISOString(),
         business_id: account.business_id,
+        team_member_id: tempTeamMemberId // Required field in our database
       })
       .select()
       .single();
@@ -81,7 +86,10 @@ export const updateWhatsAppAccountStatus = async (id: string, status: 'connected
   try {
     const { error } = await supabase
       .from('whatsapp_accounts')
-      .update({ status, last_active: new Date().toISOString() })
+      .update({ 
+        status: status, 
+        last_active: new Date().toISOString() 
+      })
       .eq('id', id);
 
     if (error) {

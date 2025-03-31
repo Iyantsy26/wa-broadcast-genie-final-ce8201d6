@@ -5,7 +5,7 @@ import { sendMessage } from './conversations/sendMessage';
 import { createConversation } from './conversations/createConversation';
 import { deleteConversation } from './conversations/deleteConversation';
 import { archiveConversation } from './conversations/archiveConversation';
-import { addTag, removeTag } from './conversations/tagOperations';
+import { addTagToConversation, removeTag } from './conversations/tagOperations';
 import { assignConversation } from './conversations/assignOperations';
 
 export {
@@ -15,7 +15,7 @@ export {
   createConversation,
   deleteConversation,
   archiveConversation,
-  addTag,
+  addTagToConversation,
   removeTag,
   assignConversation
 };

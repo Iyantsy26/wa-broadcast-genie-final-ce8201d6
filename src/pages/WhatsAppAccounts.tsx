@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -45,7 +44,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { getWhatsAppAccounts, addWhatsAppAccount, updateWhatsAppAccountStatus, WhatsAppAccount } from '@/services/whatsAppService';
 
-// Array of country codes for the phone tab
 const countryCodes = [
   { code: '+1', country: 'United States' },
   { code: '+44', country: 'United Kingdom' },
@@ -77,7 +75,6 @@ const WhatsAppAccounts = () => {
   const [webBrowserOpen, setWebBrowserOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Fetch WhatsApp accounts on initial load
   useEffect(() => {
     fetchWhatsAppAccounts();
   }, []);
@@ -86,6 +83,7 @@ const WhatsAppAccounts = () => {
     try {
       setFetchingAccounts(true);
       const fetchedAccounts = await getWhatsAppAccounts();
+      console.log("Fetched accounts:", fetchedAccounts);
       setAccounts(fetchedAccounts);
     } catch (error) {
       console.error("Error fetching WhatsApp accounts:", error);
@@ -99,19 +97,17 @@ const WhatsAppAccounts = () => {
     }
   };
 
-  // Generate QR code on dialog open
   useEffect(() => {
     if (dialogOpen) {
       generateQrCode();
     }
   }, [dialogOpen]);
 
-  // Mock function to simulate QR code generation
   const generateQrCode = () => {
     setShowQrLoader(true);
     setTimeout(() => {
-      // In a real app, this would be a real QR code URL from WhatsApp API
-      setQrCodeUrl('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp://connection/example');
+      const uniqueId = new Date().getTime();
+      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp-connect-${uniqueId}`);
       setShowQrLoader(false);
     }, 1500);
   };
@@ -121,7 +117,6 @@ const WhatsAppAccounts = () => {
       setLoading(true);
       await updateWhatsAppAccountStatus(accountId, 'connected');
       
-      // Update the local state
       setAccounts(prevAccounts => 
         prevAccounts.map(acc => 
           acc.id === accountId ? { ...acc, status: 'connected' } : acc
@@ -148,7 +143,6 @@ const WhatsAppAccounts = () => {
     try {
       setLoading(true);
       
-      // Validate inputs based on connection type
       if (type === 'QR code' && !newAccountName) {
         toast({
           title: "Missing information",
@@ -189,7 +183,6 @@ const WhatsAppAccounts = () => {
         }
       }
       
-      // Create the account object based on type
       const newAccount: Omit<WhatsAppAccount, 'id'> = {
         name: newAccountName,
         phone: type === 'phone verification' ? `${countryCode} ${phoneNumber}` : 'Business Account',
@@ -199,10 +192,11 @@ const WhatsAppAccounts = () => {
         business_id: type === 'Business API' ? businessId : undefined,
       };
       
-      // Add the account to the database
-      const addedAccount = await addWhatsAppAccount(newAccount);
+      console.log("Adding account:", newAccount);
       
-      // Update the local state
+      const addedAccount = await addWhatsAppAccount(newAccount);
+      console.log("Added account:", addedAccount);
+      
       setAccounts(prevAccounts => [addedAccount, ...prevAccounts]);
       
       toast({
@@ -210,7 +204,6 @@ const WhatsAppAccounts = () => {
         description: `Successfully added WhatsApp account via ${type}.`,
       });
       
-      // Reset form state
       setNewAccountName('');
       setBusinessId('');
       setApiKey('');
@@ -221,7 +214,6 @@ const WhatsAppAccounts = () => {
       setVerifying(false);
       setDialogOpen(false);
       
-      // Force refresh QR code if that method was used
       if (type === 'QR code') {
         generateQrCode();
       }
@@ -249,7 +241,6 @@ const WhatsAppAccounts = () => {
     
     setVerifying(true);
     
-    // Simulate sending verification code
     setTimeout(() => {
       setVerifying(false);
       setCodeSent(true);
@@ -272,7 +263,6 @@ const WhatsAppAccounts = () => {
     
     setVerifying(true);
     
-    // Simulate verifying code
     setTimeout(() => {
       setVerifying(false);
       handleAddAccount('phone verification');
@@ -293,7 +283,6 @@ const WhatsAppAccounts = () => {
     try {
       await updateWhatsAppAccountStatus(accountId, 'disconnected');
       
-      // Update the local state
       setAccounts(prevAccounts => 
         prevAccounts.map(acc => 
           acc.id === accountId ? { ...acc, status: 'disconnected' } : acc
@@ -667,7 +656,6 @@ const WhatsAppAccounts = () => {
         </div>
       )}
 
-      {/* WhatsApp Web Browser Sheet */}
       <Sheet open={webBrowserOpen} onOpenChange={setWebBrowserOpen}>
         <SheetContent className="w-[90%] sm:max-w-[540px] sm:w-[540px]">
           <SheetHeader>

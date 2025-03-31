@@ -345,25 +345,40 @@ export type Database = {
       whatsapp_accounts: {
         Row: {
           account_name: string
+          api_key: string | null
+          business_id: string | null
+          connection_type: string | null
           created_at: string
           id: string
+          last_active: string | null
           phone_number: string
+          status: string | null
           team_member_id: string
           updated_at: string
         }
         Insert: {
           account_name: string
+          api_key?: string | null
+          business_id?: string | null
+          connection_type?: string | null
           created_at?: string
           id?: string
+          last_active?: string | null
           phone_number: string
+          status?: string | null
           team_member_id: string
           updated_at?: string
         }
         Update: {
           account_name?: string
+          api_key?: string | null
+          business_id?: string | null
+          connection_type?: string | null
           created_at?: string
           id?: string
+          last_active?: string | null
           phone_number?: string
+          status?: string | null
           team_member_id?: string
           updated_at?: string
         }
