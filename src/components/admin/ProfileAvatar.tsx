@@ -24,6 +24,16 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
         return;
       }
       
+      // Make sure we have a valid user
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You need to be logged in to update your avatar.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const file = event.target.files[0];
       
       if (file.size > MAX_FILE_SIZE) {
@@ -36,56 +46,61 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       }
       
       setUploading(true);
+      console.log("Starting avatar upload for user:", user.id);
       
       // Create a URL for the file to preview
       const objectUrl = URL.createObjectURL(file);
       setAvatarUrl(objectUrl);
       
+      // Prepare file details
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}.${fileExt}`;
+      
       try {
         // Check if storage bucket exists
+        console.log("Checking if avatars bucket exists");
         const { data: bucketData } = await supabase.storage.getBucket('avatars');
         
         if (!bucketData) {
+          console.log("Creating avatars bucket");
           // Create bucket if it doesn't exist
           await supabase.storage.createBucket('avatars', {
             public: true
           });
         }
         
-        if (user) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}.${fileExt}`;
+        // Upload the file
+        console.log("Uploading file to avatars bucket:", fileName);
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, file, { upsert: true });
           
-          // Upload the file
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(fileName, file, { upsert: true });
-            
-          if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw uploadError;
+        }
+        
+        // Get public URL
+        console.log("Getting public URL for uploaded file");
+        const { data: urlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
           
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
-            
-          if (urlData) {
-            // Update user avatar URL in metadata
-            const { error: updateError } = await supabase.auth.updateUser({
-              data: { avatar_url: urlData.publicUrl }
-            });
-            
-            if (updateError) throw updateError;
-            
-            toast({
-              title: "Avatar updated",
-              description: "Your avatar has been updated successfully.",
-            });
+        if (urlData) {
+          // Update user avatar URL in metadata
+          console.log("Updating user metadata with avatar URL:", urlData.publicUrl);
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: { avatar_url: urlData.publicUrl }
+          });
+          
+          if (updateError) {
+            console.error("Update metadata error:", updateError);
+            throw updateError;
           }
-        } else {
+          
           toast({
-            title: "User not found",
-            description: "Please log in to update your avatar.",
-            variant: "destructive",
+            title: "Avatar updated",
+            description: "Your avatar has been updated successfully.",
           });
         }
       } catch (storageError) {

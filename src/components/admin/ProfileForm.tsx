@@ -84,6 +84,7 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
     try {
       setIsSaving(true);
       
+      // Make sure we have a valid user
       if (!user) {
         toast({
           title: "Error",
@@ -93,16 +94,23 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         return;
       }
       
+      console.log("Updating profile for user:", user.id);
+      
       // Update user email if it's changed and user is super admin
       if (isSuperAdmin && data.email !== user.email) {
+        console.log("Updating email from", user.email, "to", data.email);
         const { error: emailError } = await supabase.auth.updateUser({
           email: data.email,
         });
         
-        if (emailError) throw emailError;
+        if (emailError) {
+          console.error("Email update error:", emailError);
+          throw emailError;
+        }
       }
       
       // Update other user metadata
+      console.log("Updating user metadata");
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           name: data.name,
@@ -113,14 +121,17 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         }
       });
       
-      if (metadataError) throw metadataError;
+      if (metadataError) {
+        console.error("Metadata update error:", metadataError);
+        throw metadataError;
+      }
       
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
       
-      console.log("Updated profile data:", data);
+      console.log("Successfully updated profile data:", data);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({
