@@ -16,6 +16,7 @@ import Tickets from "./pages/Tickets";
 import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
 import Clients from "./pages/Clients";
+import Devices from "./pages/Devices";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/broadcasts" element={<BroadcastCampaigns />} />
             <Route path="/chatbots" element={<ChatbotBuilder />} />
             <Route path="/templates" element={<Templates />} />
+            <Route path="/devices" element={<Devices />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/team" element={<TeamManagement />} />

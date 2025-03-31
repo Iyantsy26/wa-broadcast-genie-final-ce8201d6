@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,8 @@ import {
   Ticket, 
   Home,
   UserRound,
-  Building2
+  Building2,
+  Smartphone
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,6 +46,11 @@ const navItems: NavItem[] = [
     title: 'Chatbots',
     href: '/chatbots',
     icon: <Bot className="h-5 w-5" />,
+  },
+  {
+    title: 'Devices',
+    href: '/devices',
+    icon: <Smartphone className="h-5 w-5" />,
   },
   {
     title: 'Leads',
