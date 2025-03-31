@@ -33,6 +33,7 @@ import {
   MoreVertical,
   Loader2,
   Globe,
+  Shield,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,7 +43,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { getWhatsAppAccounts, addWhatsAppAccount, updateWhatsAppAccountStatus, WhatsAppAccount } from '@/services/whatsAppService';
+import { 
+  getWhatsAppAccounts, 
+  addWhatsAppAccount, 
+  updateWhatsAppAccountStatus, 
+  WhatsAppAccount,
+  checkAdminStatus,
+  addUserAsAdmin
+} from '@/services/whatsAppService';
+import { supabase } from '@/integrations/supabase/client';
 
 const countryCodes = [
   { code: '+1', country: 'United States' },
@@ -74,9 +83,13 @@ const WhatsAppAccounts = () => {
   const [showQrLoader, setShowQrLoader] = useState(true);
   const [webBrowserOpen, setWebBrowserOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   useEffect(() => {
     fetchWhatsAppAccounts();
+    checkCurrentUserAdminStatus();
   }, []);
 
   const fetchWhatsAppAccounts = async () => {
@@ -97,11 +110,51 @@ const WhatsAppAccounts = () => {
     }
   };
 
-  useEffect(() => {
-    if (dialogOpen) {
-      generateQrCode();
+  const checkCurrentUserAdminStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        const isUserAdmin = await checkAdminStatus();
+        setIsAdmin(isUserAdmin);
+        console.log("User admin status:", isUserAdmin);
+      }
+    } catch (error) {
+      console.error("Error checking admin status:", error);
     }
-  }, [dialogOpen]);
+  };
+
+  const makeUserAdmin = async () => {
+    if (!userId) return;
+    
+    try {
+      setAdminLoading(true);
+      const success = await addUserAsAdmin(userId);
+      
+      if (success) {
+        setIsAdmin(true);
+        toast({
+          title: "Admin Access Granted",
+          description: "You now have administrator privileges.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to grant admin privileges.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error making user admin:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setAdminLoading(false);
+    }
+  };
 
   const generateQrCode = () => {
     setShowQrLoader(true);
@@ -170,6 +223,15 @@ const WhatsAppAccounts = () => {
           });
           return;
         }
+      }
+      
+      if (type === 'Business API' && !isAdmin) {
+        toast({
+          title: "Admin access required",
+          description: "You need admin privileges to connect via Business API.",
+          variant: "destructive",
+        });
+        return;
       }
       
       if (type === 'Business API') {
@@ -332,232 +394,267 @@ const WhatsAppAccounts = () => {
           </p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Account
+        <div className="flex gap-2">
+          {!isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={makeUserAdmin}
+              disabled={adminLoading}
+              className="flex items-center gap-2"
+            >
+              {adminLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
+              Activate Admin Access
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add WhatsApp Account</DialogTitle>
-              <DialogDescription>
-                Choose a method to connect your WhatsApp business account.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Tabs defaultValue="qr">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="qr">QR Code</TabsTrigger>
-                <TabsTrigger value="phone">Phone</TabsTrigger>
-                <TabsTrigger value="api">Business API</TabsTrigger>
-              </TabsList>
+          )}
+          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add WhatsApp Account</DialogTitle>
+                <DialogDescription>
+                  Choose a method to connect your WhatsApp business account.
+                </DialogDescription>
+              </DialogHeader>
               
-              <TabsContent value="qr" className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="qr-name">Account Name</Label>
-                  <Input
-                    id="qr-name"
-                    placeholder="e.g., Marketing Account"
-                    value={newAccountName}
-                    onChange={(e) => setNewAccountName(e.target.value)}
-                  />
-                </div>
+              <Tabs defaultValue="qr">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="qr">QR Code</TabsTrigger>
+                  <TabsTrigger value="phone">Phone</TabsTrigger>
+                  <TabsTrigger value="api" disabled={!isAdmin}>Business API</TabsTrigger>
+                </TabsList>
                 
-                <div className="border rounded-md p-6 flex flex-col items-center justify-center">
-                  {showQrLoader ? (
-                    <div className="flex flex-col items-center justify-center h-32 w-32">
-                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                      <p className="text-sm text-muted-foreground mt-4">Generating QR code...</p>
-                    </div>
-                  ) : (
-                    <img src={qrCodeUrl} alt="WhatsApp QR Code" className="h-32 w-32" />
-                  )}
-                  <p className="text-sm text-muted-foreground mt-4 text-center">
-                    Scan this QR code with your WhatsApp app to connect
-                  </p>
-                  <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" onClick={handleRefreshQrCode}>
-                      <RefreshCw className="mr-2 h-3 w-3" />
-                      Refresh QR Code
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={openWebWhatsApp}>
-                      <Globe className="mr-2 h-3 w-3" />
-                      Open in Browser
-                    </Button>
-                  </div>
-                </div>
-                
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAddAccount('QR code')}
-                  disabled={loading || !newAccountName}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Confirm Connection
-                    </>
-                  )}
-                </Button>
-              </TabsContent>
-              
-              <TabsContent value="phone" className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone-name">Account Name</Label>
-                  <Input
-                    id="phone-name"
-                    placeholder="e.g., Support Account"
-                    value={newAccountName}
-                    onChange={(e) => setNewAccountName(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone-number">Phone Number</Label>
-                  <div className="flex gap-2">
-                    <select
-                      className="max-w-[100px] h-10 rounded-md border border-input bg-background px-3 py-2"
-                      value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
-                    >
-                      {countryCodes.map((country) => (
-                        <option key={country.code} value={country.code}>
-                          {country.code} ({country.country.substring(0, 2)})
-                        </option>
-                      ))}
-                    </select>
+                <TabsContent value="qr" className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="qr-name">Account Name</Label>
                     <Input
-                      id="phone-number"
-                      placeholder="123-456-7890"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="flex-1"
+                      id="qr-name"
+                      placeholder="e.g., Marketing Account"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
                     />
                   </div>
-                </div>
+                  
+                  <div className="border rounded-md p-6 flex flex-col items-center justify-center">
+                    {showQrLoader ? (
+                      <div className="flex flex-col items-center justify-center h-32 w-32">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                        <p className="text-sm text-muted-foreground mt-4">Generating QR code...</p>
+                      </div>
+                    ) : (
+                      <img src={qrCodeUrl} alt="WhatsApp QR Code" className="h-32 w-32" />
+                    )}
+                    <p className="text-sm text-muted-foreground mt-4 text-center">
+                      Scan this QR code with your WhatsApp app to connect
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      <Button variant="outline" size="sm" onClick={handleRefreshQrCode}>
+                        <RefreshCw className="mr-2 h-3 w-3" />
+                        Refresh QR Code
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={openWebWhatsApp}>
+                        <Globe className="mr-2 h-3 w-3" />
+                        Open in Browser
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleAddAccount('QR code')}
+                    disabled={loading || !newAccountName}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        Confirm Connection
+                      </>
+                    )}
+                  </Button>
+                </TabsContent>
                 
-                {codeSent ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="verification-code">Verification Code</Label>
+                <TabsContent value="phone" className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone-name">Account Name</Label>
+                    <Input
+                      id="phone-name"
+                      placeholder="e.g., Support Account"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone-number">Phone Number</Label>
+                    <div className="flex gap-2">
+                      <select
+                        className="max-w-[100px] h-10 rounded-md border border-input bg-background px-3 py-2"
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                      >
+                        {countryCodes.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.code} ({country.country.substring(0, 2)})
+                          </option>
+                        ))}
+                      </select>
                       <Input
-                        id="verification-code"
-                        placeholder="Enter 6-digit code"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                        maxLength={6}
+                        id="phone-number"
+                        placeholder="123-456-7890"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="flex-1"
                       />
                     </div>
-                    <Button 
-                      className="w-full" 
-                      onClick={handleVerifyCode}
-                      disabled={verifying || !verificationCode}
-                    >
-                      {verifying ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="mr-2 h-4 w-4" />
-                          Verify Code
-                        </>
-                      )}
-                    </Button>
                   </div>
-                ) : (
-                  <>
-                    <div className="border rounded-md p-4">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-blue-500" />
-                        <p className="text-sm">
-                          We'll send a one-time password to this number to verify.
-                        </p>
+                  
+                  {codeSent ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="verification-code">Verification Code</Label>
+                        <Input
+                          id="verification-code"
+                          placeholder="Enter 6-digit code"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          maxLength={6}
+                        />
                       </div>
+                      <Button 
+                        className="w-full" 
+                        onClick={handleVerifyCode}
+                        disabled={verifying || !verificationCode}
+                      >
+                        {verifying ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="mr-2 h-4 w-4" />
+                            Verify Code
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={handleSendVerificationCode}
-                      disabled={verifying || !phoneNumber || !newAccountName}
-                    >
-                      {verifying ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <PhoneCall className="mr-2 h-4 w-4" />
-                          Send Verification Code
-                        </>
-                      )}
-                    </Button>
-                  </>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="api" className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="api-name">Account Name</Label>
-                  <Input
-                    id="api-name"
-                    placeholder="e.g., Business Account"
-                    value={newAccountName}
-                    onChange={(e) => setNewAccountName(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="business-id">Business ID</Label>
-                  <Input
-                    id="business-id"
-                    placeholder="Enter Meta Business ID"
-                    value={businessId}
-                    onChange={(e) => setBusinessId(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Enter API Key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                  />
-                </div>
-                
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleAddAccount('Business API')}
-                  disabled={loading || !newAccountName || !businessId || !apiKey}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
                   ) : (
                     <>
-                      <Key className="mr-2 h-4 w-4" />
-                      Connect API
+                      <div className="border rounded-md p-4">
+                        <div className="flex items-center gap-3">
+                          <AlertCircle className="h-5 w-5 text-blue-500" />
+                          <p className="text-sm">
+                            We'll send a one-time password to this number to verify.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        className="w-full" 
+                        onClick={handleSendVerificationCode}
+                        disabled={verifying || !phoneNumber || !newAccountName}
+                      >
+                        {verifying ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <PhoneCall className="mr-2 h-4 w-4" />
+                            Send Verification Code
+                          </>
+                        )}
+                      </Button>
                     </>
                   )}
-                </Button>
-              </TabsContent>
-            </Tabs>
-          </DialogContent>
-        </Dialog>
+                </TabsContent>
+                
+                <TabsContent value="api" className="space-y-4 py-4">
+                  {!isAdmin ? (
+                    <div className="border rounded-md p-4 bg-yellow-50">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-yellow-500" />
+                        <div>
+                          <p className="font-medium">Admin access required</p>
+                          <p className="text-sm text-muted-foreground">
+                            You need admin privileges to connect via Business API.
+                            Click "Activate Admin Access" button above to continue.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="api-name">Account Name</Label>
+                        <Input
+                          id="api-name"
+                          placeholder="e.g., Business Account"
+                          value={newAccountName}
+                          onChange={(e) => setNewAccountName(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="business-id">Business ID</Label>
+                        <Input
+                          id="business-id"
+                          placeholder="Enter Meta Business ID"
+                          value={businessId}
+                          onChange={(e) => setBusinessId(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="api-key">API Key</Label>
+                        <Input
+                          id="api-key"
+                          type="password"
+                          placeholder="Enter API Key"
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                        />
+                      </div>
+                      
+                      <Button 
+                        className="w-full" 
+                        onClick={() => handleAddAccount('Business API')}
+                        disabled={loading || !newAccountName || !businessId || !apiKey}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          <>
+                            <Key className="mr-2 h-4 w-4" />
+                            Connect API
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {fetchingAccounts ? (

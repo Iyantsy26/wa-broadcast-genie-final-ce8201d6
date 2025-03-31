@@ -11,6 +11,8 @@ import {
   getWhatsAppAccounts, 
   addWhatsAppAccount,
   updateWhatsAppAccountStatus,
+  checkAdminStatus,
+  addUserAsAdmin,
   WhatsAppAccount 
 } from './whatsAppService';
 
@@ -27,5 +29,7 @@ export {
   getWhatsAppAccounts,
   addWhatsAppAccount,
   updateWhatsAppAccountStatus,
+  checkAdminStatus,
+  addUserAsAdmin,
   type WhatsAppAccount
 };

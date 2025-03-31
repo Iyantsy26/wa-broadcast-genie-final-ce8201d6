@@ -101,3 +101,38 @@ export const updateWhatsAppAccountStatus = async (id: string, status: 'connected
     throw error;
   }
 };
+
+export const checkAdminStatus = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('is_admin');
+    
+    if (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+    
+    return data || false;
+  } catch (error) {
+    console.error('Error in checkAdminStatus:', error);
+    return false;
+  }
+};
+
+export const addUserAsAdmin = async (userId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('admin_users')
+      .insert({ id: userId });
+    
+    if (error) {
+      console.error('Error adding user as admin:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in addUserAsAdmin:', error);
+    return false;
+  }
+};
