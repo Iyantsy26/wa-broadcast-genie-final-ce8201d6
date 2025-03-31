@@ -118,7 +118,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 max-h-[500px] overflow-y-auto">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 max-h-[800px] overflow-y-auto">
         <LeadAvatar 
           avatarUrl={lead?.avatar_url || null} 
           onAvatarChange={handleAvatarChange} 
