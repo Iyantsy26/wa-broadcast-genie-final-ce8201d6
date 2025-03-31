@@ -15,7 +15,7 @@ interface ProfileAvatarProps {
 
 const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
   const { toast } = useToast();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.user_metadata?.avatar_url || null);
   const [uploading, setUploading] = useState(false);
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +26,21 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       
       // Check for user before proceeding
       if (!user) {
+        // Special case for Super Admin
+        if (localStorage.getItem('isSuperAdmin') === 'true') {
+          // For Super Admin mode with no user object, just show the avatar preview
+          // but don't attempt to upload to Supabase
+          const file = event.target.files[0];
+          const objectUrl = URL.createObjectURL(file);
+          setAvatarUrl(objectUrl);
+          
+          toast({
+            title: "Avatar Preview",
+            description: "Avatar preview updated for Super Admin.",
+          });
+          return;
+        }
+        
         console.error("No user found when uploading avatar");
         toast({
           title: "Error",
@@ -60,14 +75,23 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       try {
         // Check if storage bucket exists
         console.log("Checking if avatars bucket exists");
-        const { data: bucketData } = await supabase.storage.getBucket('avatars');
+        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('avatars');
         
-        if (!bucketData) {
+        if (bucketError) {
+          console.log("Error checking bucket, will try to create: ", bucketError);
+        }
+        
+        if (!bucketData || bucketError) {
           console.log("Creating avatars bucket");
           // Create bucket if it doesn't exist
-          await supabase.storage.createBucket('avatars', {
+          const { error: createError } = await supabase.storage.createBucket('avatars', {
             public: true
           });
+          
+          if (createError) {
+            console.error("Error creating bucket:", createError);
+            throw createError;
+          }
         }
         
         // Upload the file
@@ -120,6 +144,9 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
     }
   };
 
+  // Use super admin fallback for avatar if no user or avatarUrl
+  const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+
   return (
     <div className="flex flex-col items-center gap-2">
       <Avatar className="h-24 w-24">
@@ -128,8 +155,8 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
         ) : user?.user_metadata?.avatar_url ? (
           <AvatarImage src={user.user_metadata.avatar_url} alt="Profile" />
         ) : (
-          <AvatarFallback>
-            <UserCircle className="h-12 w-12" />
+          <AvatarFallback className={isSuperAdmin ? "bg-primary/10" : ""}>
+            <UserCircle className={`h-12 w-12 ${isSuperAdmin ? "text-primary" : ""}`} />
           </AvatarFallback>
         )}
       </Avatar>
@@ -138,7 +165,7 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
           variant="outline" 
           size="sm"
           className="text-xs"
-          disabled={uploading || !user}
+          disabled={uploading || (!user && !isSuperAdmin)}
           onClick={() => document.getElementById('avatar-upload')?.click()}
         >
           <Upload className="h-3 w-3 mr-1" />

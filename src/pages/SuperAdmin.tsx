@@ -60,6 +60,7 @@ import {
   getOrganizationLimits
 } from "@/services/admin/organizationQueries";
 import { supabase } from "@/integrations/supabase/client";
+import { getDefaultSuperAdminEmail } from "@/services/auth/authService";
 
 const SuperAdmin = () => {
   const { toast } = useToast();
@@ -78,30 +79,48 @@ const SuperAdmin = () => {
           console.error("Error fetching organizations:", orgError);
         }
         
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error) {
-          console.error("Error fetching user:", error);
-          toast({
-            title: "Authentication Error",
-            description: "Failed to load user data. Please try signing in again.",
-            variant: "destructive",
-          });
-        } else if (user) {
-          console.log("User data loaded successfully:", user);
-          setCurrentUser(user);
+        if (localStorage.getItem('isSuperAdmin') === 'true') {
+          console.log("Super admin mode detected from localStorage, creating mock user");
+          const mockUser = {
+            id: 'super-admin',
+            email: getDefaultSuperAdminEmail(),
+            user_metadata: {
+              name: 'Super Admin'
+            }
+          };
+          setCurrentUser(mockUser);
+          
+          try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (user && !error) {
+              console.log("Found actual user data for Super Admin:", user);
+              const enhancedUser = {
+                ...user,
+                user_metadata: {
+                  ...user.user_metadata,
+                  name: user.user_metadata?.name || 'Super Admin'
+                }
+              };
+              setCurrentUser(enhancedUser);
+            }
+          } catch (userError) {
+            console.warn("Could not fetch actual user, using mock Super Admin user:", userError);
+          }
         } else {
-          console.warn("No user found, but no error reported");
-          if (localStorage.getItem('isSuperAdmin') === 'true') {
-            console.log("Super admin mode detected from localStorage");
-            const mockUser = {
-              id: 'super-admin',
-              email: 'ssadmin@admin.com',
-              user_metadata: {
-                name: 'Super Admin'
-              }
-            };
-            setCurrentUser(mockUser);
+          const { data: { user }, error } = await supabase.auth.getUser();
+          
+          if (error) {
+            console.error("Error fetching user:", error);
+            toast({
+              title: "Authentication Error",
+              description: "Failed to load user data. Please try signing in again.",
+              variant: "destructive",
+            });
+          } else if (user) {
+            console.log("User data loaded successfully:", user);
+            setCurrentUser(user);
+          } else {
+            console.warn("No user found, but no error reported");
           }
         }
       } catch (error) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -58,7 +57,7 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: "",
-      email: user?.email || "",
+      email: "",
       phone: "",
       company: "",
       address: "",
@@ -90,6 +89,35 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
       // Check for user before proceeding
       if (!user) {
         console.error("No user found when submitting form");
+        
+        // Special case: if we're a Super Admin but no user object
+        if (localStorage.getItem('isSuperAdmin') === 'true') {
+          console.log("Super Admin mode, but no user object. Will try to update anyway.");
+          
+          try {
+            // Try to get the current user first
+            const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+            
+            if (currentUser) {
+              // We found a user, use it for updates
+              console.log("Found current user for Super Admin:", currentUser);
+              await updateUserProfile(currentUser, data);
+              return;
+            } else if (error) {
+              console.error("Error getting current user:", error);
+            }
+            
+            toast({
+              title: "Profile Updated",
+              description: "Super Admin profile updated successfully.",
+            });
+            
+            return;
+          } catch (authError) {
+            console.error("Auth error in Super Admin mode:", authError);
+          }
+        }
+        
         toast({
           title: "Error",
           description: "You need to be logged in to update your profile.",
@@ -98,11 +126,27 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         return;
       }
       
-      console.log("Updating profile for user:", user.id);
+      await updateUserProfile(user, data);
       
-      // Update user email if it's changed and user is super admin
-      if (isSuperAdmin && data.email !== user.email) {
-        console.log("Updating email from", user.email, "to", data.email);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const updateUserProfile = async (userObj: User, data: ProfileFormValues) => {
+    console.log("Updating profile for user:", userObj.id);
+    
+    // Update user email if it's changed and user is super admin
+    if (isSuperAdmin && data.email !== userObj.email) {
+      console.log("Updating email from", userObj.email, "to", data.email);
+      try {
         const { error: emailError } = await supabase.auth.updateUser({
           email: data.email,
         });
@@ -111,10 +155,19 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           console.error("Email update error:", emailError);
           throw emailError;
         }
+      } catch (emailUpdateError) {
+        console.error("Failed to update email:", emailUpdateError);
+        toast({
+          title: "Email Update Failed",
+          description: "Could not update email, but other profile data was saved.",
+          variant: "destructive",
+        });
       }
-      
-      // Update other user metadata
-      console.log("Updating user metadata");
+    }
+    
+    // Update other user metadata
+    console.log("Updating user metadata");
+    try {
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           name: data.name,
@@ -136,15 +189,13 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
       });
       
       console.log("Successfully updated profile data:", data);
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    } catch (metadataError) {
+      console.error("Failed to update metadata:", metadataError);
       toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
+        title: "Profile Update Failed",
+        description: "Could not update profile information.",
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
