@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
-import WhatsAppAccounts from "./pages/WhatsAppAccounts";
 import BroadcastCampaigns from "./pages/BroadcastCampaigns";
 import ChatbotBuilder from "./pages/ChatbotBuilder";
 import Templates from "./pages/Templates";
@@ -29,7 +28,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
-            <Route path="/accounts" element={<WhatsAppAccounts />} />
             <Route path="/broadcasts" element={<BroadcastCampaigns />} />
             <Route path="/chatbots" element={<ChatbotBuilder />} />
             <Route path="/templates" element={<Templates />} />

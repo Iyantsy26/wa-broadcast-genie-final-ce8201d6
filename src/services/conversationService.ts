@@ -7,14 +7,6 @@ import { deleteConversation } from './conversations/deleteConversation';
 import { archiveConversation } from './conversations/archiveConversation';
 import { addTagToConversation, removeTag } from './conversations/tagOperations';
 import { assignConversation } from './conversations/assignOperations';
-import { 
-  getWhatsAppAccounts, 
-  addWhatsAppAccount,
-  updateWhatsAppAccountStatus,
-  checkAdminStatus,
-  addUserAsAdmin,
-  WhatsAppAccount 
-} from './whatsAppService';
 
 export {
   getConversations,
@@ -25,11 +17,5 @@ export {
   archiveConversation,
   addTagToConversation,
   removeTag,
-  assignConversation,
-  getWhatsAppAccounts,
-  addWhatsAppAccount,
-  updateWhatsAppAccountStatus,
-  checkAdminStatus,
-  addUserAsAdmin,
-  type WhatsAppAccount
+  assignConversation
 };

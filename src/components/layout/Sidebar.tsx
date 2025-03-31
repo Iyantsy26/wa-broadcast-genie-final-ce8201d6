@@ -5,7 +5,6 @@ import {
   BarChart3, 
   Users, 
   Send, 
-  Smartphone, 
   Bot, 
   Settings, 
   FileText, 
@@ -35,11 +34,6 @@ const navItems: NavItem[] = [
     title: 'Broadcasts',
     href: '/broadcasts',
     icon: <Send className="h-5 w-5" />,
-  },
-  {
-    title: 'WhatsApp Accounts',
-    href: '/accounts',
-    icon: <Smartphone className="h-5 w-5" />,
   },
   {
     title: 'Templates',
