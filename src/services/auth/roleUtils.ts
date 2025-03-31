@@ -101,24 +101,8 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
       }
     }
     
-    // For other roles, or as a fallback, query the database directly
-    try {
-      // Query the user_roles table directly instead of using RPC
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('role', role)
-        .single();
-      
-      if (!error && data) {
-        return true;
-      }
-    } catch (err) {
-      console.warn('Direct query not available, using local check', err);
-    }
-    
-    // Fallback to local check
+    // For other roles, or as a fallback, we'll use the local check
+    // since we don't have a user_roles table yet
     return checkRoleLocally(user.id, role);
   } catch (error) {
     console.error('Error checking user role:', error);
