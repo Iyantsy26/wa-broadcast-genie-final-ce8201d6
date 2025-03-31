@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -90,6 +89,23 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
     try {
       setIsSaving(true);
       
+      // Check for valid session before proceeding
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // If no session, try to utilize the super admin status
+        if (isSuperAdmin && localStorage.getItem('isSuperAdmin') === 'true') {
+          // For super admin demo, just show success toast
+          toast({
+            title: "Profile updated (Demo Mode)",
+            description: "In demo mode, profile changes are not saved to the database, but would work in a real environment.",
+          });
+          setIsSaving(false);
+          return;
+        } else {
+          throw new Error("You need to be logged in to update your profile");
+        }
+      }
+      
       // Update user email if it's changed and user is super admin
       if (isSuperAdmin && data.email !== user?.email) {
         const { error: emailError } = await supabase.auth.updateUser({
@@ -153,8 +169,10 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
       const objectUrl = URL.createObjectURL(file);
       setAvatarUrl(objectUrl);
       
-      // If we have Supabase storage configured, upload the avatar
-      if (user) {
+      // If we have Supabase storage configured and a valid session, upload the avatar
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (user && session) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}.${fileExt}`;
         
@@ -191,6 +209,12 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
           console.error("Storage error:", storageError);
           // Continue with local preview even if storage fails
         }
+      } else if (isSuperAdmin) {
+        // For demo super admin, just show success toast for avatar upload
+        toast({
+          title: "Avatar updated (Demo Mode)",
+          description: "In demo mode, avatar changes are not saved to storage, but would work in a real environment.",
+        });
       }
       
       toast({
