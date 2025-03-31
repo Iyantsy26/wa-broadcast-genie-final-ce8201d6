@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 import { UserCircle, Upload } from "lucide-react";
+import { hasRole } from "@/services/auth/authService";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
@@ -41,6 +42,23 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
   const { toast } = useToast();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  
+  // Check if user is super admin to enable email editing
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      if (localStorage.getItem('isSuperAdmin') === 'true') {
+        setIsSuperAdmin(true);
+        return;
+      }
+      
+      const superAdminCheck = await hasRole('super_admin');
+      setIsSuperAdmin(superAdminCheck);
+    };
+    
+    checkSuperAdmin();
+  }, []);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -54,15 +72,52 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
     },
   });
 
+  // Initialize form with user data
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.user_metadata?.name || "",
+        email: user.email || "",
+        phone: user.user_metadata?.phone || "",
+        company: user.user_metadata?.company || "",
+        address: user.user_metadata?.address || "",
+        bio: user.user_metadata?.bio || "",
+      });
+    }
+  }, [user, form]);
+
   const onSubmit = async (data: ProfileFormValues) => {
     try {
-      // For now, just show a success toast since we haven't implemented the backend
+      setIsSaving(true);
+      
+      // Update user email if it's changed and user is super admin
+      if (isSuperAdmin && data.email !== user?.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: data.email,
+        });
+        
+        if (emailError) throw emailError;
+      }
+      
+      // Update other user metadata
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          name: data.name,
+          phone: data.phone,
+          company: data.company,
+          address: data.address,
+          bio: data.bio
+        }
+      });
+      
+      if (metadataError) throw metadataError;
+      
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
       
-      console.log("Form data:", data);
+      console.log("Updated profile data:", data);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({
@@ -70,6 +125,8 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
         description: "Failed to update profile. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -96,7 +153,45 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
       const objectUrl = URL.createObjectURL(file);
       setAvatarUrl(objectUrl);
       
-      // TODO: Actually upload to storage when connected to Supabase storage
+      // If we have Supabase storage configured, upload the avatar
+      if (user) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}.${fileExt}`;
+        
+        try {
+          // Check if storage bucket exists
+          const { data: bucketData } = await supabase.storage.getBucket('avatars');
+          
+          if (!bucketData) {
+            // Create bucket if it doesn't exist
+            await supabase.storage.createBucket('avatars', {
+              public: true
+            });
+          }
+          
+          // Upload the file
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, file, { upsert: true });
+            
+          if (uploadError) throw uploadError;
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+            
+          if (urlData) {
+            // Update user avatar URL in metadata
+            await supabase.auth.updateUser({
+              data: { avatar_url: urlData.publicUrl }
+            });
+          }
+        } catch (storageError) {
+          console.error("Storage error:", storageError);
+          // Continue with local preview even if storage fails
+        }
+      }
       
       toast({
         title: "Avatar updated",
@@ -121,6 +216,8 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
           <Avatar className="h-24 w-24">
             {avatarUrl ? (
               <AvatarImage src={avatarUrl} alt="Profile" />
+            ) : user?.user_metadata?.avatar_url ? (
+              <AvatarImage src={user.user_metadata.avatar_url} alt="Profile" />
             ) : (
               <AvatarFallback>
                 <UserCircle className="h-12 w-12" />
@@ -179,9 +276,14 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
                         type="email" 
                         placeholder="your.email@example.com" 
                         {...field} 
-                        disabled 
+                        disabled={!isSuperAdmin} 
                       />
                     </FormControl>
+                    {isSuperAdmin && (
+                      <p className="text-xs text-muted-foreground">
+                        As a Super Admin, you can edit your email address.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -249,8 +351,8 @@ const ProfileSettingsForm = ({ user }: ProfileSettingsFormProps) => {
                 )}
               />
               
-              <Button type="submit" className="w-full sm:w-auto">
-                Save Changes
+              <Button type="submit" className="w-full sm:w-auto" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </form>
           </Form>
