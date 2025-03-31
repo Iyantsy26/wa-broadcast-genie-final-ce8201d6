@@ -18,6 +18,11 @@ import Leads from "./pages/Leads";
 import Clients from "./pages/Clients";
 import Devices from "./pages/Devices";
 import SuperAdmin from "./pages/SuperAdmin";
+import Admin from "./pages/Admin";
+import WhiteLabel from "./pages/WhiteLabel";
+import Login from "./pages/Login";
+import Index from "./pages/Index";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +33,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<DashboardLayout />}>
+          {/* Auth Routes */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
             <Route index element={<Dashboard />} />
             <Route path="/broadcasts" element={<BroadcastCampaigns />} />
             <Route path="/chatbots" element={<ChatbotBuilder />} />
@@ -41,8 +54,14 @@ const App = () => (
             <Route path="/tickets" element={<Tickets />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/white-label" element={<WhiteLabel />} />
           </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          
+          {/* Redirect Route */}
+          <Route path="/index" element={<Index />} />
+          
+          {/* 404 Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

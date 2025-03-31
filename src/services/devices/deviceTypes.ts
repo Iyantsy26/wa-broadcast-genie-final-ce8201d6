@@ -107,3 +107,12 @@ export interface TeamMember {
   updated_at?: string;
   is_super_admin?: boolean;
 }
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'super_admin' | 'admin' | 'white_label' | 'user';
+  organization_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}

@@ -13,8 +13,14 @@ import {
   Home,
   UserRound,
   Building2,
-  Smartphone
+  Smartphone,
+  ShieldCheck,
+  Building,
+  Globe,
+  LogIn
 } from 'lucide-react';
+import { signOut } from '@/services/auth/authService';
+import { useToast } from '@/hooks/use-toast';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -84,7 +90,45 @@ const navItems: NavItem[] = [
   },
 ];
 
+// Admin navItems
+const adminItems: NavItem[] = [
+  {
+    title: 'Super Admin',
+    href: '/super-admin',
+    icon: <ShieldCheck className="h-5 w-5" />,
+  },
+  {
+    title: 'Admin Portal',
+    href: '/admin',
+    icon: <Building className="h-5 w-5" />,
+  },
+  {
+    title: 'White Label',
+    href: '/white-label',
+    icon: <Globe className="h-5 w-5" />,
+  },
+];
+
 const Sidebar = ({ isOpen }: SidebarProps) => {
+  const { toast } = useToast();
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully",
+      });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    }
+  };
+  
   return (
     <aside 
       className={cn(
@@ -111,19 +155,56 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               {isOpen && <span>{item.title}</span>}
             </NavLink>
           ))}
+          
+          {/* Admin section */}
+          {isOpen && <h2 className="text-xs font-semibold text-sidebar-foreground/60 px-2 pt-6 pb-2">ADMIN PORTALS</h2>}
+          {!isOpen && <div className="border-t my-4 border-sidebar-border"></div>}
+          
+          {adminItems.map((item) => (
+            <NavLink 
+              key={item.href} 
+              to={item.href}
+              className={({ isActive }) => cn(
+                "nav-item transition-all duration-150",
+                isActive ? "active" : "",
+                !isOpen && "justify-center px-0"
+              )}
+            >
+              {item.icon}
+              {isOpen && <span>{item.title}</span>}
+            </NavLink>
+          ))}
         </nav>
         <div className="p-3 mt-auto">
           {isOpen ? (
-            <div className="rounded-md bg-sidebar-accent p-3 text-xs">
-              <p className="font-medium text-sidebar-accent-foreground">Free Trial</p>
-              <p className="text-sidebar-accent-foreground/70 mt-1">12 days remaining</p>
-              <div className="mt-2 h-1.5 w-full bg-sidebar-accent-foreground/20 rounded-full overflow-hidden">
-                <div className="bg-primary h-full w-[60%]" />
+            <div className="space-y-3">
+              <div className="rounded-md bg-sidebar-accent p-3 text-xs">
+                <p className="font-medium text-sidebar-accent-foreground">Free Trial</p>
+                <p className="text-sidebar-accent-foreground/70 mt-1">12 days remaining</p>
+                <div className="mt-2 h-1.5 w-full bg-sidebar-accent-foreground/20 rounded-full overflow-hidden">
+                  <div className="bg-primary h-full w-[60%]" />
+                </div>
               </div>
+              
+              <button 
+                onClick={handleSignOut}
+                className="w-full flex items-center p-2 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                <span className="text-sm">Sign Out</span>
+              </button>
             </div>
           ) : (
-            <div className="h-1.5 w-full bg-sidebar-accent-foreground/20 rounded-full overflow-hidden">
-              <div className="bg-primary h-full w-[60%]" />
+            <div className="flex flex-col items-center">
+              <div className="h-1.5 w-full bg-sidebar-accent-foreground/20 rounded-full overflow-hidden mb-3">
+                <div className="bg-primary h-full w-[60%]" />
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              >
+                <LogIn className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
