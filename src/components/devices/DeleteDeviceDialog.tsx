@@ -16,6 +16,7 @@ interface DeleteDeviceDialogProps {
   onDelete: () => Promise<void>;
   loading: boolean;
   deviceName?: string;
+  organizationName?: string;
 }
 
 const DeleteDeviceDialog = ({
@@ -23,7 +24,8 @@ const DeleteDeviceDialog = ({
   onOpenChange,
   onDelete,
   loading,
-  deviceName = "this device"
+  deviceName = "this device",
+  organizationName
 }: DeleteDeviceDialogProps) => {
   const handleDelete = async () => {
     try {
@@ -33,13 +35,17 @@ const DeleteDeviceDialog = ({
     }
   };
 
+  const contextMessage = organizationName 
+    ? `from ${organizationName}`
+    : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Remove Device</DialogTitle>
           <DialogDescription>
-            Are you sure you want to remove {deviceName}? This action cannot be undone.
+            Are you sure you want to remove {deviceName} {contextMessage}? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-2">

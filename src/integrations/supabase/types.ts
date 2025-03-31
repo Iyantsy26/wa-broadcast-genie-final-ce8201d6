@@ -186,6 +186,7 @@ export type Database = {
           id: string
           last_active: string | null
           name: string
+          organization_id: string | null
           phone: string
           plan_tier: string | null
           status: string
@@ -197,6 +198,7 @@ export type Database = {
           id?: string
           last_active?: string | null
           name: string
+          organization_id?: string | null
           phone: string
           plan_tier?: string | null
           status: string
@@ -208,12 +210,21 @@ export type Database = {
           id?: string
           last_active?: string | null
           name?: string
+          organization_id?: string | null
           phone?: string
           plan_tier?: string | null
           status?: string
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "device_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -319,6 +330,220 @@ export type Database = {
           },
         ]
       }
+      organization_branding: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          custom_domain: string | null
+          custom_domain_verified: boolean | null
+          favicon_url: string | null
+          id: string
+          logo_url: string | null
+          organization_id: string
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          custom_domain_verified?: boolean | null
+          favicon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          organization_id: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          custom_domain_verified?: boolean | null
+          favicon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          organization_id?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_branding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_subscriptions: {
+        Row: {
+          cancel_at: string | null
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          id: string
+          organization_id: string
+          payment_provider: string | null
+          payment_provider_subscription_id: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_at?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end: string
+          current_period_start?: string
+          id?: string
+          organization_id: string
+          payment_provider?: string | null
+          payment_provider_subscription_id?: string | null
+          plan_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_at?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          organization_id?: string
+          payment_provider?: string | null
+          payment_provider_subscription_id?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          owner_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: Json
+          id: string
+          interval: string | null
+          is_active: boolean
+          is_custom: boolean
+          name: string
+          price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          interval?: string | null
+          is_active?: boolean
+          is_custom?: boolean
+          name: string
+          price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          interval?: string | null
+          is_active?: boolean
+          is_custom?: boolean
+          name?: string
+          price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           avatar: string | null
@@ -326,6 +551,7 @@ export type Database = {
           department_id: string | null
           email: string
           id: string
+          is_super_admin: boolean | null
           last_active: string | null
           name: string
           phone: string | null
@@ -339,6 +565,7 @@ export type Database = {
           department_id?: string | null
           email: string
           id?: string
+          is_super_admin?: boolean | null
           last_active?: string | null
           name: string
           phone?: string | null
@@ -352,6 +579,7 @@ export type Database = {
           department_id?: string | null
           email?: string
           id?: string
+          is_super_admin?: boolean | null
           last_active?: string | null
           name?: string
           phone?: string | null
@@ -448,7 +676,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_organization_limits: {
+        Args: {
+          org_id: string
+        }
+        Returns: Json
+      }
       is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }

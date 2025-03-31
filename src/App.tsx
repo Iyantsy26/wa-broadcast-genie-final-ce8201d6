@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
 import Clients from "./pages/Clients";
 import Devices from "./pages/Devices";
+import SuperAdmin from "./pages/SuperAdmin";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/tickets" element={<Tickets />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/super-admin" element={<SuperAdmin />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

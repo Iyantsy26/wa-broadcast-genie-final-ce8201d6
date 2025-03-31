@@ -21,12 +21,19 @@ import {
 import { Loader2, Save } from 'lucide-react';
 import { DeviceAccount } from '@/services/deviceService';
 
+interface Organization {
+  id: string;
+  name: string;
+}
+
 interface EditDeviceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (id: string, updates: Partial<DeviceAccount>) => Promise<void>;
   loading: boolean;
   device: DeviceAccount | null;
+  isSuperAdmin?: boolean;
+  organizations?: Organization[];
 }
 
 const EditDeviceDialog = ({
@@ -34,17 +41,21 @@ const EditDeviceDialog = ({
   onOpenChange,
   onSave,
   loading,
-  device
+  device,
+  isSuperAdmin = false,
+  organizations = []
 }: EditDeviceDialogProps) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [planTier, setPlanTier] = useState<'starter' | 'professional' | 'enterprise'>('starter');
+  const [organizationId, setOrganizationId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (device) {
       setName(device.name || '');
       setPhone(device.phone || '');
       setPlanTier((device.plan_tier || 'starter') as 'starter' | 'professional' | 'enterprise');
+      setOrganizationId(device.organization_id);
     }
   }, [device]);
 
@@ -52,11 +63,17 @@ const EditDeviceDialog = ({
     if (!device) return;
     
     try {
-      await onSave(device.id, {
+      const updates: Partial<DeviceAccount> = {
         name,
         phone,
         plan_tier: planTier
-      });
+      };
+
+      if (isSuperAdmin) {
+        updates.organization_id = organizationId;
+      }
+
+      await onSave(device.id, updates);
     } catch (error) {
       console.error("Error saving device:", error);
     }
@@ -111,6 +128,30 @@ const EditDeviceDialog = ({
               </SelectContent>
             </Select>
           </div>
+          
+          {isSuperAdmin && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="organization" className="text-right">
+                Organization
+              </Label>
+              <Select 
+                value={organizationId} 
+                onValueChange={setOrganizationId}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Assign to organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleSave} disabled={loading}>
