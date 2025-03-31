@@ -1,30 +1,12 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
+import { checkUserHasRole } from "./roleUtils";
 
 /**
  * Check if the current user has a specific role
  */
 export const hasRole = async (role: UserRole['role']): Promise<boolean> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) return false;
-    
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('role', role)
-      .single();
-    
-    if (error || !data) return false;
-    
-    return true;
-  } catch (error) {
-    console.error('Error checking user role:', error);
-    return false;
-  }
+  return checkUserHasRole(role);
 };
 
 /**
@@ -36,11 +18,9 @@ export const checkUserRole = async (): Promise<UserRole | null> => {
     
     if (!user) return null;
     
-    // First check if user is a super admin
-    const { data: superAdminData, error: superAdminError } = await supabase
-      .rpc('is_super_admin');
-      
-    if (!superAdminError && superAdminData) {
+    // Check for roles in priority order
+    const isSuperAdmin = await checkUserHasRole('super_admin');
+    if (isSuperAdmin) {
       return {
         id: 'system',
         user_id: user.id,
@@ -48,25 +28,30 @@ export const checkUserRole = async (): Promise<UserRole | null> => {
       };
     }
     
-    // Check other roles
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('role', { ascending: false }) // Get highest priority role first
-      .limit(1)
-      .single();
-    
-    if (error || !data) {
-      // Default to regular user
+    const isAdmin = await checkUserHasRole('admin');
+    if (isAdmin) {
       return {
-        id: 'default',
+        id: 'admin',
         user_id: user.id,
-        role: 'user'
+        role: 'admin'
       };
     }
     
-    return data as UserRole;
+    const isWhiteLabel = await checkUserHasRole('white_label');
+    if (isWhiteLabel) {
+      return {
+        id: 'white_label',
+        user_id: user.id,
+        role: 'white_label'
+      };
+    }
+    
+    // Default to regular user
+    return {
+      id: 'default',
+      user_id: user.id,
+      role: 'user'
+    };
   } catch (error) {
     console.error('Error getting user role:', error);
     return null;

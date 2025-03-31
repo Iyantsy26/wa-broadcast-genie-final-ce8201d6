@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,7 +26,6 @@ import {
   AlertTriangle,
   Upload,
   Check,
-  Upload,
   Copy,
   RefreshCw
 } from "lucide-react";

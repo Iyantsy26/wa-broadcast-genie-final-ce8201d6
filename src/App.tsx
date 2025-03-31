@@ -23,6 +23,7 @@ import WhiteLabel from "./pages/WhiteLabel";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,31 @@ const App = () => (
         <Routes>
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
+          
+          {/* Role-protected Routes */}
+          <Route path="/super-admin" element={
+            <RoleProtectedRoute requiredRole="super_admin">
+              <DashboardLayout />
+            </RoleProtectedRoute>
+          }>
+            <Route index element={<SuperAdmin />} />
+          </Route>
+          
+          <Route path="/admin" element={
+            <RoleProtectedRoute requiredRole="admin">
+              <DashboardLayout />
+            </RoleProtectedRoute>
+          }>
+            <Route index element={<Admin />} />
+          </Route>
+          
+          <Route path="/white-label" element={
+            <RoleProtectedRoute requiredRole="white_label">
+              <DashboardLayout />
+            </RoleProtectedRoute>
+          }>
+            <Route index element={<WhiteLabel />} />
+          </Route>
           
           {/* Protected Routes */}
           <Route path="/" element={
@@ -53,9 +79,6 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/tickets" element={<Tickets />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/super-admin" element={<SuperAdmin />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/white-label" element={<WhiteLabel />} />
           </Route>
           
           {/* Redirect Route */}
