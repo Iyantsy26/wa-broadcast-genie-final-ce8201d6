@@ -194,34 +194,53 @@ const WhatsAppAccounts = () => {
       
       console.log("Adding account:", newAccount);
       
-      const addedAccount = await addWhatsAppAccount(newAccount);
-      console.log("Added account:", addedAccount);
-      
-      setAccounts(prevAccounts => [addedAccount, ...prevAccounts]);
-      
-      toast({
-        title: "Account added",
-        description: `Successfully added WhatsApp account via ${type}.`,
-      });
-      
-      setNewAccountName('');
-      setBusinessId('');
-      setApiKey('');
-      setPhoneNumber('');
-      setCountryCode('+1');
-      setVerificationCode('');
-      setCodeSent(false);
-      setVerifying(false);
-      setDialogOpen(false);
-      
-      if (type === 'QR code') {
-        generateQrCode();
+      try {
+        const addedAccount = await addWhatsAppAccount(newAccount);
+        console.log("Added account:", addedAccount);
+        
+        setAccounts(prevAccounts => [addedAccount, ...prevAccounts]);
+        
+        toast({
+          title: "Account added",
+          description: `Successfully added WhatsApp account via ${type}.`,
+        });
+        
+        setNewAccountName('');
+        setBusinessId('');
+        setApiKey('');
+        setPhoneNumber('');
+        setCountryCode('+1');
+        setVerificationCode('');
+        setCodeSent(false);
+        setVerifying(false);
+        setDialogOpen(false);
+        
+        if (type === 'QR code') {
+          generateQrCode();
+        }
+      } catch (error: any) {
+        console.error("Error adding account:", error);
+        let errorMessage = "Failed to add WhatsApp account";
+        
+        if (error.message) {
+          if (error.message.includes("row-level security policy")) {
+            errorMessage = "Permission denied: You don't have access to add WhatsApp accounts. Please check your permissions.";
+          } else {
+            errorMessage = `Error: ${error.message}`;
+          }
+        }
+        
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error("Error adding account:", error);
+    } catch (error: any) {
+      console.error("Error in handleAddAccount:", error);
       toast({
         title: "Error",
-        description: "Failed to add WhatsApp account",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {

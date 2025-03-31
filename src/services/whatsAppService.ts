@@ -29,8 +29,8 @@ export const getWhatsAppAccounts = async (): Promise<WhatsAppAccount[]> => {
       id: account.id,
       name: account.account_name,
       phone: account.phone_number,
-      status: account.status || 'disconnected',
-      type: account.connection_type || 'qr',
+      status: (account.status || 'disconnected') as 'connected' | 'disconnected' | 'expired',
+      type: (account.connection_type || 'qr') as 'qr' | 'otp' | 'api',
       last_active: account.last_active || new Date().toISOString(),
       business_id: account.business_id,
       created_at: account.created_at
@@ -70,8 +70,8 @@ export const addWhatsAppAccount = async (account: Omit<WhatsAppAccount, 'id'>): 
       id: data.id,
       name: data.account_name,
       phone: data.phone_number,
-      status: data.status,
-      type: data.connection_type,
+      status: data.status as 'connected' | 'disconnected' | 'expired',
+      type: data.connection_type as 'qr' | 'otp' | 'api',
       last_active: data.last_active,
       business_id: data.business_id,
       created_at: data.created_at
