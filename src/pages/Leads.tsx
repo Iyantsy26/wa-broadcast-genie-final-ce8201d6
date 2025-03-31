@@ -127,7 +127,7 @@ const Leads = () => {
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[900px] w-[900px] max-h-[900px]">
+        <DialogContent className="sm:max-w-[600px] w-[600px] max-h-[700px]">
           <LeadForm onComplete={handleLeadFormComplete} />
         </DialogContent>
       </Dialog>
