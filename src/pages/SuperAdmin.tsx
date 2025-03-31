@@ -62,11 +62,26 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { getDefaultSuperAdminEmail } from "@/services/auth/authService";
 
+interface UserMetadata {
+  name: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  bio?: string;
+  avatar_url?: string;
+}
+
+interface MockUser {
+  id: string;
+  email: string;
+  user_metadata: UserMetadata;
+}
+
 const SuperAdmin = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [organizations, setOrganizations] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(null);
   
   useEffect(() => {
     const loadData = async () => {
@@ -81,7 +96,7 @@ const SuperAdmin = () => {
         
         if (localStorage.getItem('isSuperAdmin') === 'true') {
           console.log("Super admin mode detected from localStorage");
-          let mockUser = {
+          let mockUser: MockUser = {
             id: 'super-admin',
             email: getDefaultSuperAdminEmail(),
             user_metadata: {
@@ -133,7 +148,7 @@ const SuperAdmin = () => {
                   avatar_url: user.user_metadata?.avatar_url || mockUser.user_metadata.avatar_url
                 }
               };
-              setCurrentUser(enhancedUser);
+              setCurrentUser(enhancedUser as MockUser);
             }
           } catch (userError) {
             console.warn("Could not fetch actual user, using mock Super Admin user:", userError);
@@ -150,7 +165,7 @@ const SuperAdmin = () => {
             });
           } else if (user) {
             console.log("User data loaded successfully:", user);
-            setCurrentUser(user);
+            setCurrentUser(user as unknown as MockUser);
           } else {
             console.warn("No user found, but no error reported");
             toast({
@@ -439,7 +454,7 @@ const SuperAdmin = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : currentUser ? (
-                <ProfileSettingsForm user={currentUser} />
+                <ProfileSettingsForm user={currentUser as any} />
               ) : (
                 <div className="p-4 text-center">
                   <p className="text-red-500">User data not available. Please try refreshing the page.</p>
