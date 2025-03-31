@@ -68,7 +68,8 @@ export const getRedirectPathForRole = async (): Promise<string> => {
 };
 
 /**
- * Create a wrapper for the hasRole function to use local checks when needed
+ * Create a wrapper for checking if a user has a specific role
+ * This fixes the TypeScript error by not using the 'has_role' RPC function directly
  */
 export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean> => {
   try {
@@ -76,20 +77,45 @@ export const checkUserHasRole = async (role: UserRole['role']): Promise<boolean>
     
     if (!user) return false;
     
-    // Try using the RPC approach first
+    // Try using the available RPC function for checking super_admin status
+    if (role === 'super_admin') {
+      try {
+        const { data, error } = await supabase.rpc('is_super_admin');
+        if (!error) {
+          return Boolean(data);
+        }
+      } catch (err) {
+        console.warn('RPC not available for super_admin check, using local check');
+      }
+    }
+    
+    // Try using the available RPC function for checking admin status
+    if (role === 'admin') {
+      try {
+        const { data, error } = await supabase.rpc('is_admin');
+        if (!error) {
+          return Boolean(data);
+        }
+      } catch (err) {
+        console.warn('RPC not available for admin check, using local check');
+      }
+    }
+    
+    // For other roles, or as a fallback, query the database directly
     try {
-      const { data, error } = await supabase.rpc('has_role', { 
-        _role: role,
-        _user_id: user.id 
-      });
+      // Query the user_roles table directly instead of using RPC
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('role', role)
+        .single();
       
-      // If RPC was successful, use that result
-      if (!error) {
-        return Boolean(data);
+      if (!error && data) {
+        return true;
       }
     } catch (err) {
-      // RPC not available, fallback to local check
-      console.warn('RPC not available, using local role check');
+      console.warn('Direct query not available, using local check', err);
     }
     
     // Fallback to local check
