@@ -33,7 +33,7 @@ import {
   AlertCircle,
   MoreVertical,
   Loader2,
-  Browser,
+  Globe, // Replaced Browser with Globe
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -331,7 +331,7 @@ const WhatsAppAccounts = () => {
                       Refresh QR Code
                     </Button>
                     <Button variant="outline" size="sm" onClick={openWebWhatsApp}>
-                      <Browser className="mr-2 h-3 w-3" />
+                      <Globe className="mr-2 h-3 w-3" /> {/* Changed from Browser to Globe */}
                       Open in Browser
                     </Button>
                   </div>
