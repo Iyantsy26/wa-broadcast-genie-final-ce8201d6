@@ -181,7 +181,7 @@ const AddAdministratorDialog = ({
     
     try {
       // Generate credentials
-      const generatedUserId = generateUserId();
+      const generatedUserId = generateUserId(); // Renamed from userId to generatedUserId
       const password = generatePassword();
       
       // Upload avatar if provided
