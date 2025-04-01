@@ -45,25 +45,47 @@ const OrganizationManagement = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   const fetchOrganizations = async () => {
     setIsLoading(true);
+    setErrorMsg(null);
+    
     try {
-      // Get all organizations without using RLS policies that might cause infinite recursion
+      // Fetch organizations directly without using RLS policies
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching organizations:', error);
+        setErrorMsg(`Failed to load organizations: ${error.message}`);
+        toast({
+          title: 'Error',
+          description: `Failed to load organizations: ${error.message}`,
+          variant: 'destructive',
+        });
+        setOrganizations([]);
+        return;
+      }
       
-      // For each org, get member count
+      // For each org, get member count separately
       const orgsWithMemberCount = await Promise.all((data || []).map(async (org) => {
         try {
+          // Use a direct count query to avoid RLS recursion
           const { count, error: countError } = await supabase
             .from('organization_members')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', org.id);
+          
+          if (countError) {
+            console.error(`Error getting member count for org ${org.id}:`, countError);
+            return {
+              ...org,
+              memberCount: 0,
+            };
+          }
           
           return {
             ...org,
@@ -79,8 +101,9 @@ const OrganizationManagement = () => {
       }));
       
       setOrganizations(orgsWithMemberCount);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching organizations:', error);
+      setErrorMsg(`Failed to load organizations: ${error.message || 'Unknown error'}`);
       toast({
         title: 'Error',
         description: 'Failed to load organizations. Please try again later.',
@@ -123,7 +146,10 @@ const OrganizationManagement = () => {
         .delete()
         .eq('id', orgId);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting organization:', error);
+        throw error;
+      }
       
       toast({
         title: 'Organization Deleted',
@@ -131,11 +157,11 @@ const OrganizationManagement = () => {
       });
       
       fetchOrganizations();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting organization:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete organization',
+        description: `Failed to delete organization: ${error.message || 'Unknown error'}`,
         variant: 'destructive',
       });
     }
@@ -181,6 +207,19 @@ const OrganizationManagement = () => {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-sm text-muted-foreground">Loading organizations...</p>
+            </div>
+          ) : errorMsg ? (
+            <div className="text-center py-8">
+              <Building className="h-8 w-8 mx-auto text-destructive opacity-70" />
+              <p className="mt-2 text-sm text-destructive">{errorMsg}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={() => fetchOrganizations()}
+              >
+                Try Again
+              </Button>
             </div>
           ) : filteredOrganizations.length === 0 ? (
             <div className="text-center py-8">

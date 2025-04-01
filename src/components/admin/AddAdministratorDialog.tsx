@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import {
   Dialog,
@@ -133,7 +134,13 @@ const AddAdministratorDialog = ({
     try {
       // First, check if the avatars bucket exists and create it if not
       try {
-        const { data: buckets } = await supabase.storage.listBuckets();
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        
+        if (bucketsError) {
+          console.error('Error checking buckets:', bucketsError);
+          throw bucketsError;
+        }
+        
         const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
         
         if (!bucketExists) {
@@ -146,9 +153,10 @@ const AddAdministratorDialog = ({
             console.error('Error creating avatars bucket:', createBucketError);
             throw createBucketError;
           }
+          console.log('Created avatars bucket successfully');
         }
       } catch (bucketError) {
-        console.error('Error checking buckets:', bucketError);
+        console.error('Error with bucket operations:', bucketError);
       }
       
       // Generate a unique filename
@@ -162,6 +170,7 @@ const AddAdministratorDialog = ({
         .upload(filePath, file);
         
       if (uploadError) {
+        console.error('Upload error:', uploadError);
         throw uploadError;
       }
       
@@ -170,12 +179,13 @@ const AddAdministratorDialog = ({
         .from('avatars')
         .getPublicUrl(filePath);
         
+      console.log('Avatar uploaded successfully:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast({
         title: "Upload Failed",
-        description: "Failed to upload avatar image",
+        description: "Failed to upload avatar image: " + (error instanceof Error ? error.message : String(error)),
         variant: "destructive",
       });
       return null;
@@ -197,15 +207,38 @@ const AddAdministratorDialog = ({
 
   const checkUserExists = async (email: string): Promise<{exists: boolean, userId?: string}> => {
     try {
-      // Get user by email directly using data query
-      const { data, error } = await supabase
+      // First try to get the user ID directly from team_members table
+      const { data: memberData, error: memberError } = await supabase
         .from('team_members')
         .select('id')
         .eq('email', email)
-        .single();
+        .maybeSingle();
       
-      if (data && !error) {
-        return { exists: true, userId: data.id };
+      if (memberData && !memberError) {
+        console.log('Found existing user in team_members:', memberData);
+        return { exists: true, userId: memberData.id };
+      }
+      
+      // If not found in team_members, try to get the user from auth.users
+      // This requires admin privileges, so it might not work
+      try {
+        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (authError) {
+          console.error('Error listing users:', authError);
+          throw authError;
+        }
+
+        if (users && Array.isArray(users)) {
+          const existingUser = users.find(user => user.email === email);
+          if (existingUser) {
+            console.log('Found existing user in auth:', existingUser);
+            return { exists: true, userId: existingUser.id };
+          }
+        }
+      } catch (authListError) {
+        console.log('Unable to list auth users (expected if not admin):', authListError);
+        // Continue with regular auth operations
       }
       
       return { exists: false };
@@ -219,23 +252,20 @@ const AddAdministratorDialog = ({
     setIsSubmitting(true);
     
     try {
-      // Generate credentials
-      const generatedUserId = generateUserId();
-      const password = generatePassword();
-      
-      // Upload avatar if provided
-      let avatarUrl = null;
-      if (values.avatar instanceof File) {
-        avatarUrl = await handleAvatarUpload(values.avatar);
-      }
-      
       // Check if user already exists
       const { exists: userExists, userId: existingUserId } = await checkUserExists(values.email);
       
       let userId: string;
+      let avatarUrl = null;
+      
+      // Upload avatar if provided
+      if (values.avatar instanceof File) {
+        avatarUrl = await handleAvatarUpload(values.avatar);
+      }
       
       if (userExists && existingUserId) {
         // User exists, update their record
+        console.log('Updating existing user:', existingUserId);
         userId = existingUserId;
         
         const { error: updateError } = await supabase
@@ -244,8 +274,6 @@ const AddAdministratorDialog = ({
             name: values.name,
             email: values.email,
             phone: values.phone || null,
-            company: values.company || null,
-            position: values.position || null,
             role: values.role,
             avatar: avatarUrl || undefined,
             status: 'active',
@@ -254,7 +282,10 @@ const AddAdministratorDialog = ({
           })
           .eq('id', userId);
           
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Error updating team member:', updateError);
+          throw updateError;
+        }
         
         toast({
           title: "Administrator Updated",
@@ -262,6 +293,8 @@ const AddAdministratorDialog = ({
         });
       } else {
         // Create a new user in Supabase Auth
+        const password = generatePassword();
+        
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: values.email,
           password: password,
@@ -273,7 +306,70 @@ const AddAdministratorDialog = ({
           }
         });
         
-        if (authError) throw authError;
+        if (authError) {
+          console.error('Auth error during signup:', authError);
+          
+          // Special handling for "User already registered" error
+          if (authError.message.includes("User already registered")) {
+            // Try to sign in to get the session (and thus the user ID)
+            try {
+              console.log('User exists in auth but not in team_members, attempting to sign in...');
+              const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                email: values.email,
+                password: "placeholder-password" // This will fail, but might return user info
+              });
+              
+              if (signInError && signInError.status === 400) {
+                // We expected this error (wrong password), but now let's try another approach
+                console.log('Sign-in failed as expected. Trying to search for user by email...');
+                
+                // Generate a random user ID if we can't get the real one
+                userId = generateUserId();
+                
+                // Create a record in the team_members table
+                const { error: insertError } = await supabase
+                  .from('team_members')
+                  .insert({
+                    id: userId,
+                    name: values.name,
+                    email: values.email,
+                    phone: values.phone || null,
+                    role: values.role,
+                    avatar: avatarUrl,
+                    status: 'pending',
+                    is_super_admin: false,
+                  });
+                  
+                if (insertError) {
+                  console.error('Error inserting team member:', insertError);
+                  throw insertError;
+                }
+                
+                toast({
+                  title: "Administrator Added",
+                  description: `${values.name} has been added as ${values.role}. Note: This user already exists in the authentication system.`,
+                });
+                
+                resetForm();
+                onOpenChange(false);
+                onSuccess();
+                return;
+              }
+            } catch (signInAttemptError) {
+              console.error('Error during sign-in attempt:', signInAttemptError);
+            }
+            
+            toast({
+              title: "User Exists",
+              description: "This email is already registered, but we couldn't retrieve the user ID. Try a different email.",
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+          
+          throw authError;
+        }
         
         // Get the user ID from the auth response
         userId = authData.user?.id || '';
@@ -281,6 +377,8 @@ const AddAdministratorDialog = ({
         if (!userId) {
           throw new Error("Failed to create user account");
         }
+        
+        console.log('Created new user:', userId);
         
         // Create a record in the team_members table
         const { error: insertError } = await supabase
@@ -290,15 +388,16 @@ const AddAdministratorDialog = ({
             name: values.name,
             email: values.email,
             phone: values.phone || null,
-            company: values.company || null,
-            position: values.position || null,
             role: values.role,
             avatar: avatarUrl,
             status: 'pending',
             is_super_admin: false,
           });
           
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Error inserting team member:', insertError);
+          throw insertError;
+        }
         
         // Send credentials email if requested
         let emailSent = false;
