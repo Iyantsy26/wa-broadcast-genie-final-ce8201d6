@@ -88,22 +88,119 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSaving(true);
+      console.log("Submitting profile data:", data);
       
-      // Special case: if we're a Super Admin but no user object
+      // Special case: if we're a Super Admin but no user object in supabase yet
       const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+      
+      // First try to create a session if we're in super admin mode but don't have one
       if (isSuperAdmin && (!user || user.id === 'super-admin')) {
-        console.log("Super Admin mode, saving profile to localStorage");
-        
-        // Save profile to localStorage for Super Admin mode
-        localStorage.setItem('superAdminProfile', JSON.stringify(data));
-        
-        toast({
-          title: "Profile Updated",
-          description: "Super Admin profile updated successfully.",
-        });
-        
-        setIsSaving(false);
-        return;
+        console.log("Super Admin mode - attempting to create or use account");
+        try {
+          // Check if the super admin account exists
+          const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
+            email: data.email,
+            password: "super-admin-password", // This is just a placeholder
+          });
+          
+          if (checkError || !existingUser.user) {
+            console.log("Super admin account doesn't exist or can't be accessed, trying to create it");
+            
+            // Try to create the account
+            const { data: newUser, error: signupError } = await supabase.auth.signUp({
+              email: data.email,
+              password: Math.random().toString(36).substring(2, 15), // Generate a random password
+              options: {
+                data: {
+                  name: data.name,
+                  phone: data.phone,
+                  company: data.company,
+                  address: data.address,
+                  bio: data.bio,
+                  is_super_admin: true
+                }
+              }
+            });
+            
+            if (signupError) {
+              console.error("Failed to create super admin account:", signupError);
+              // Still save to localStorage as fallback
+              localStorage.setItem('superAdminProfile', JSON.stringify(data));
+              
+              toast({
+                title: "Profile Partially Updated",
+                description: "Profile saved locally only. Could not create database account.",
+              });
+              setIsSaving(false);
+              return;
+            }
+            
+            console.log("Created new super admin account:", newUser);
+            
+            // Save locally as well
+            localStorage.setItem('superAdminProfile', JSON.stringify(data));
+            
+            toast({
+              title: "Profile Updated",
+              description: "Super Admin profile created and updated successfully.",
+            });
+            
+            window.location.reload(); // Reload to update the session
+            return;
+          } else {
+            console.log("Successfully logged in as existing super admin:", existingUser);
+            
+            // Update the existing user
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: {
+                name: data.name,
+                phone: data.phone,
+                company: data.company,
+                address: data.address,
+                bio: data.bio,
+                is_super_admin: true
+              }
+            });
+            
+            if (updateError) {
+              console.error("Failed to update super admin profile:", updateError);
+              // Still save to localStorage as fallback
+              localStorage.setItem('superAdminProfile', JSON.stringify(data));
+              
+              toast({
+                title: "Profile Partially Updated",
+                description: "Profile saved locally only. Could not update database.",
+              });
+              setIsSaving(false);
+              return;
+            }
+            
+            console.log("Updated super admin profile");
+            
+            // Save locally as well
+            localStorage.setItem('superAdminProfile', JSON.stringify(data));
+            
+            toast({
+              title: "Profile Updated",
+              description: "Super Admin profile updated successfully.",
+            });
+            
+            // Reload to update the session
+            window.location.reload();
+            return;
+          }
+        } catch (authError) {
+          console.error("Auth operation failed:", authError);
+          // Fallback to localStorage
+          localStorage.setItem('superAdminProfile', JSON.stringify(data));
+          
+          toast({
+            title: "Profile Updated Locally",
+            description: "Could not update database. Profile saved locally only.",
+          });
+          setIsSaving(false);
+          return;
+        }
       }
       
       // Normal user flow with authentication
@@ -155,6 +252,11 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         if (metadataError) {
           console.error("Metadata update error:", metadataError);
           throw metadataError;
+        }
+        
+        // Also update localStorage as a fallback/cache
+        if (isSuperAdmin) {
+          localStorage.setItem('superAdminProfile', JSON.stringify(data));
         }
         
         toast({

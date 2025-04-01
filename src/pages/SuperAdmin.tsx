@@ -94,6 +94,35 @@ const SuperAdmin = () => {
           console.error("Error fetching organizations:", orgError);
         }
         
+        try {
+          const { data: { user }, error } = await supabase.auth.getUser();
+          
+          if (user && !error) {
+            console.log("Found authenticated user:", user);
+            
+            const isSuperAdminUser = user.user_metadata?.is_super_admin === true;
+            
+            if (isSuperAdminUser) {
+              console.log("User has super admin role in metadata");
+              localStorage.setItem('isSuperAdmin', 'true');
+              
+              const enhancedUser = {
+                ...user,
+                user_metadata: {
+                  ...user.user_metadata,
+                  name: user.user_metadata?.name || "Super Admin"
+                }
+              };
+              
+              setCurrentUser(enhancedUser as MockUser);
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (userError) {
+          console.warn("Error checking authenticated user:", userError);
+        }
+        
         if (localStorage.getItem('isSuperAdmin') === 'true') {
           console.log("Super admin mode detected from localStorage");
           let mockUser: MockUser = {
@@ -133,25 +162,17 @@ const SuperAdmin = () => {
           setCurrentUser(mockUser);
           
           try {
-            const { data: { user }, error } = await supabase.auth.getUser();
-            if (user && !error) {
-              console.log("Found actual user data for Super Admin:", user);
-              const enhancedUser = {
-                ...user,
-                user_metadata: {
-                  ...user.user_metadata,
-                  name: user.user_metadata?.name || mockUser.user_metadata.name,
-                  phone: user.user_metadata?.phone || mockUser.user_metadata.phone,
-                  company: user.user_metadata?.company || mockUser.user_metadata.company,
-                  address: user.user_metadata?.address || mockUser.user_metadata.address,
-                  bio: user.user_metadata?.bio || mockUser.user_metadata.bio,
-                  avatar_url: user.user_metadata?.avatar_url || mockUser.user_metadata.avatar_url
-                }
-              };
-              setCurrentUser(enhancedUser as MockUser);
+            console.log("Attempting to sign in with super admin credentials...");
+            const { data: { session }, error } = await supabase.auth.signInWithPassword({
+              email: mockUser.email,
+              password: "super-admin-password"
+            });
+            
+            if (session && !error) {
+              console.log("Successfully authenticated with super admin account");
             }
-          } catch (userError) {
-            console.warn("Could not fetch actual user, using mock Super Admin user:", userError);
+          } catch (signInError) {
+            console.warn("Could not sign in with super admin credentials:", signInError);
           }
         } else {
           const { data: { user }, error } = await supabase.auth.getUser();

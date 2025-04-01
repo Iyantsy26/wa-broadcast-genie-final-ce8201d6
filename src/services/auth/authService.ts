@@ -16,6 +16,16 @@ export const hasRole = async (role: UserRole['role']): Promise<boolean> => {
     return true;
   }
   
+  // Check if the user has the super_admin flag in their metadata
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.user_metadata?.is_super_admin === true && role === 'super_admin') {
+      return true;
+    }
+  } catch (error) {
+    console.error("Error checking user metadata for super admin:", error);
+  }
+  
   return checkUserHasRole(role);
 };
 
@@ -26,19 +36,25 @@ export const checkUserRole = async (): Promise<UserRole | null> => {
   try {
     // Check for Super Admin in localStorage first
     if (localStorage.getItem('isSuperAdmin') === 'true') {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        return {
-          id: 'system',
-          user_id: user.id,
-          role: 'super_admin'
-        };
-      }
+      return {
+        id: 'system',
+        user_id: 'super-admin',
+        role: 'super_admin'
+      };
     }
     
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) return null;
+    
+    // Check if user has super_admin flag in metadata
+    if (user.user_metadata?.is_super_admin === true) {
+      return {
+        id: 'system',
+        user_id: user.id,
+        role: 'super_admin'
+      };
+    }
     
     // Check for roles in priority order
     const isSuperAdmin = await checkUserHasRole('super_admin');
@@ -91,6 +107,47 @@ export const isAuthenticated = async (): Promise<boolean> => {
   
   const { data: { session } } = await supabase.auth.getSession();
   return !!session;
+};
+
+/**
+ * Create a super admin account in Supabase
+ */
+export const createSuperAdminAccount = async (email: string, password: string = "super-admin-password"): Promise<boolean> => {
+  try {
+    // Check if account already exists
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (!signInError && signInData.user) {
+      console.log("Super admin account already exists");
+      return true;
+    }
+    
+    // Create new account
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: "Super Admin",
+          is_super_admin: true
+        }
+      }
+    });
+    
+    if (error) {
+      console.error("Error creating super admin account:", error);
+      return false;
+    }
+    
+    console.log("Super admin account created successfully");
+    return true;
+  } catch (error) {
+    console.error("Error in createSuperAdminAccount:", error);
+    return false;
+  }
 };
 
 /**
