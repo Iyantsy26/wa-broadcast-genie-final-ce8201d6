@@ -31,3 +31,23 @@ export const generatePassword = (length = 12): string => {
   // Shuffle the password characters
   return password.split('').sort(() => 0.5 - Math.random()).join('');
 };
+
+/**
+ * Interface for team member data structure
+ */
+export interface TeamMember {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  avatar: string;
+  last_active: string;
+  is_super_admin: boolean;
+  department_id: string;
+  company?: string;
+  position?: string;
+}
