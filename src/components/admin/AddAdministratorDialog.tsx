@@ -62,6 +62,13 @@ interface AddAdministratorDialogProps {
   onSuccess: () => void;
 }
 
+// Define a type for the Supabase auth user
+interface SupabaseAuthUser {
+  id: string;
+  email?: string;
+  // Add other properties as needed
+}
+
 const AddAdministratorDialog = ({
   open,
   onOpenChange,
@@ -222,15 +229,15 @@ const AddAdministratorDialog = ({
       // If not found in team_members, try to get the user from auth.users
       // This requires admin privileges, so it might not work
       try {
-        const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+        const { data, error: authError } = await supabase.auth.admin.listUsers();
         
         if (authError) {
           console.error('Error listing users:', authError);
           throw authError;
         }
 
-        if (users && Array.isArray(users)) {
-          const existingUser = users.find(user => user.email === email);
+        if (data && data.users && Array.isArray(data.users)) {
+          const existingUser = data.users.find((user: SupabaseAuthUser) => user.email === email);
           if (existingUser) {
             console.log('Found existing user in auth:', existingUser);
             return { exists: true, userId: existingUser.id };
@@ -311,43 +318,42 @@ const AddAdministratorDialog = ({
           
           // Special handling for "User already registered" error
           if (authError.message.includes("User already registered")) {
-            // Try to sign in to get the session (and thus the user ID)
+            // Try to find the user in the team_members table using email
             try {
-              console.log('User exists in auth but not in team_members, attempting to sign in...');
-              const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                email: values.email,
-                password: "placeholder-password" // This will fail, but might return user info
-              });
-              
-              if (signInError && signInError.status === 400) {
-                // We expected this error (wrong password), but now let's try another approach
-                console.log('Sign-in failed as expected. Trying to search for user by email...');
+              console.log('User exists in auth but not in team_members, checking team members table...');
+              const { data: teamMemberData, error: teamMemberError } = await supabase
+                .from('team_members')
+                .select('id')
+                .eq('email', values.email)
+                .maybeSingle();
                 
-                // Generate a random user ID if we can't get the real one
-                userId = generateUserId();
+              if (!teamMemberError && teamMemberData) {
+                // We found the user in the team_members table
+                console.log('Found user in team_members table:', teamMemberData);
+                userId = teamMemberData.id;
                 
-                // Create a record in the team_members table
-                const { error: insertError } = await supabase
+                // Update the existing team member
+                const { error: updateError } = await supabase
                   .from('team_members')
-                  .insert({
-                    id: userId,
+                  .update({
                     name: values.name,
-                    email: values.email,
                     phone: values.phone || null,
                     role: values.role,
                     avatar: avatarUrl,
-                    status: 'pending',
+                    status: 'active',
                     is_super_admin: false,
-                  });
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', userId);
                   
-                if (insertError) {
-                  console.error('Error inserting team member:', insertError);
-                  throw insertError;
+                if (updateError) {
+                  console.error('Error updating team member:', updateError);
+                  throw updateError;
                 }
                 
                 toast({
-                  title: "Administrator Added",
-                  description: `${values.name} has been added as ${values.role}. Note: This user already exists in the authentication system.`,
+                  title: "Administrator Updated",
+                  description: `${values.name}'s information has been updated`
                 });
                 
                 resetForm();
@@ -355,8 +361,41 @@ const AddAdministratorDialog = ({
                 onSuccess();
                 return;
               }
-            } catch (signInAttemptError) {
-              console.error('Error during sign-in attempt:', signInAttemptError);
+              
+              // Generate a random user ID since we can't get the real one
+              userId = generateUserId();
+              
+              // Create a record in the team_members table
+              const { error: insertError } = await supabase
+                .from('team_members')
+                .insert({
+                  id: userId,
+                  name: values.name,
+                  email: values.email,
+                  phone: values.phone || null,
+                  role: values.role,
+                  avatar: avatarUrl,
+                  status: 'pending',
+                  is_super_admin: false,
+                });
+                
+              if (insertError) {
+                console.error('Error inserting team member:', insertError);
+                throw insertError;
+              }
+              
+              toast({
+                title: "Administrator Added",
+                description: `${values.name} has been added as ${values.role}. Note: This user already exists in the authentication system.`,
+              });
+              
+              resetForm();
+              onOpenChange(false);
+              onSuccess();
+              return;
+              
+            } catch (teamMemberCheckError) {
+              console.error('Error checking team members:', teamMemberCheckError);
             }
             
             toast({

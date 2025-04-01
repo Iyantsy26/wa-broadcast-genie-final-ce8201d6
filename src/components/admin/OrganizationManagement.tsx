@@ -52,7 +52,8 @@ const OrganizationManagement = () => {
     setErrorMsg(null);
     
     try {
-      // Fetch organizations directly without using RLS policies
+      // Use an alternative approach to avoid the infinite recursion RLS policy issue
+      // Instead of using organization_members in the query, just fetch organizations directly
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
@@ -70,10 +71,10 @@ const OrganizationManagement = () => {
         return;
       }
       
-      // For each org, get member count separately
+      // For each org, calculate member count by fetching each org's members separately
       const orgsWithMemberCount = await Promise.all((data || []).map(async (org) => {
         try {
-          // Use a direct count query to avoid RLS recursion
+          // Use a separate count query for each organization's members
           const { count, error: countError } = await supabase
             .from('organization_members')
             .select('*', { count: 'exact', head: true })
