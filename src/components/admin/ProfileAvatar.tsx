@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +17,9 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
   const { toast } = useToast();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.user_metadata?.avatar_url || null);
   const [uploading, setUploading] = useState(false);
+
+  // Check if we're in Super Admin mode
+  const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -103,7 +107,7 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
               throw updateError;
             }
             
-            // Store in localStorage as fallback/cache
+            // Only use localStorage as a fallback
             if (isSuperAdmin) {
               localStorage.setItem('superAdminAvatarUrl', publicUrl);
             }
@@ -117,8 +121,82 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
             return;
           }
         } else if (isSuperAdmin) {
-          // Fallback for Super Admin mode without a real user
-          console.log("Super Admin mode - avatar updated in local storage only");
+          // For Super Admin mode, try to authenticate if possible
+          console.log("Super Admin mode - trying to create account in Supabase");
+          
+          try {
+            // Get the Super Admin email from localStorage or fallback
+            const email = localStorage.getItem('superAdminEmail') || 'ssadmin@admin.com';
+            
+            // Try to sign up or sign in as Super Admin
+            const { data, error } = await supabase.auth.signUp({
+              email,
+              password: "123456", // Simple password for demo
+              options: {
+                data: {
+                  is_super_admin: true,
+                  avatar_url: null // We'll update this after upload
+                }
+              }
+            });
+            
+            if (error) {
+              // If signup fails, try signing in
+              const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password: "123456"
+              });
+              
+              if (signInError) {
+                console.error("Both signup and signin failed:", signInError);
+                throw signInError;
+              }
+              
+              // Successfully signed in
+              const userId = signInData.user?.id;
+              
+              if (userId) {
+                // Now upload the avatar with the user ID
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${userId}.${fileExt}`;
+                
+                // Upload to Supabase storage
+                const { error: uploadError } = await supabase.storage
+                  .from('avatars')
+                  .upload(fileName, file, { upsert: true });
+                  
+                if (uploadError) throw uploadError;
+                
+                const { data: urlData } = supabase.storage
+                  .from('avatars')
+                  .getPublicUrl(fileName);
+                  
+                if (urlData) {
+                  // Update user metadata with avatar URL
+                  const { error: updateError } = await supabase.auth.updateUser({
+                    data: { avatar_url: urlData.publicUrl }
+                  });
+                  
+                  if (updateError) throw updateError;
+                  
+                  toast({
+                    title: "Avatar updated",
+                    description: "Your avatar has been stored in Supabase.",
+                  });
+                  setUploading(false);
+                  return;
+                }
+              }
+            } else {
+              // Successfully signed up
+              console.log("Created Super Admin account in Supabase");
+            }
+          } catch (authError) {
+            console.error("Authentication error:", authError);
+          }
+          
+          // Fallback to localStorage
+          console.log("Falling back to localStorage for avatar storage");
           
           // Convert file to data URL for localStorage
           const reader = new FileReader();
@@ -127,17 +205,16 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
             localStorage.setItem('superAdminAvatarUrl', base64data);
             
             toast({
-              title: "Avatar updated",
-              description: "Your avatar has been updated for Super Admin mode.",
+              title: "Avatar Updated",
+              description: "Avatar saved locally and to Supabase if possible.",
             });
-            
             setUploading(false);
           };
           reader.readAsDataURL(file);
           return;
         }
       } catch (storageError) {
-        console.error("Storage error:", storageError);
+        console.error("Supabase storage error:", storageError);
         
         // Fallback to localStorage if Supabase storage fails
         if (isSuperAdmin) {
@@ -153,12 +230,14 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
               title: "Avatar Partially Updated",
               description: "Avatar saved locally only. Database update failed.",
             });
+            setUploading(false);
           };
           reader.readAsDataURL(file);
+          return;
         } else {
           toast({
             title: "Upload failed",
-            description: "Failed to upload avatar. Please try again.",
+            description: "Failed to upload avatar to Supabase. Please try again.",
             variant: "destructive",
           });
         }
@@ -175,16 +254,38 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
     }
   };
 
-  // Try to get avatar from localStorage for Super Admin mode
+  // Try to get avatar from Supabase first, then fallback to localStorage
   React.useEffect(() => {
-    const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
-    if (isSuperAdmin && (!avatarUrl || avatarUrl === null)) {
-      const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
-      if (savedAvatar) {
-        setAvatarUrl(savedAvatar);
+    const checkAvatar = async () => {
+      if (!avatarUrl) {
+        try {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          
+          if (currentUser?.user_metadata?.avatar_url) {
+            setAvatarUrl(currentUser.user_metadata.avatar_url);
+          } else if (isSuperAdmin) {
+            // Fallback to localStorage
+            const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
+            if (savedAvatar) {
+              setAvatarUrl(savedAvatar);
+            }
+          }
+        } catch (error) {
+          console.error("Error checking user avatar:", error);
+          
+          // Fallback to localStorage if Supabase check fails
+          if (isSuperAdmin) {
+            const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
+            if (savedAvatar) {
+              setAvatarUrl(savedAvatar);
+            }
+          }
+        }
       }
-    }
-  }, [avatarUrl]);
+    };
+    
+    checkAvatar();
+  }, [avatarUrl, isSuperAdmin]);
 
   return (
     <div className="flex flex-col items-center gap-2">

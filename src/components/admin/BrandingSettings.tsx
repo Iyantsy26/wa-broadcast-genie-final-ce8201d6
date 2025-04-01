@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Upload, Image, Palette, Type } from "lucide-react";
+import { Globe, Upload, Image, Palette, Type, RefreshCw, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
@@ -40,6 +41,55 @@ const BrandingSettings = () => {
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  
+  // Load branding from Supabase
+  useEffect(() => {
+    const loadBranding = async () => {
+      try {
+        // In a real app, you would get the organization ID from context or user data
+        // For now, we'll use a placeholder
+        const tempOrgId = localStorage.getItem('orgId') || 'default-org';
+        setOrgId(tempOrgId);
+        
+        const { data, error } = await supabase
+          .from('organization_branding')
+          .select('*')
+          .eq('organization_id', tempOrgId)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error loading branding:", error);
+          return;
+        }
+        
+        if (data) {
+          // Update form with data from Supabase
+          form.reset({
+            siteName: localStorage.getItem('siteName') || "My WhatsApp Dashboard",
+            primaryColor: data.primary_color || "#1a1f2c",
+            secondaryColor: data.secondary_color || "#ffffff",
+            accentColor: data.accent_color || "#8b5cf6",
+            customDomain: data.custom_domain || "",
+          });
+          
+          // Set logo and favicon previews if available
+          if (data.logo_url) {
+            setLogoPreview(data.logo_url);
+          }
+          
+          if (data.favicon_url) {
+            setFaviconPreview(data.favicon_url);
+          }
+        }
+      } catch (error) {
+        console.error("Error in loadBranding:", error);
+      }
+    };
+    
+    loadBranding();
+  }, []);
   
   const form = useForm<BrandingFormValues>({
     resolver: zodResolver(brandingFormSchema),
@@ -54,10 +104,95 @@ const BrandingSettings = () => {
   
   const onSubmit = async (data: BrandingFormValues) => {
     try {
-      // Here we would typically update the branding in the database
-      console.log("Form data:", data);
-      console.log("Logo file:", logoFile);
-      console.log("Favicon file:", faviconFile);
+      setIsSaving(true);
+      localStorage.setItem('siteName', data.siteName);
+      
+      // Get current organization ID (in real app, this would come from auth context)
+      const currentOrgId = orgId || 'default-org'; 
+      
+      // Prepare branding data
+      let brandingData: any = {
+        organization_id: currentOrgId,
+        primary_color: data.primaryColor,
+        secondary_color: data.secondaryColor,
+        accent_color: data.accentColor,
+        custom_domain: data.customDomain,
+      };
+      
+      // Upload logo if selected
+      if (logoFile) {
+        try {
+          // Ensure bucket exists
+          const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('branding');
+          if (bucketError || !bucketData) {
+            await supabase.storage.createBucket('branding', { public: true });
+          }
+          
+          // Upload file
+          const fileName = `${currentOrgId}_logo_${Date.now()}`;
+          const { error: uploadError } = await supabase.storage
+            .from('branding')
+            .upload(fileName, logoFile, { upsert: true });
+            
+          if (uploadError) throw uploadError;
+          
+          // Get URL
+          const { data: urlData } = supabase.storage
+            .from('branding')
+            .getPublicUrl(fileName);
+            
+          if (urlData) {
+            brandingData.logo_url = urlData.publicUrl;
+            setLogoPreview(urlData.publicUrl);
+          }
+        } catch (error) {
+          console.error("Logo upload error:", error);
+          toast({
+            title: "Logo Upload Failed",
+            description: "Failed to upload logo, but other settings will be saved.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Upload favicon if selected
+      if (faviconFile) {
+        try {
+          // Ensure bucket exists (already checked above)
+          
+          // Upload file
+          const fileName = `${currentOrgId}_favicon_${Date.now()}`;
+          const { error: uploadError } = await supabase.storage
+            .from('branding')
+            .upload(fileName, faviconFile, { upsert: true });
+            
+          if (uploadError) throw uploadError;
+          
+          // Get URL
+          const { data: urlData } = supabase.storage
+            .from('branding')
+            .getPublicUrl(fileName);
+            
+          if (urlData) {
+            brandingData.favicon_url = urlData.publicUrl;
+            setFaviconPreview(urlData.publicUrl);
+          }
+        } catch (error) {
+          console.error("Favicon upload error:", error);
+          toast({
+            title: "Favicon Upload Failed",
+            description: "Failed to upload favicon, but other settings will be saved.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Save to Supabase (upsert)
+      const { error } = await supabase
+        .from('organization_branding')
+        .upsert(brandingData, { onConflict: 'organization_id' });
+        
+      if (error) throw error;
       
       toast({
         title: "Branding updated",
@@ -70,6 +205,8 @@ const BrandingSettings = () => {
         description: "Failed to update branding settings. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -94,8 +231,8 @@ const BrandingSettings = () => {
     setLogoPreview(objectUrl);
     
     toast({
-      title: "Logo uploaded",
-      description: "Your logo has been uploaded successfully.",
+      title: "Logo ready",
+      description: "Click 'Save Branding Settings' to upload the logo.",
     });
   };
   
@@ -120,8 +257,8 @@ const BrandingSettings = () => {
     setFaviconPreview(objectUrl);
     
     toast({
-      title: "Favicon uploaded",
-      description: "Your favicon has been uploaded successfully.",
+      title: "Favicon ready",
+      description: "Click 'Save Branding Settings' to upload the favicon.",
     });
   };
 
@@ -196,10 +333,14 @@ const BrandingSettings = () => {
                       <FormLabel>Primary Color</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-3">
-                          <div 
-                            className="w-10 h-10 rounded-md border"
-                            style={{ backgroundColor: field.value }}
-                          />
+                          <div className="flex items-center">
+                            <input
+                              type="color"
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="w-10 h-10 rounded cursor-pointer"
+                            />
+                          </div>
                           <Input {...field} />
                         </div>
                       </FormControl>
@@ -219,10 +360,14 @@ const BrandingSettings = () => {
                       <FormLabel>Secondary Color</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-3">
-                          <div 
-                            className="w-10 h-10 rounded-md border"
-                            style={{ backgroundColor: field.value }}
-                          />
+                          <div className="flex items-center">
+                            <input
+                              type="color"
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="w-10 h-10 rounded cursor-pointer"
+                            />
+                          </div>
                           <Input {...field} />
                         </div>
                       </FormControl>
@@ -242,10 +387,14 @@ const BrandingSettings = () => {
                       <FormLabel>Accent Color</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-3">
-                          <div 
-                            className="w-10 h-10 rounded-md border"
-                            style={{ backgroundColor: field.value }}
-                          />
+                          <div className="flex items-center">
+                            <input
+                              type="color"
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="w-10 h-10 rounded cursor-pointer"
+                            />
+                          </div>
                           <Input {...field} />
                         </div>
                       </FormControl>
@@ -367,7 +516,19 @@ const BrandingSettings = () => {
               </div>
             </TabsContent>
             
-            <Button type="submit">Save Branding Settings</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Save Branding Settings
+                </>
+              )}
+            </Button>
           </form>
         </Form>
       </Tabs>

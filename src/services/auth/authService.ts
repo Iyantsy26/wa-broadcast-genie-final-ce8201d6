@@ -16,16 +16,39 @@ export const hasRole = async (role: UserRole['role']): Promise<boolean> => {
     return true;
   }
   
-  // Check if the user has the super_admin flag in their metadata
   try {
+    // Check if the user has the super_admin flag in their metadata
     const { data: { user } } = await supabase.auth.getUser();
     if (user && user.user_metadata?.is_super_admin === true && role === 'super_admin') {
+      // Store flag in localStorage for faster subsequent checks
+      localStorage.setItem('isSuperAdmin', 'true');
       return true;
     }
+
+    // Check for roles in Supabase database
+    if (user) {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('role, is_super_admin')
+        .eq('id', user.id)
+        .single();
+        
+      if (data) {
+        if (role === 'super_admin' && data.is_super_admin) {
+          localStorage.setItem('isSuperAdmin', 'true');
+          return true;
+        }
+        
+        if (data.role === role) {
+          return true;
+        }
+      }
+    }
   } catch (error) {
-    console.error("Error checking user metadata for super admin:", error);
+    console.error("Error checking user metadata for role:", error);
   }
   
+  // Fallback to roleUtils check
   return checkUserHasRole(role);
 };
 
@@ -49,6 +72,7 @@ export const checkUserRole = async (): Promise<UserRole | null> => {
     
     // Check if user has super_admin flag in metadata
     if (user.user_metadata?.is_super_admin === true) {
+      localStorage.setItem('isSuperAdmin', 'true');
       return {
         id: 'system',
         user_id: user.id,
@@ -56,7 +80,33 @@ export const checkUserRole = async (): Promise<UserRole | null> => {
       };
     }
     
-    // Check for roles in priority order
+    // Check for roles in Supabase database
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('role, is_super_admin')
+      .eq('id', user.id)
+      .single();
+      
+    if (data) {
+      if (data.is_super_admin) {
+        localStorage.setItem('isSuperAdmin', 'true');
+        return {
+          id: 'system',
+          user_id: user.id,
+          role: 'super_admin'
+        };
+      }
+      
+      if (data.role) {
+        return {
+          id: data.role,
+          user_id: user.id,
+          role: data.role as UserRole['role']
+        };
+      }
+    }
+    
+    // Fallback to the old checks
     const isSuperAdmin = await checkUserHasRole('super_admin');
     if (isSuperAdmin) {
       return {
@@ -122,6 +172,49 @@ export const createSuperAdminAccount = async (email: string, password: string = 
     
     if (!signInError && signInData.user) {
       console.log("Super admin account already exists");
+      
+      // Ensure user has super admin flag in metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          name: "Super Admin",
+          is_super_admin: true
+        }
+      });
+      
+      if (updateError) {
+        console.error("Error updating super admin metadata:", updateError);
+      }
+      
+      // Check if user exists in team_members table
+      const { data: teamMember, error: teamError } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('email', email)
+        .single();
+        
+      if (teamError && teamError.code !== 'PGRST116') {
+        console.error("Error checking team_members:", teamError);
+      }
+      
+      // Insert or update the team_member record
+      if (!teamMember) {
+        const { error: insertError } = await supabase
+          .from('team_members')
+          .insert([{
+            id: signInData.user.id,
+            name: "Super Admin",
+            email: email,
+            role: 'super_admin',
+            is_super_admin: true,
+            status: 'active'
+          }]);
+          
+        if (insertError) {
+          console.error("Error inserting team member:", insertError);
+        }
+      }
+      
+      localStorage.setItem('isSuperAdmin', 'true');
       return true;
     }
     
@@ -142,6 +235,25 @@ export const createSuperAdminAccount = async (email: string, password: string = 
       return false;
     }
     
+    // Add user to team_members table if needed
+    if (data.user) {
+      const { error: teamError } = await supabase
+        .from('team_members')
+        .insert([{
+          id: data.user.id,
+          name: "Super Admin",
+          email: data.user.email,
+          role: 'super_admin',
+          is_super_admin: true,
+          status: 'active'
+        }]);
+        
+      if (teamError) {
+        console.error("Error creating team member:", teamError);
+      }
+    }
+    
+    localStorage.setItem('isSuperAdmin', 'true');
     console.log("Super admin account created successfully");
     return true;
   } catch (error) {
@@ -155,8 +267,10 @@ export const createSuperAdminAccount = async (email: string, password: string = 
  */
 export const signOut = async (): Promise<boolean> => {
   try {
-    // Clear super admin status
+    // Clear super admin status from localStorage
     localStorage.removeItem('isSuperAdmin');
+    localStorage.removeItem('superAdminProfile');
+    localStorage.removeItem('superAdminAvatarUrl');
     
     const { error } = await supabase.auth.signOut();
     return !error;
@@ -179,4 +293,70 @@ export const isDefaultSuperAdmin = (email: string, password: string): boolean =>
  */
 export const getDefaultSuperAdminEmail = (): string => {
   return DEFAULT_SUPER_ADMIN_EMAIL;
+};
+
+/**
+ * Save Super Admin profile to Supabase
+ */
+export const saveProfileToSupabase = async (
+  profileData: {
+    name: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    address?: string;
+    bio?: string;
+  }
+): Promise<boolean> => {
+  try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          ...user.user_metadata,
+          ...profileData
+        }
+      });
+      
+      if (updateError) {
+        console.error("Error updating user metadata:", updateError);
+        return false;
+      }
+      
+      // Also update the team_members table
+      const { error: teamError } = await supabase
+        .from('team_members')
+        .upsert([{
+          id: user.id,
+          name: profileData.name,
+          email: profileData.email || user.email,
+          phone: profileData.phone,
+          role: 'super_admin',
+          is_super_admin: true,
+          status: 'active'
+        }], { onConflict: 'id' });
+        
+      if (teamError) {
+        console.error("Error updating team member:", teamError);
+      }
+      
+      // Cache in localStorage as backup
+      localStorage.setItem('superAdminProfile', JSON.stringify(profileData));
+      
+      return true;
+    } else {
+      // Fallback to localStorage if no user exists
+      localStorage.setItem('superAdminProfile', JSON.stringify(profileData));
+      return true;
+    }
+  } catch (error) {
+    console.error("Error saving profile to Supabase:", error);
+    
+    // Fallback to localStorage
+    localStorage.setItem('superAdminProfile', JSON.stringify(profileData));
+    return false;
+  }
 };
