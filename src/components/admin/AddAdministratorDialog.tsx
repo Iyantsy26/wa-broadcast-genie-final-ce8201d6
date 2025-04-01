@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import {
   Dialog,
@@ -178,7 +179,7 @@ const AddAdministratorDialog = ({
   const checkUserExists = async (email: string): Promise<{exists: boolean, userId?: string}> => {
     try {
       // First try to sign in with a dummy password to see if user exists
-      const { error, data } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password: "dummy-password-123456789" // This will almost certainly fail, but it's a way to check if user exists
       });
@@ -232,7 +233,8 @@ const AddAdministratorDialog = ({
         // If user exists in Auth but we don't have their ID, we can't proceed
         if (!existingUserId) {
           const { data } = await supabase.auth.admin.listUsers();
-          const existingUser = data?.users?.find(u => u.email === values.email);
+          const existingUsers = data?.users || [];
+          const existingUser = existingUsers.find(u => u.email === values.email);
           
           if (!existingUser?.id) {
             throw new Error("User exists but could not retrieve user ID. Contact your system administrator.");
@@ -314,7 +316,7 @@ const AddAdministratorDialog = ({
         if (authError) throw authError;
         
         // Get the user ID from the auth response
-        userId = authData.user?.id;
+        userId = authData.user?.id || '';
         
         if (!userId) {
           throw new Error("Failed to create user account");
