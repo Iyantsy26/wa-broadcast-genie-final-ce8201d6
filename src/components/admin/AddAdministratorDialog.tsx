@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import {
   Dialog,
@@ -25,7 +24,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User, Building, Mail, Phone, Lock, Key, ShieldCheck } from "lucide-react";
+import { Upload, User, Building, Mail, Phone, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePassword, generateUserId } from "@/utils/adminUtils";
 
@@ -132,6 +131,26 @@ const AddAdministratorDialog = ({
 
   const handleAvatarUpload = async (file: File): Promise<string | null> => {
     try {
+      // First, check if the avatars bucket exists and create it if not
+      try {
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+        
+        if (!bucketExists) {
+          // Create the avatars bucket
+          const { error: createBucketError } = await supabase.storage.createBucket('avatars', {
+            public: true
+          });
+          
+          if (createBucketError) {
+            console.error('Error creating avatars bucket:', createBucketError);
+            throw createBucketError;
+          }
+        }
+      } catch (bucketError) {
+        console.error('Error checking buckets:', bucketError);
+      }
+      
       // Generate a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -178,31 +197,17 @@ const AddAdministratorDialog = ({
 
   const checkUserExists = async (email: string): Promise<{exists: boolean, userId?: string}> => {
     try {
-      // First try to sign in with a dummy password to see if user exists
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: "dummy-password-123456789" // This will almost certainly fail, but it's a way to check if user exists
-      });
+      // Get user by email directly using data query
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('email', email)
+        .single();
       
-      // If error code is 'invalid_credentials', the user exists but password is wrong
-      if (error && error.message.includes('Invalid login credentials')) {
-        // Now look up the user by email to try to get their ID
-        const { data: adminData, error: lookupError } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('email', email)
-          .single();
-          
-        if (!lookupError && adminData) {
-          // If we found the user in team_members, return their ID
-          return { exists: true, userId: adminData.id };
-        }
-        
-        // User exists in Auth but not in team_members yet
-        return { exists: true };
+      if (data && !error) {
+        return { exists: true, userId: data.id };
       }
       
-      // If no error or different error, user likely doesn't exist
       return { exists: false };
     } catch (error) {
       console.error("Error checking if user exists:", error);
@@ -229,79 +234,34 @@ const AddAdministratorDialog = ({
       
       let userId: string;
       
-      if (userExists) {
-        // If user exists in Auth but we don't have their ID, we can't proceed
-        if (!existingUserId) {
-          const { data } = await supabase.auth.admin.listUsers();
-          const existingUsers = data?.users || [];
-          const existingUser = existingUsers.find(u => u.email === values.email);
-          
-          if (!existingUser?.id) {
-            throw new Error("User exists but could not retrieve user ID. Contact your system administrator.");
-          }
-          
-          userId = existingUser.id;
-        } else {
-          userId = existingUserId;
-        }
+      if (userExists && existingUserId) {
+        // User exists, update their record
+        userId = existingUserId;
         
-        // We have a user ID, now check if they exist in team_members
-        const { data: memberData } = await supabase
+        const { error: updateError } = await supabase
           .from('team_members')
-          .select('id')
-          .eq('id', userId)
-          .single();
+          .update({
+            name: values.name,
+            email: values.email,
+            phone: values.phone || null,
+            company: values.company || null,
+            position: values.position || null,
+            role: values.role,
+            avatar: avatarUrl || undefined,
+            status: 'active',
+            is_super_admin: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
           
-        if (memberData) {
-          // User exists in team_members too, let's update their info
-          const { error: updateError } = await supabase
-            .from('team_members')
-            .update({
-              name: values.name,
-              email: values.email,
-              phone: values.phone || null,
-              company: values.company || null,
-              position: values.position || null,
-              role: values.role,
-              avatar: avatarUrl || undefined,
-              status: 'active',
-              is_super_admin: false,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-          if (updateError) throw updateError;
-          
-          toast({
-            title: "Administrator Updated",
-            description: `${values.name}'s information has been updated`
-          });
-        } else {
-          // User exists in Auth but not in team_members, create team_members record
-          const { error: insertError } = await supabase
-            .from('team_members')
-            .insert({
-              id: userId,
-              name: values.name,
-              email: values.email,
-              phone: values.phone || null,
-              company: values.company || null,
-              position: values.position || null,
-              role: values.role,
-              avatar: avatarUrl,
-              status: 'pending',
-              is_super_admin: false,
-            });
-            
-          if (insertError) throw insertError;
-          
-          toast({
-            title: "Administrator Added",
-            description: `${values.name} has been added as ${values.role}`
-          });
-        }
+        if (updateError) throw updateError;
+        
+        toast({
+          title: "Administrator Updated",
+          description: `${values.name}'s information has been updated`
+        });
       } else {
-        // Create a new user in Supabase Auth if the user doesn't exist
+        // Create a new user in Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: values.email,
           password: password,

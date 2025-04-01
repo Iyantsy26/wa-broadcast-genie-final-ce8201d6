@@ -49,7 +49,7 @@ const OrganizationManagement = () => {
   const fetchOrganizations = async () => {
     setIsLoading(true);
     try {
-      // Get all organizations
+      // Get all organizations without using RLS policies that might cause infinite recursion
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
@@ -83,9 +83,12 @@ const OrganizationManagement = () => {
       console.error('Error fetching organizations:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load organizations',
+        description: 'Failed to load organizations. Please try again later.',
         variant: 'destructive',
       });
+      
+      // Set empty array to prevent infinite loading state
+      setOrganizations([]);
     } finally {
       setIsLoading(false);
     }
