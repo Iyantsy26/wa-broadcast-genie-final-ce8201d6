@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -75,17 +76,18 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         try {
           const { data: teamMember, error } = await supabase
             .from('team_members')
-            .select('name, email, phone, company, address, position')
+            .select('name, email, phone, position, avatar, role') // Remove company and address if they don't exist
             .eq('id', user.id)
             .maybeSingle();
             
           if (!error && teamMember) {
+            // We need to handle the case where company and address might not exist
             form.reset({
               name: teamMember.name || user.user_metadata?.name || "",
               email: teamMember.email || user.email || "",
               phone: teamMember.phone || user.user_metadata?.phone || "",
-              company: teamMember.company || user.user_metadata?.company || "",
-              address: teamMember.address || user.user_metadata?.address || "",
+              company: user.user_metadata?.company || "", // Use user metadata since company might not be in team_members
+              address: user.user_metadata?.address || "", // Use user metadata since address might not be in team_members
               bio: user.user_metadata?.bio || "",
             });
             return;

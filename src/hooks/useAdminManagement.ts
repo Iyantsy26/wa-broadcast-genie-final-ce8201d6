@@ -65,19 +65,19 @@ export const useAdminManagement = () => {
           throw error;
         }
         
-        // Map to AdminUser format
+        // Map to AdminUser format with safe property access
         const mappedAdmins: AdminUser[] = data.map(member => ({
           id: member.id,
           name: member.name,
           email: member.email,
           phone: member.phone || '',
-          company: member.company || '',
+          company: member.company || '', // This field might not exist in team_members, handle it safely
           avatar: member.avatar,
           role: member.role as UserRole['role'],
           tags: [],
           joinDate: new Date(member.created_at),
-          address: member.address || '',
-          position: member.position || '',
+          address: member.address || '', // This field might not exist in team_members, handle it safely
+          position: member.position || '', // This field might not exist in team_members, handle it safely
           status: member.status || 'active'
         }));
         

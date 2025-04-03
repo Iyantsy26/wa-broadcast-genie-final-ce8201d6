@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -51,10 +50,10 @@ const getStatusBadgeVariant = (status?: string) => {
     case 'suspended':
       return 'destructive';
     case 'pending':
-      return 'warning';
+      return 'warning' as "warning";
     case 'active':
     default:
-      return 'success';
+      return 'success' as "success";
   }
 };
 
