@@ -550,6 +550,7 @@ export type Database = {
           avatar: string | null
           company: string | null
           created_at: string
+          custom_id: string | null
           department_id: string | null
           email: string
           id: string
@@ -567,6 +568,7 @@ export type Database = {
           avatar?: string | null
           company?: string | null
           created_at?: string
+          custom_id?: string | null
           department_id?: string | null
           email: string
           id?: string
@@ -584,6 +586,7 @@ export type Database = {
           avatar?: string | null
           company?: string | null
           created_at?: string
+          custom_id?: string | null
           department_id?: string | null
           email?: string
           id?: string
@@ -685,6 +688,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_custom_user_id: {
+        Args: {
+          role_type: string
+        }
+        Returns: string
+      }
       get_organization_limits: {
         Args: {
           org_id: string

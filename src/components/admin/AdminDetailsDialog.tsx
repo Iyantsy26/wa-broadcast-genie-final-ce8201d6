@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -38,6 +37,7 @@ const adminFormSchema = z.object({
   company: z.string().optional(),
   position: z.string().optional(),
   role: z.string(),
+  customId: z.string().optional(),
   avatar: z
     .any()
     .refine((file) => !file || file instanceof File, "Avatar must be a file")
@@ -84,6 +84,7 @@ const AdminDetailsDialog = ({
       company: "",
       position: "",
       role: "admin",
+      customId: "",
     },
   });
 
@@ -129,9 +130,10 @@ const AdminDetailsDialog = ({
       name: data.name,
       email: data.email,
       phone: data.phone || "",
-      company: data.company || "", // Add company field
-      position: data.position || "", // Add position field
+      company: data.company || "",
+      position: data.position || "",
       role: data.role,
+      customId: data.custom_id || "",
     });
     
     setAvatarPreview(data.avatar || null);
@@ -223,11 +225,12 @@ const AdminDetailsDialog = ({
           name: values.name,
           email: values.email,
           phone: values.phone || null,
-          company: values.company || null, // Update company
-          position: values.position || null, // Update position
+          company: values.company || null,
+          position: values.position || null,
           role: values.role,
           avatar: avatarUrl,
           updated_at: new Date().toISOString(),
+          // Never update custom_id here as it's system-managed
         })
         .eq('id', admin.id);
         
@@ -323,6 +326,30 @@ const AdminDetailsDialog = ({
                       />
                     </div>
                   </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="customId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>User ID</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                              {...field}
+                              className="pl-8 bg-muted"
+                              readOnly
+                              disabled
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          System-assigned ID that cannot be changed
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
                   
                   <FormField
                     control={form.control}
@@ -467,6 +494,11 @@ const AdminDetailsDialog = ({
                   <div className="flex justify-between items-center">
                     <h3 className="font-semibold text-lg">{admin.name}</h3>
                     {getStatusBadge(admin.status)}
+                  </div>
+                  
+                  <div className="text-sm flex items-center gap-2 font-mono bg-muted p-2 rounded">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>ID: {admin.custom_id || 'Not assigned'}</span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">

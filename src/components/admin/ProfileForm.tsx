@@ -7,7 +7,7 @@ import PersonalInfoForm from "./PersonalInfoForm";
 import BioSection from "./BioSection";
 import ProfileFormButtons from "./ProfileFormButtons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Key } from "lucide-react";
 
 interface ProfileFormProps {
   user: User | null;
@@ -16,10 +16,20 @@ interface ProfileFormProps {
 const ProfileForm = ({ user }: ProfileFormProps) => {
   const { form, isSaving, isSuperAdmin, onSubmit } = useProfileForm(user);
   const isSuperAdminMode = localStorage.getItem('isSuperAdmin') === 'true';
+  const customId = form.watch('customId');
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {customId && (
+          <Alert className="mb-4 bg-blue-50 border-blue-200">
+            <Key className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-blue-700">
+              Your User ID <span className="font-mono font-bold">{customId}</span> is a system-generated master key that cannot be changed.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {isSuperAdmin && (
           <Alert variant="warning" className="mb-4">
             <AlertCircle className="h-4 w-4" />

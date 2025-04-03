@@ -89,24 +89,28 @@ export const updateUserAvatar = async (userId: string, publicUrl: string) => {
   }
 };
 
-export const updateTeamMemberAvatar = async (userId: string, publicUrl: string, userData?: { name?: string; email?: string; role?: string }) => {
+export const updateTeamMemberAvatar = async (userId: string, publicUrl: string, userData?: { name?: string; email?: string; role?: string; custom_id?: string }) => {
   if (userId !== 'super-admin') {
     // Get existing user data if not provided
     let name = userData?.name;
     let email = userData?.email;
     let role = userData?.role;
+    let custom_id = userData?.custom_id;
 
     if (!name || !email || !role) {
       try {
         const { data: teamMember } = await supabase
           .from('team_members')
-          .select('name, email, role')
+          .select('name, email, role, custom_id')
           .eq('id', userId)
           .maybeSingle();
           
         name = teamMember?.name || 'User';
         email = teamMember?.email || 'user@example.com';
         role = teamMember?.role || 'user';
+        custom_id = teamMember?.custom_id;
+        
+        // If no custom_id exists, it will be automatically generated via the trigger
       } catch (err) {
         console.error("Error fetching team member data:", err);
       }
@@ -125,6 +129,7 @@ export const updateTeamMemberAvatar = async (userId: string, publicUrl: string, 
           email: email || 'user@example.com',
           role: role || 'user',
           status: 'active'
+          // Don't specify custom_id here, let the trigger handle it
         }, { onConflict: 'id' });
         
       if (teamError) {

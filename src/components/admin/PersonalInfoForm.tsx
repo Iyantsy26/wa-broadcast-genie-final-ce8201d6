@@ -6,10 +6,12 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import { ProfileFormValues } from "./ProfileFormTypes";
+import { User } from "lucide-react";
 
 interface PersonalInfoFormProps {
   form: UseFormReturn<ProfileFormValues>;
@@ -19,6 +21,31 @@ interface PersonalInfoFormProps {
 const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ form, isSuperAdmin }) => {
   return (
     <>
+      <FormField
+        control={form.control}
+        name="customId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>User ID</FormLabel>
+            <FormControl>
+              <div className="relative">
+                <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="System assigned ID" 
+                  {...field} 
+                  className="pl-8 bg-muted"
+                  readOnly
+                  disabled
+                />
+              </div>
+            </FormControl>
+            <FormDescription className="text-xs">
+              This is your unique system ID and cannot be changed.
+            </FormDescription>
+          </FormItem>
+        )}
+      />
+      
       <FormField
         control={form.control}
         name="name"

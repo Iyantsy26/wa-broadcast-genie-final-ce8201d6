@@ -23,6 +23,7 @@ export const useProfileForm = (user: User | null) => {
       company: "",
       address: "",
       bio: "",
+      customId: "",
     },
   });
 
@@ -48,7 +49,7 @@ export const useProfileForm = (user: User | null) => {
         try {
           const { data: teamMember, error } = await supabase
             .from('team_members')
-            .select('name, email, phone, position, avatar, role, company, address')
+            .select('name, email, phone, position, avatar, role, company, address, custom_id')
             .eq('id', user.id)
             .maybeSingle();
             
@@ -61,6 +62,7 @@ export const useProfileForm = (user: User | null) => {
               company: teamMember?.company || user.user_metadata?.company || "",
               address: teamMember?.address || user.user_metadata?.address || "",
               bio: user.user_metadata?.bio || "",
+              customId: teamMember?.custom_id || "SSoo3", // Default Super Admin ID if not set
             });
             return;
           }
@@ -76,6 +78,7 @@ export const useProfileForm = (user: User | null) => {
           company: user.user_metadata?.company || "",
           address: user.user_metadata?.address || "",
           bio: user.user_metadata?.bio || "",
+          customId: isSuperAdmin ? "SSoo3" : "", // Default for super admin
         });
       } else if (localStorage.getItem('isSuperAdmin') === 'true') {
         // For super admin mode without actual user, try to load from localStorage
@@ -91,6 +94,7 @@ export const useProfileForm = (user: User | null) => {
               company: profileData.company || "",
               address: profileData.address || "",
               bio: profileData.bio || "",
+              customId: profileData.customId || "SSoo3", // Default Super Admin ID
             });
           } catch (error) {
             console.error("Error parsing saved profile:", error);
@@ -101,6 +105,7 @@ export const useProfileForm = (user: User | null) => {
               company: "",
               address: "",
               bio: "",
+              customId: "SSoo3", // Default Super Admin ID
             });
           }
         } else {
@@ -111,13 +116,14 @@ export const useProfileForm = (user: User | null) => {
             company: "",
             address: "",
             bio: "",
+            customId: "SSoo3", // Default Super Admin ID
           });
         }
       }
     };
     
     loadProfile();
-  }, [user, form]);
+  }, [user, form, isSuperAdmin]);
 
   // Handle form submission with improved email handling
   const onSubmit = async (data: ProfileFormValues) => {
@@ -145,7 +151,8 @@ export const useProfileForm = (user: User | null) => {
               is_super_admin: isSuperAdmin,
               role: isSuperAdmin ? 'super_admin' : 'admin',
               status: 'active',
-              last_active: new Date().toISOString()
+              last_active: new Date().toISOString(),
+              // Don't update custom_id here - it's read-only
             }, { onConflict: 'id' });
             
           if (teamError) {
