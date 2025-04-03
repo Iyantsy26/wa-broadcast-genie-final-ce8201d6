@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CurrencyCode, SubscriptionPlan, PlanFeature } from './PlanTypes';
+import { Json } from "@/integrations/supabase/types";
 
 export const usePlanManagement = () => {
   const { toast } = useToast();
@@ -43,16 +44,18 @@ export const usePlanManagement = () => {
       
       if (data && data.length > 0) {
         const formattedPlans = data.map(plan => {
-          const features = typeof plan.features === 'object' ? plan.features : {};
+          // Cast to avoid TypeScript errors when accessing properties
+          const featuresObj = plan.features as unknown as Record<string, any>;
+          
           return {
             id: plan.id,
             name: plan.name,
             description: plan.description || '',
             price: plan.price || 0,
             interval: plan.interval as 'monthly' | 'yearly',
-            features: features.features || [],
-            isPopular: features.isPopular || false,
-            currency: features.currency || 'INR'
+            features: featuresObj?.features || [],
+            isPopular: featuresObj?.isPopular || false,
+            currency: featuresObj?.currency || 'INR'
           };
         });
         
@@ -137,6 +140,13 @@ export const usePlanManagement = () => {
   
   const savePlanToSupabase = async (plan: SubscriptionPlan) => {
     try {
+      // Create a properly formatted features object for Supabase
+      const featuresObject = {
+        features: plan.features,
+        isPopular: plan.isPopular,
+        currency: plan.currency || 'INR'
+      };
+      
       const { error } = await supabase
         .from('plans')
         .upsert({
@@ -145,11 +155,7 @@ export const usePlanManagement = () => {
           description: plan.description,
           price: plan.price,
           interval: plan.interval,
-          features: {
-            features: plan.features,
-            isPopular: plan.isPopular,
-            currency: plan.currency || 'INR'
-          },
+          features: featuresObject as unknown as Json,
           is_active: true
         });
         
@@ -246,7 +252,7 @@ export const usePlanManagement = () => {
         description: "Please provide a name and price for the plan",
         variant: "destructive",
       });
-      return;
+      return false;
     }
     
     const newPlan: SubscriptionPlan = {
@@ -400,6 +406,7 @@ export const usePlanManagement = () => {
     isLoading,
     selectedCurrency,
     formData,
+    setFormData,
     featureForm,
     selectedPlan,
     setSelectedPlan,

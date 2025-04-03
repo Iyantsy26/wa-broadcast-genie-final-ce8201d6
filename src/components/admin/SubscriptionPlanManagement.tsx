@@ -28,6 +28,7 @@ const SubscriptionPlanManagement = () => {
     featureForm,
     selectedPlan,
     setSelectedPlan,
+    setFormData,
     handleChangeCurrency,
     handleInputChange,
     handleFeatureChange,

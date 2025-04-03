@@ -18,13 +18,15 @@ export interface SubscriptionPlan {
   currency?: string;
 }
 
-export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
+// Define currency symbols as a simple record without circular references
+export const CURRENCY_SYMBOLS = {
   USD: '$',
   INR: '₹',
   EUR: '€',
   GBP: '£'
-};
+} as const;
 
+// Define currency code type based on the keys of CURRENCY_SYMBOLS
 export type CurrencyCode = keyof typeof CURRENCY_SYMBOLS;
 
 export const planFeatureSchema = z.object({
