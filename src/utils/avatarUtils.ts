@@ -38,54 +38,70 @@ export const createAvatarsBucket = async (): Promise<void> => {
 };
 
 export const uploadAvatarToStorage = async (userId: string, file: File): Promise<string> => {
-  // First ensure bucket exists with proper policies
-  await createAvatarsBucket();
-  
-  // Prepare file details
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}-${Date.now()}.${fileExt}`;
-  
-  // Upload file to Supabase Storage
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(fileName, file, { upsert: true });
+  try {
+    // First ensure bucket exists with proper policies
+    await createAvatarsBucket();
     
-  if (uploadError) {
-    console.error("Upload error:", uploadError);
-    throw uploadError;
-  }
-  
-  // Get the public URL of the uploaded file
-  const { data: urlData } = supabase.storage
-    .from('avatars')
-    .getPublicUrl(fileName);
+    // Prepare file details
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
     
-  if (!urlData || !urlData.publicUrl) {
-    throw new Error("Failed to get public URL for uploaded avatar");
+    // Upload file to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, { upsert: true });
+      
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+    
+    // Get the public URL of the uploaded file
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+      
+    if (!urlData || !urlData.publicUrl) {
+      throw new Error("Failed to get public URL for uploaded avatar");
+    }
+    
+    console.log("Successfully uploaded avatar to:", urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error("Error in uploadAvatarToStorage:", error);
+    throw error;
   }
-  
-  return urlData.publicUrl;
 };
 
 export const updateUserAvatarInDatabase = async (userId: string, avatarUrl: string): Promise<void> => {
-  // Update auth user metadata
-  const { error: updateError } = await supabase.auth.updateUser({
-    data: { avatar_url: avatarUrl }
-  });
-  
-  if (updateError) {
-    console.error("Error updating user metadata:", updateError);
-    throw updateError;
-  }
-  
-  // Update team_members table
-  const { error: teamError } = await supabase
-    .from('team_members')
-    .update({ avatar: avatarUrl })
-    .eq('id', userId);
+  try {
+    // Update auth user metadata
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { avatar_url: avatarUrl }
+    });
     
-  if (teamError) {
-    console.error("Error updating team_member avatar:", teamError);
-    throw teamError;
+    if (updateError) {
+      console.error("Error updating user metadata:", updateError);
+      throw updateError;
+    }
+    
+    // Update team_members table if user exists there
+    const { error: teamError } = await supabase
+      .from('team_members')
+      .update({ avatar: avatarUrl })
+      .eq('id', userId);
+      
+    if (teamError) {
+      // Only throw if it's not a "no rows updated" error
+      if (!teamError.message.includes("no rows")) {
+        console.error("Error updating team_member avatar:", teamError);
+        throw teamError;
+      } else {
+        console.log("No team_member record found for avatar update - this is normal for some users");
+      }
+    }
+  } catch (error) {
+    console.error("Error in updateUserAvatarInDatabase:", error);
+    throw error;
   }
 };

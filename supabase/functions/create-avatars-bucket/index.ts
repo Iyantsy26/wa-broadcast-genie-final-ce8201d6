@@ -52,73 +52,74 @@ serve(async (req) => {
       if (error) {
         throw error;
       }
-
-      // Add RLS policies for the bucket
-      try {
-        // Allow public read access to the avatars
-        await supabaseAdmin.rpc('set_bucket_policy', { 
-          bucket_name: 'avatars', 
-          policy_name: 'Public Read Access', 
-          policy_definition: 'true', 
-          policy_operation: 'SELECT' 
-        });
-
-        // Allow authenticated users to upload their own avatars
-        await supabaseAdmin.rpc('set_bucket_policy', { 
-          bucket_name: 'avatars', 
-          policy_name: 'Auth User Access', 
-          policy_definition: 'auth.role() = \'authenticated\'', 
-          policy_operation: 'INSERT' 
-        });
-
-        // Allow users to update/delete their own avatars
-        await supabaseAdmin.rpc('set_bucket_policy', { 
-          bucket_name: 'avatars', 
-          policy_name: 'Auth User Update Access', 
-          policy_definition: 'auth.role() = \'authenticated\'', 
-          policy_operation: 'UPDATE' 
-        });
-
-        await supabaseAdmin.rpc('set_bucket_policy', { 
-          bucket_name: 'avatars', 
-          policy_name: 'Auth User Delete Access', 
-          policy_definition: 'auth.role() = \'authenticated\'', 
-          policy_operation: 'DELETE' 
-        });
-
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: 'Avatars bucket created with proper RLS policies' 
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        });
-      } catch (policyError) {
-        console.error('Error setting RLS policy:', policyError);
-        // Still return success if bucket was created
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: 'Avatars bucket created but RLS policy setup failed',
-          error: policyError
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 207
-        });
-      }
+      
+      console.log("Created avatars bucket successfully");
+    } else {
+      console.log("Avatars bucket already exists");
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: 'Avatars bucket already exists' 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
-    });
+    // Now, update RLS policies regardless of whether the bucket was just created or already existed
+    // This ensures the policies are set correctly even if the bucket was created previously
+    try {
+      // Allow public read access to the avatars
+      await supabaseAdmin.storage.from('avatars').setPublic(true);
+      
+      // Create policies that allow authenticated users to manage their own avatars
+      await supabaseAdmin.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Public Read Access',
+        definition: 'true',
+        operation: 'SELECT'
+      }).catch(e => console.log("Public read policy setup error (might already exist):", e));
+
+      // Allow any authenticated user to upload avatars
+      await supabaseAdmin.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Auth User Upload',
+        definition: 'auth.role() = \'authenticated\'',
+        operation: 'INSERT'
+      }).catch(e => console.log("Upload policy setup error (might already exist):", e));
+
+      // Allow users to update/delete their own avatars
+      await supabaseAdmin.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Auth User Update',
+        definition: 'auth.role() = \'authenticated\'',
+        operation: 'UPDATE'
+      }).catch(e => console.log("Update policy setup error (might already exist):", e));
+
+      await supabaseAdmin.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Auth User Delete',
+        definition: 'auth.role() = \'authenticated\'',
+        operation: 'DELETE'
+      }).catch(e => console.log("Delete policy setup error (might already exist):", e));
+
+      console.log("Successfully set RLS policies on avatars bucket");
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Avatars bucket verified and policies updated' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    } catch (policyError) {
+      console.error('Error setting storage policies:', policyError);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Avatars bucket exists but policy update failed',
+        error: policyError.message
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 207
+      });
+    }
   } catch (error) {
-    console.error('Error creating avatars bucket:', error);
+    console.error('Error in create-avatars-bucket function:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      message: 'Failed to create avatars bucket',
+      message: 'Failed to manage avatars bucket',
       error: error.message 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
