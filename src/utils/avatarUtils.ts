@@ -59,16 +59,9 @@ export const uploadAvatarToStorage = async (userId: string, file: File): Promise
         console.error("RLS policy violation. This could be due to insufficient permissions.");
         console.error("User ID:", userId);
         
-        // Try to get more details about the bucket policies
-        const { data: policies, error: policiesError } = await supabase
-          .rpc('get_storage_policies', { bucket_name: 'avatars' })
-          .catch(() => ({ data: null, error: { message: 'Could not fetch policies' } }));
-          
-        if (policiesError) {
-          console.error("Error fetching policies:", policiesError);
-        } else {
-          console.log("Current bucket policies:", policies);
-        }
+        // Try to get more details about the bucket policies - removed due to type errors
+        // We'll just log the error without attempting to fetch policies
+        console.error("RLS policy violation with user ID:", userId, "Error:", uploadError.message);
       }
       
       throw new Error(`Upload failed: ${uploadError.message}`);
