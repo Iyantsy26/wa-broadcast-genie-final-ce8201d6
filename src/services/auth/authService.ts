@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
 import { checkUserHasRole } from "./roleUtils";
@@ -269,8 +268,8 @@ export const signOut = async (): Promise<boolean> => {
   try {
     // Clear super admin status from localStorage
     localStorage.removeItem('isSuperAdmin');
-    localStorage.removeItem('superAdminProfile');
-    localStorage.removeItem('superAdminAvatarUrl');
+    // Don't remove superAdminProfile or superAdminAvatarUrl on sign out
+    // This allows the profile to persist across sessions
     
     const { error } = await supabase.auth.signOut();
     return !error;
@@ -306,18 +305,24 @@ export const saveProfileToSupabase = async (
     company?: string;
     address?: string;
     bio?: string;
+    customId?: string;
   }
 ): Promise<boolean> => {
   try {
+    console.log("Saving profile with saveProfileToSupabase:", profileData);
+    
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
-      // Update user metadata
+      console.log("Found user:", user.id);
+      
+      // Update user metadata with ALL profile fields to ensure persistence
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           ...user.user_metadata,
-          ...profileData
+          ...profileData,
+          is_super_admin: true, // Always set this for super admin
         }
       });
       
@@ -326,28 +331,40 @@ export const saveProfileToSupabase = async (
         return false;
       }
       
-      // Also update the team_members table
-      const { error: teamError } = await supabase
-        .from('team_members')
-        .upsert([{
-          id: user.id,
-          name: profileData.name,
-          email: profileData.email || user.email,
-          phone: profileData.phone,
-          role: 'super_admin',
-          is_super_admin: true,
-          status: 'active'
-        }], { onConflict: 'id' });
-        
-      if (teamError) {
-        console.error("Error updating team member:", teamError);
+      // If this is a regular user (not the special super-admin string ID)
+      if (user.id !== 'super-admin') {
+        try {
+          // Also update the team_members table
+          const { error: teamError } = await supabase
+            .from('team_members')
+            .upsert([{
+              id: user.id,
+              name: profileData.name,
+              email: profileData.email || user.email,
+              phone: profileData.phone,
+              company: profileData.company,
+              address: profileData.address,
+              role: 'super_admin',
+              is_super_admin: true,
+              status: 'active',
+              custom_id: profileData.customId
+            }], { onConflict: 'id' });
+            
+          if (teamError) {
+            console.error("Error updating team member:", teamError);
+          }
+        } catch (err) {
+          console.error("Error in team_members update:", err);
+        }
       }
       
-      // Cache in localStorage as backup
+      // Cache in localStorage as backup - IMPORTANT for persistence across sessions
       localStorage.setItem('superAdminProfile', JSON.stringify(profileData));
+      console.log("Profile saved to localStorage:", profileData);
       
       return true;
     } else {
+      console.log("No user found, saving to localStorage only");
       // Fallback to localStorage if no user exists
       localStorage.setItem('superAdminProfile', JSON.stringify(profileData));
       return true;

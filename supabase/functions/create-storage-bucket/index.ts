@@ -7,6 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Create a more robust storage bucket initialization function
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {

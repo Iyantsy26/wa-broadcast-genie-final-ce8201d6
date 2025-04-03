@@ -6,7 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { profileFormSchema, ProfileFormValues } from "@/components/admin/ProfileFormTypes";
-import { hasRole } from "@/services/auth/authService";
+import { hasRole, saveProfileToSupabase } from "@/services/auth/authService";
 
 export const useProfileForm = (user: User | null) => {
   const { toast } = useToast();
@@ -46,11 +46,13 @@ export const useProfileForm = (user: User | null) => {
   // Load profile data
   useEffect(() => {
     const loadProfile = async () => {
+      console.log("Loading profile for user:", user?.id);
       if (user) {
         setOriginalEmail(user.email);
         try {
           // Handle special case for "super-admin" ID which is not a valid UUID
           if (user.id === 'super-admin') {
+            console.log("Loading super-admin profile from localStorage");
             const superAdminProfile = localStorage.getItem('superAdminProfile');
             if (superAdminProfile) {
               try {
@@ -64,17 +66,20 @@ export const useProfileForm = (user: User | null) => {
                   bio: profileData.bio || "",
                   customId: profileData.customId || "SSoo3",
                 });
+                console.log("Loaded profile data:", profileData);
               } catch (parseError) {
                 console.error("Error parsing saved profile:", parseError);
                 setDefaultSuperAdminProfile();
               }
             } else {
+              console.log("No saved super-admin profile found, setting default");
               setDefaultSuperAdminProfile();
             }
             return;
           }
           
           // For regular users with valid UUIDs, try to fetch from database
+          console.log("Fetching team member data for:", user.id);
           const { data: teamMember, error } = await supabase
             .from('team_members')
             .select('name, email, phone, position, avatar, role, company, address, custom_id')
@@ -82,6 +87,7 @@ export const useProfileForm = (user: User | null) => {
             .maybeSingle();
             
           if (!error && teamMember) {
+            console.log("Found team member data:", teamMember);
             // Use optional chaining and nullish coalescing to safely access properties
             form.reset({
               name: teamMember?.name || user.user_metadata?.name || "",
@@ -93,6 +99,8 @@ export const useProfileForm = (user: User | null) => {
               customId: teamMember?.custom_id || "SSoo3", // Default Super Admin ID if not set
             });
             return;
+          } else {
+            console.log("No team member data found, error:", error);
           }
         } catch (err) {
           console.error("Error loading team member data:", err);
@@ -109,6 +117,7 @@ export const useProfileForm = (user: User | null) => {
         }
       } else if (localStorage.getItem('isSuperAdmin') === 'true') {
         // For super admin mode without actual user, try to load from localStorage
+        console.log("Loading super-admin profile without user from localStorage");
         const savedProfile = localStorage.getItem('superAdminProfile');
         if (savedProfile) {
           try {
@@ -123,11 +132,13 @@ export const useProfileForm = (user: User | null) => {
               bio: profileData.bio || "",
               customId: profileData.customId || "SSoo3", // Default Super Admin ID
             });
+            console.log("Loaded profile data from localStorage:", profileData);
           } catch (error) {
             console.error("Error parsing saved profile:", error);
             setDefaultSuperAdminProfile();
           }
         } else {
+          console.log("No saved super-admin profile found, setting default");
           setDefaultSuperAdminProfile();
         }
       }
@@ -149,7 +160,7 @@ export const useProfileForm = (user: User | null) => {
     });
   };
 
-  // Handle form submission with improved error handling for super admin
+  // Handle form submission with improved error handling and persistence for super admin
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSaving(true);
@@ -157,6 +168,12 @@ export const useProfileForm = (user: User | null) => {
       
       // Check if we're in Super Admin mode with no actual user
       const isSuperAdminMode = localStorage.getItem('isSuperAdmin') === 'true';
+      
+      // Always save to localStorage for Super Admin
+      if (isSuperAdmin || isSuperAdminMode || (user && user.id === 'super-admin')) {
+        console.log("Saving Super Admin profile to localStorage");
+        localStorage.setItem('superAdminProfile', JSON.stringify(data));
+      }
       
       if (user && user.id) {
         console.log("Updating profile for user:", user.id);
@@ -167,7 +184,7 @@ export const useProfileForm = (user: User | null) => {
             // First update team_members table
             const { error: teamError } = await supabase
               .from('team_members')
-              .upsert({
+              .upsert([{
                 id: user.id,
                 name: data.name,
                 email: data.email,
@@ -176,10 +193,8 @@ export const useProfileForm = (user: User | null) => {
                 address: data.address,
                 is_super_admin: isSuperAdmin,
                 role: isSuperAdmin ? 'super_admin' : 'admin',
-                status: 'active',
-                last_active: new Date().toISOString(),
-                // Don't update custom_id here - it's read-only
-              }, { onConflict: 'id' });
+                status: 'active'
+              }], { onConflict: 'id' });
               
             if (teamError) {
               console.error("Error updating team_members:", teamError);
@@ -188,19 +203,20 @@ export const useProfileForm = (user: User | null) => {
             
             console.log("Updated team_members successfully");
           } else {
-            console.log("Handling special super-admin ID");
-            // For special super-admin ID, just update localStorage
-            localStorage.setItem('superAdminProfile', JSON.stringify(data));
+            console.log("Skipping team_members update for special super-admin ID");
           }
           
-          // Then update user metadata
+          // Then update user metadata - this works for all users including super-admin
           const { error: metadataError } = await supabase.auth.updateUser({
             data: {
               name: data.name,
               phone: data.phone,
               company: data.company,
               address: data.address,
-              bio: data.bio
+              bio: data.bio,
+              // Important: add these fields to ensure persistence across sessions
+              is_super_admin: true,
+              custom_id: data.customId
             }
           });
           
@@ -208,6 +224,8 @@ export const useProfileForm = (user: User | null) => {
             console.error("Metadata update error:", metadataError);
             throw new Error(`Failed to update auth metadata: ${metadataError.message}`);
           }
+          
+          console.log("Updated user metadata successfully");
           
           // Handle email change separately - email changes require confirmation
           if (isSuperAdmin && data.email !== originalEmail) {
@@ -227,9 +245,10 @@ export const useProfileForm = (user: User | null) => {
             });
           }
           
-          // Always update localStorage for super admin profile
-          if (isSuperAdmin || isSuperAdminMode) {
-            localStorage.setItem('superAdminProfile', JSON.stringify(data));
+          // If this is a Super Admin, also use the saveProfileToSupabase helper
+          if (isSuperAdmin || user.id === 'super-admin') {
+            console.log("Using saveProfileToSupabase helper for Super Admin");
+            await saveProfileToSupabase(data);
           }
           
           setFormState({ 
@@ -254,8 +273,8 @@ export const useProfileForm = (user: User | null) => {
       } else if (isSuperAdminMode) {
         // Handle profile updates in Super Admin mode without actual user
         try {
-          // Save to localStorage for persistence
-          localStorage.setItem('superAdminProfile', JSON.stringify(data));
+          console.log("Saving Super Admin profile to localStorage only (no user)");
+          // Already saved to localStorage above
           
           setFormState({ 
             wasUpdated: true, 

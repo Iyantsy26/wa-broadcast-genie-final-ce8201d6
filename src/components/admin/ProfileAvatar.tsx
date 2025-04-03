@@ -31,6 +31,12 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
             return;
           }
           
+          // Check user metadata first
+          if (user.user_metadata?.avatar_url) {
+            setAvatarUrl(user.user_metadata.avatar_url);
+            return;
+          }
+          
           // Try to get from team_members table
           const { data, error } = await supabase
             .from('team_members')
@@ -62,17 +68,36 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
   useEffect(() => {
     const initializeStorage = async () => {
       try {
-        // Call our edge function to initialize the storage bucket
-        const response = await fetch(`${window.location.origin}/api/create-storage-bucket`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
+        // First check if bucket exists directly
+        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.warn("Storage bucket initialization warning:", errorData);
+        const bucketName = "profile-avatars";
+        const bucketExists = buckets?.some(b => b.name === bucketName);
+        
+        if (!bucketExists) {
+          toast({
+            title: "Creating storage",
+            description: "Setting up storage for avatars...",
+          });
+          
+          try {
+            // Create the bucket
+            const { error } = await supabase.storage.createBucket(bucketName, {
+              public: true,
+            });
+            
+            if (error) {
+              console.error("Error creating bucket:", error);
+              throw error;
+            }
+            
+            toast({
+              title: "Storage created",
+              description: "Avatar storage has been set up successfully.",
+            });
+          } catch (createError: any) {
+            console.warn("Error creating bucket, will try to use it anyway:", createError);
+          }
         }
       } catch (error) {
         console.warn("Storage bucket initialization error:", error);
@@ -80,7 +105,7 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
     };
     
     initializeStorage();
-  }, []);
+  }, [toast]);
   
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -106,14 +131,13 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
             description: "Setting up storage for avatars...",
           });
           
-          try {
-            const { error } = await supabase.storage.createBucket('profile-avatars', {
-              public: true,
-            });
-            
-            if (error) throw error;
-          } catch (createError: any) {
-            console.warn("Error creating bucket, will try to use it anyway:", createError);
+          const { error } = await supabase.storage.createBucket('profile-avatars', {
+            public: true,
+          });
+          
+          if (error) {
+            console.error("Error creating bucket:", error);
+            throw error;
           }
         }
       } catch (bucketCheckError) {
@@ -136,23 +160,30 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       
       setAvatarUrl(publicUrl);
       
-      // Update in database or localStorage
-      if (user && user.id && user.id !== 'super-admin') {
-        // Update team_members table
-        const { error: updateError } = await supabase
-          .from('team_members')
-          .update({ avatar: publicUrl })
-          .eq('id', user.id);
+      // Update in database and user metadata
+      if (user && user.id) {
+        // Update user metadata
+        await supabase.auth.updateUser({
+          data: {
+            avatar_url: publicUrl
+          }
+        });
         
-        if (updateError) {
-          console.error("Error updating avatar in database:", updateError);
+        if (user.id !== 'super-admin') {
+          // Update team_members table
+          const { error: updateError } = await supabase
+            .from('team_members')
+            .update({ avatar: publicUrl })
+            .eq('id', user.id);
+          
+          if (updateError) {
+            console.error("Error updating avatar in database:", updateError);
+          }
         }
       }
       
-      // Always update in localStorage for super admin
-      if (isSuperAdminMode || user?.id === 'super-admin') {
-        localStorage.setItem('superAdminAvatarUrl', publicUrl);
-      }
+      // Always update in localStorage for super admin persistence
+      localStorage.setItem('superAdminAvatarUrl', publicUrl);
       
       toast({
         title: "Avatar updated",
