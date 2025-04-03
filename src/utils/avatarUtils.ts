@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -99,20 +98,29 @@ export const updateTeamMemberAvatar = async (userId: string, publicUrl: string, 
 
     if (!name || !email || !role) {
       try {
-        const { data: teamMember } = await supabase
+        const { data: teamMember, error } = await supabase
           .from('team_members')
           .select('name, email, role, custom_id')
           .eq('id', userId)
           .maybeSingle();
           
-        name = teamMember?.name || 'User';
-        email = teamMember?.email || 'user@example.com';
-        role = teamMember?.role || 'user';
-        custom_id = teamMember?.custom_id;
-        
-        // If no custom_id exists, it will be automatically generated via the trigger
+        if (!error && teamMember) {
+          name = teamMember.name;
+          email = teamMember.email;
+          role = teamMember.role;
+          custom_id = teamMember.custom_id;
+        } else {
+          // Handle error scenario
+          console.error("Error fetching team member data:", error);
+          name = name || 'User';
+          email = email || 'user@example.com';
+          role = role || 'user';
+        }
       } catch (err) {
         console.error("Error fetching team member data:", err);
+        name = name || 'User';
+        email = email || 'user@example.com';
+        role = role || 'user';
       }
     }
 

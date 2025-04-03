@@ -50,4 +50,5 @@ export interface TeamMember {
   department_id: string;
   company?: string;
   position?: string;
+  custom_id?: string; // Added custom_id property
 }

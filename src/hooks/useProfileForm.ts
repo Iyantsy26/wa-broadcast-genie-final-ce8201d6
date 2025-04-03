@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,18 +67,17 @@ export const useProfileForm = (user: User | null) => {
           }
         } catch (err) {
           console.error("Error loading team member data:", err);
+          // Fallback to user metadata
+          form.reset({
+            name: user.user_metadata?.name || "",
+            email: user.email || "",
+            phone: user.user_metadata?.phone || "",
+            company: user.user_metadata?.company || "",
+            address: user.user_metadata?.address || "",
+            bio: user.user_metadata?.bio || "",
+            customId: isSuperAdmin ? "SSoo3" : "", // Default for super admin
+          });
         }
-        
-        // Fallback to user metadata if team member data isn't available
-        form.reset({
-          name: user.user_metadata?.name || "",
-          email: user.email || "",
-          phone: user.user_metadata?.phone || "",
-          company: user.user_metadata?.company || "",
-          address: user.user_metadata?.address || "",
-          bio: user.user_metadata?.bio || "",
-          customId: isSuperAdmin ? "SSoo3" : "", // Default for super admin
-        });
       } else if (localStorage.getItem('isSuperAdmin') === 'true') {
         // For super admin mode without actual user, try to load from localStorage
         const savedProfile = localStorage.getItem('superAdminProfile');
