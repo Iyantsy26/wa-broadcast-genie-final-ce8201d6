@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
 import { checkUserHasRole } from "./roleUtils";
+import { signInWithEmail, signOutAndRedirect } from "@/utils/authUtils";
 
 // Default Super Admin credentials
 const DEFAULT_SUPER_ADMIN_EMAIL = "ssadmin@admin.com";
@@ -374,6 +375,57 @@ export const saveProfileToSupabase = async (
     
     // Fallback to localStorage
     localStorage.setItem('superAdminProfile', JSON.stringify(profileData));
+    return false;
+  }
+};
+
+/**
+ * Sign in with email and password
+ */
+export const signIn = async (email: string, password: string) => {
+  try {
+    // Check if this is super admin mode for demo
+    if (email === 'ssadmin@admin.com' && password === 'super-admin-password') {
+      console.info("Super Admin role granted via localStorage");
+      localStorage.setItem('super-admin-mode', 'true');
+      localStorage.setItem('auth-token', 'super-admin-token');
+      return true;
+    }
+    
+    const { data, error } = await signInWithEmail(email, password);
+    
+    if (error) {
+      console.error("Login error:", error.message);
+      return false;
+    }
+    
+    if (data?.user) {
+      console.info("Login successful for:", data.user.email);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error("Error in signIn:", error);
+    return false;
+  }
+};
+
+/**
+ * Sign out the user
+ */
+export const signOut = async () => {
+  try {
+    // Clear super admin mode if active
+    if (localStorage.getItem('super-admin-mode')) {
+      localStorage.removeItem('super-admin-mode');
+      localStorage.removeItem('auth-token');
+      return true;
+    }
+    
+    return await signOutAndRedirect();
+  } catch (error) {
+    console.error("Error in signOut:", error);
     return false;
   }
 };
