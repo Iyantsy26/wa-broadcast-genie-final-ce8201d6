@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { validateAvatarFile, uploadAvatarToStorage, updateUserAvatar, updateTeamMemberAvatar } from '@/utils/avatarUtils';
 
 export const useAvatarManagement = (user: User | null) => {
   const { toast } = useToast();
@@ -34,24 +35,17 @@ export const useAvatarManagement = (user: User | null) => {
         } catch (err) {
           console.error("Error loading avatar from team_members:", err);
         }
+      } else if (localStorage.getItem('isSuperAdmin') === 'true') {
+        // If in Super Admin mode, check localStorage for saved avatar
+        const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
+        if (savedAvatar) {
+          setAvatarUrl(savedAvatar);
+        }
       }
     };
     
     fetchAvatar();
   }, [user]);
-
-  const validateAvatarFile = (file: File) => {
-    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-    if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: "File too large",
-        description: "Avatar image must be less than 2MB",
-        variant: "destructive",
-      });
-      return false;
-    }
-    return true;
-  };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -61,7 +55,7 @@ export const useAvatarManagement = (user: User | null) => {
       
       const file = event.target.files[0];
       
-      if (!validateAvatarFile(file)) {
+      if (!validateAvatarFile(file, toast)) {
         return;
       }
       
@@ -72,72 +66,29 @@ export const useAvatarManagement = (user: User | null) => {
       
       if (user && user.id) {
         userId = user.id;
+      } else if (localStorage.getItem('isSuperAdmin') === 'true') {
+        userId = 'super-admin';
       } else {
         throw new Error("User not authenticated");
       }
       
       try {
-        // Check if the avatars bucket exists or create it
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+        // Upload avatar to Supabase Storage
+        const publicUrl = await uploadAvatarToStorage(userId, file);
         
-        if (!avatarsBucketExists) {
-          await supabase.storage.createBucket('avatars', {
-            public: true,
-            fileSizeLimit: 2 * 1024 * 1024 // 2MB
-          });
-        }
-        
-        // Prepare file details
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}.${fileExt}`;
-        
-        // Upload the file
-        console.log("Uploading file to avatars bucket:", fileName);
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, file, { upsert: true });
-          
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
-          throw uploadError;
-        }
-        
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
-          
-        if (!urlData?.publicUrl) {
+        if (!publicUrl) {
           throw new Error("Failed to get public URL for uploaded avatar");
         }
         
-        const publicUrl = urlData.publicUrl;
-        
-        // Update auth user metadata
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: { 
-            avatar_url: publicUrl 
-          }
-        });
-        
-        if (metadataError) {
-          console.error("Error updating auth metadata:", metadataError);
-          throw metadataError;
-        }
-        
-        // Update team_members table
-        const { error: teamError } = await supabase
-          .from('team_members')
-          .update({ 
-            avatar: publicUrl,
-            last_active: new Date().toISOString()
-          })
-          .eq('id', userId);
+        // Update user metadata if we have a real user
+        if (user && user.id) {
+          await updateUserAvatar(userId, publicUrl);
           
-        if (teamError) {
-          console.error("Error updating team_member avatar:", teamError);
-          throw teamError;
+          // Update team_members table
+          await updateTeamMemberAvatar(userId, publicUrl);
+        } else if (localStorage.getItem('isSuperAdmin') === 'true') {
+          // For Super Admin mode without actual user, save in localStorage
+          localStorage.setItem('superAdminAvatarUrl', publicUrl);
         }
         
         // Set the avatar URL in component state

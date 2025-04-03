@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export const validateAvatarFile = (file: File, toast: ReturnType<typeof useToast>['toast']) => {
+  // Validate file size
   if (file.size > MAX_FILE_SIZE) {
     toast({
       title: "File too large",
@@ -13,6 +14,18 @@ export const validateAvatarFile = (file: File, toast: ReturnType<typeof useToast
     });
     return false;
   }
+  
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    toast({
+      title: "Invalid file type",
+      description: "Avatar must be a JPEG, PNG, GIF, or WebP image",
+      variant: "destructive",
+    });
+    return false;
+  }
+  
   return true;
 };
 
@@ -24,6 +37,7 @@ export const uploadAvatarToStorage = async (userId: string, file: File) => {
     
     if (!avatarsBucketExists) {
       // Create avatars bucket if it doesn't exist
+      console.log("Creating avatars bucket");
       await supabase.storage.createBucket('avatars', {
         public: true,
         fileSizeLimit: MAX_FILE_SIZE
@@ -32,7 +46,7 @@ export const uploadAvatarToStorage = async (userId: string, file: File) => {
     
     // Prepare file details
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}.${fileExt}`;
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
     
     // Upload the file
     console.log("Uploading file to avatars bucket:", fileName);

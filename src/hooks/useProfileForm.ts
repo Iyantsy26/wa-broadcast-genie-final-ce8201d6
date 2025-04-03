@@ -12,6 +12,7 @@ export const useProfileForm = (user: User | null) => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [originalEmail, setOriginalEmail] = useState<string | null>(null);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -31,6 +32,8 @@ export const useProfileForm = (user: User | null) => {
       if (user) {
         const superAdminCheck = await hasRole('super_admin');
         setIsSuperAdmin(superAdminCheck);
+      } else if (localStorage.getItem('isSuperAdmin') === 'true') {
+        setIsSuperAdmin(true);
       }
     };
     
@@ -41,6 +44,7 @@ export const useProfileForm = (user: User | null) => {
   useEffect(() => {
     const loadProfile = async () => {
       if (user) {
+        setOriginalEmail(user.email);
         try {
           const { data: teamMember, error } = await supabase
             .from('team_members')
@@ -73,17 +77,56 @@ export const useProfileForm = (user: User | null) => {
           address: user.user_metadata?.address || "",
           bio: user.user_metadata?.bio || "",
         });
+      } else if (localStorage.getItem('isSuperAdmin') === 'true') {
+        // For super admin mode without actual user, try to load from localStorage
+        const savedProfile = localStorage.getItem('superAdminProfile');
+        if (savedProfile) {
+          try {
+            const profileData = JSON.parse(savedProfile);
+            setOriginalEmail(profileData.email);
+            form.reset({
+              name: profileData.name || "Super Admin",
+              email: profileData.email || "ssadmin@admin.com",
+              phone: profileData.phone || "",
+              company: profileData.company || "",
+              address: profileData.address || "",
+              bio: profileData.bio || "",
+            });
+          } catch (error) {
+            console.error("Error parsing saved profile:", error);
+            form.reset({
+              name: "Super Admin",
+              email: "ssadmin@admin.com",
+              phone: "",
+              company: "",
+              address: "",
+              bio: "",
+            });
+          }
+        } else {
+          form.reset({
+            name: "Super Admin",
+            email: "ssadmin@admin.com",
+            phone: "",
+            company: "",
+            address: "",
+            bio: "",
+          });
+        }
       }
     };
     
     loadProfile();
   }, [user, form]);
 
-  // Handle form submission
+  // Handle form submission with improved email handling
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSaving(true);
       console.log("Submitting profile data:", data);
+      
+      // Check if we're in Super Admin mode with no actual user
+      const isSuperAdminMode = localStorage.getItem('isSuperAdmin') === 'true';
       
       if (user && user.id) {
         console.log("Updating profile for user:", user.id);
@@ -128,8 +171,9 @@ export const useProfileForm = (user: User | null) => {
             throw new Error(`Failed to update auth metadata: ${metadataError.message}`);
           }
           
-          if (isSuperAdmin && data.email !== user.email) {
-            console.log("Updating email from", user.email, "to", data.email);
+          // Handle email change separately - email changes require confirmation
+          if (isSuperAdmin && data.email !== originalEmail) {
+            console.log("Updating email from", originalEmail, "to", data.email);
             const { error: emailError } = await supabase.auth.updateUser({
               email: data.email,
             });
@@ -138,6 +182,11 @@ export const useProfileForm = (user: User | null) => {
               console.error("Email update error:", emailError);
               throw new Error(`Failed to update email: ${emailError.message}`);
             }
+            
+            toast({
+              title: "Email update initiated",
+              description: "A confirmation email has been sent to your new email address. Please check your inbox to confirm the change.",
+            });
           }
           
           toast({
@@ -151,6 +200,24 @@ export const useProfileForm = (user: User | null) => {
           toast({
             title: "Profile Update Failed",
             description: error.message || "Could not update profile information.",
+            variant: "destructive",
+          });
+        }
+      } else if (isSuperAdminMode) {
+        // Handle profile updates in Super Admin mode without actual user
+        try {
+          // Save to localStorage for persistence
+          localStorage.setItem('superAdminProfile', JSON.stringify(data));
+          
+          toast({
+            title: "Profile updated",
+            description: "Your super admin profile has been updated successfully.",
+          });
+        } catch (error: any) {
+          console.error("Error saving super admin profile:", error);
+          toast({
+            title: "Profile Update Failed",
+            description: error.message || "Could not update super admin profile.",
             variant: "destructive",
           });
         }
