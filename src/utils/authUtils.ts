@@ -15,10 +15,8 @@ export const getCurrentDomain = (): string => {
 export const signInWithEmail = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    password,
-    options: {
-      redirectTo: `${getCurrentDomain()}/dashboard`
-    }
+    password
+    // Note: signInWithPassword doesn't support redirects - handled by the session change
   });
   
   return { data, error };
@@ -32,7 +30,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
     email,
     password,
     options: {
-      redirectTo: `${getCurrentDomain()}/dashboard`,
+      emailRedirectTo: `${getCurrentDomain()}/dashboard`,
       data: {
         // You can add additional user metadata here if needed
       }
