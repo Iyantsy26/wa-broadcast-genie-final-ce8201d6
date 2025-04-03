@@ -412,9 +412,9 @@ export const signIn = async (email: string, password: string) => {
 };
 
 /**
- * Sign out the user
+ * Sign out the user (using more direct path)
  */
-export const signOut = async () => {
+export const signOutUser = async () => {
   try {
     // Clear super admin mode if active
     if (localStorage.getItem('super-admin-mode')) {
@@ -425,7 +425,7 @@ export const signOut = async () => {
     
     return await signOutAndRedirect();
   } catch (error) {
-    console.error("Error in signOut:", error);
+    console.error("Error in signOutUser:", error);
     return false;
   }
 };

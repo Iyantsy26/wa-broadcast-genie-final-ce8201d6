@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, Bell, LogOut, Settings, ShieldCheck, Building, Globe } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from "@/hooks/use-toast";
-import { signOut, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
+import { signOutUser, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
 import { UserRole } from "@/services/devices/deviceTypes";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -64,7 +63,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await signOutUser();
       toast({
         title: "Signed out",
         description: "You have been signed out successfully",

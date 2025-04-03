@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { hasRole, signOut } from "@/services/auth/authService";
+import { hasRole, signOutUser } from "@/services/auth/authService";
 import {
   LayoutDashboard,
   Users,
@@ -44,7 +43,7 @@ const Admin = () => {
   }, [toast]);
   
   const handleSignOut = async () => {
-    const success = await signOut();
+    const success = await signOutUser();
     if (success) {
       toast({
         title: "Signed out",

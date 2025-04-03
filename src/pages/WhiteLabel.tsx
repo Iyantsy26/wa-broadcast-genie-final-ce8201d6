@@ -17,7 +17,7 @@ import {
   TabsTrigger 
 } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { hasRole, signOut } from "@/services/auth/authService";
+import { hasRole, signOutUser } from "@/services/auth/authService";
 import {
   Globe,
   Palette,
@@ -65,7 +65,7 @@ const WhiteLabel = () => {
   }, [toast]);
   
   const handleSignOut = async () => {
-    const success = await signOut();
+    const success = await signOutUser();
     if (success) {
       toast({
         title: "Signed out",
