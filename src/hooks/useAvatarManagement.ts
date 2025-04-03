@@ -3,15 +3,11 @@ import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { validateAvatarFile, uploadAvatarToStorage, updateUserAvatar, updateTeamMemberAvatar } from '@/utils/avatarUtils';
 
 export const useAvatarManagement = (user: User | null) => {
   const { toast } = useToast();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-
-  // Check if we're in Super Admin mode
-  const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
 
   // Load avatar on component mount
   useEffect(() => {
@@ -38,27 +34,24 @@ export const useAvatarManagement = (user: User | null) => {
         } catch (err) {
           console.error("Error loading avatar from team_members:", err);
         }
-      } else if (isSuperAdmin) {
-        // For super admin mode, try to retrieve from auth or team_members table
-        try {
-          const { data: superAdmins, error } = await supabase
-            .from('team_members')
-            .select('id, avatar')
-            .eq('is_super_admin', true)
-            .limit(1);
-            
-          if (superAdmins && superAdmins.length > 0 && superAdmins[0].avatar) {
-            setAvatarUrl(superAdmins[0].avatar);
-            return;
-          }
-        } catch (err) {
-          console.error("Error looking up super admin avatar:", err);
-        }
       }
     };
     
     fetchAvatar();
-  }, [user, isSuperAdmin]);
+  }, [user]);
+
+  const validateAvatarFile = (file: File) => {
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File too large",
+        description: "Avatar image must be less than 2MB",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -68,54 +61,84 @@ export const useAvatarManagement = (user: User | null) => {
       
       const file = event.target.files[0];
       
-      if (!validateAvatarFile(file, toast)) {
+      if (!validateAvatarFile(file)) {
         return;
       }
       
       setUploading(true);
       
-      // Create a URL for the file to preview immediately
-      const objectUrl = URL.createObjectURL(file);
-      setAvatarUrl(objectUrl);
-      
-      // Get or create user ID
+      // Get user ID
       let userId: string;
       
-      if (user && user.id !== 'super-admin') {
+      if (user && user.id) {
         userId = user.id;
       } else {
-        // For super admin, try to find existing super admin user
-        const { data: admins } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('is_super_admin', true)
-          .limit(1);
-          
-        if (admins && admins.length > 0) {
-          userId = admins[0].id;
-        } else if (isSuperAdmin) {
-          // Create a placeholder ID for super admin
-          userId = 'super-admin';
-        } else {
-          throw new Error("Unable to determine user ID for avatar upload");
-        }
+        throw new Error("User not authenticated");
       }
       
-      // Upload the file
-      const publicUrl = await uploadAvatarToStorage(userId, file);
-      
-      if (publicUrl) {
-        // Update auth user metadata
-        if (user) {
-          await updateUserAvatar(userId, publicUrl);
+      try {
+        // Check if the avatars bucket exists or create it
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+        
+        if (!avatarsBucketExists) {
+          await supabase.storage.createBucket('avatars', {
+            public: true,
+            fileSizeLimit: 2 * 1024 * 1024 // 2MB
+          });
         }
         
-        // Always update team_members table
-        await updateTeamMemberAvatar(userId, publicUrl, {
-          name: user?.user_metadata?.name,
-          email: user?.email,
-          role: user?.user_metadata?.role
+        // Prepare file details
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}.${fileExt}`;
+        
+        // Upload the file
+        console.log("Uploading file to avatars bucket:", fileName);
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, file, { upsert: true });
+          
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw uploadError;
+        }
+        
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+          
+        if (!urlData?.publicUrl) {
+          throw new Error("Failed to get public URL for uploaded avatar");
+        }
+        
+        const publicUrl = urlData.publicUrl;
+        
+        // Update auth user metadata
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { 
+            avatar_url: publicUrl 
+          }
         });
+        
+        if (metadataError) {
+          console.error("Error updating auth metadata:", metadataError);
+          throw metadataError;
+        }
+        
+        // Update team_members table
+        const { error: teamError } = await supabase
+          .from('team_members')
+          .update({ 
+            avatar: publicUrl,
+            last_active: new Date().toISOString()
+          })
+          .eq('id', userId);
+          
+        if (teamError) {
+          console.error("Error updating team_member avatar:", teamError);
+          throw teamError;
+        }
         
         // Set the avatar URL in component state
         setAvatarUrl(publicUrl);
@@ -124,14 +147,19 @@ export const useAvatarManagement = (user: User | null) => {
           title: "Avatar updated",
           description: "Your avatar has been updated successfully.",
         });
-      } else {
-        throw new Error("Failed to get public URL for uploaded avatar");
+      } catch (error: any) {
+        console.error("Error in avatar upload operations:", error);
+        toast({
+          title: "Upload failed",
+          description: error.message || "Failed to upload avatar. Please try again.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading avatar:", error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload avatar. Please try again.",
+        description: error.message || "Failed to upload avatar. Please try again.",
         variant: "destructive",
       });
     } finally {

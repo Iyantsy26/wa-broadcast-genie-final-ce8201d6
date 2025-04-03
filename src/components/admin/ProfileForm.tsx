@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -41,11 +40,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
   
   useEffect(() => {
     const checkSuperAdmin = async () => {
-      if (localStorage.getItem('isSuperAdmin') === 'true') {
-        setIsSuperAdmin(true);
-        return;
-      }
-      
       if (user) {
         const superAdminCheck = await hasRole('super_admin');
         setIsSuperAdmin(superAdminCheck);
@@ -113,12 +107,11 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
       setIsSaving(true);
       console.log("Submitting profile data:", data);
       
-      const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
-      
       if (user && user.id) {
         console.log("Updating profile for user:", user.id);
         
         try {
+          // First update team_members table
           const { error: teamError } = await supabase
             .from('team_members')
             .upsert({
@@ -136,35 +129,12 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
             
           if (teamError) {
             console.error("Error updating team_members:", teamError);
-          } else {
-            console.log("Updated team_members successfully");
+            throw new Error(`Failed to update team members profile: ${teamError.message}`);
           }
-        } catch (teamErr) {
-          console.error("Exception updating team_members:", teamErr);
-        }
-        
-        if (isSuperAdmin && data.email !== user.email) {
-          console.log("Updating email from", user.email, "to", data.email);
-          try {
-            const { error: emailError } = await supabase.auth.updateUser({
-              email: data.email,
-            });
-            
-            if (emailError) {
-              console.error("Email update error:", emailError);
-              toast({
-                title: "Email Update Failed",
-                description: "Could not update email, but other profile data was saved.",
-                variant: "destructive",
-              });
-            }
-          } catch (emailUpdateError) {
-            console.error("Failed to update email:", emailUpdateError);
-          }
-        }
-        
-        console.log("Updating user metadata");
-        try {
+          
+          console.log("Updated team_members successfully");
+          
+          // Then update user metadata
           const { error: metadataError } = await supabase.auth.updateUser({
             data: {
               name: data.name,
@@ -177,7 +147,19 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           
           if (metadataError) {
             console.error("Metadata update error:", metadataError);
-            throw metadataError;
+            throw new Error(`Failed to update auth metadata: ${metadataError.message}`);
+          }
+          
+          if (isSuperAdmin && data.email !== user.email) {
+            console.log("Updating email from", user.email, "to", data.email);
+            const { error: emailError } = await supabase.auth.updateUser({
+              email: data.email,
+            });
+            
+            if (emailError) {
+              console.error("Email update error:", emailError);
+              throw new Error(`Failed to update email: ${emailError.message}`);
+            }
           }
           
           toast({
@@ -186,131 +168,26 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           });
           
           console.log("Successfully updated profile data:", data);
-        } catch (metadataError) {
-          console.error("Failed to update metadata:", metadataError);
+        } catch (error: any) {
+          console.error("Error in profile update operations:", error);
           toast({
             title: "Profile Update Failed",
-            description: "Could not update profile information in Auth metadata.",
+            description: error.message || "Could not update profile information.",
             variant: "destructive",
           });
         }
       } else {
-        if (isSuperAdmin) {
-          console.log("Creating/updating super admin account");
-          
-          try {
-            const { data: existingUser, error: signInError } = await supabase.auth.signInWithPassword({
-              email: data.email,
-              password: "super-admin-password",
-            });
-            
-            if (signInError || !existingUser.user) {
-              const { data: newUser, error: signupError } = await supabase.auth.signUp({
-                email: data.email,
-                password: Math.random().toString(36).substring(2, 15),
-                options: {
-                  data: {
-                    name: data.name,
-                    phone: data.phone,
-                    company: data.company,
-                    address: data.address,
-                    bio: data.bio,
-                    is_super_admin: true
-                  }
-                }
-              });
-              
-              if (signupError) {
-                throw signupError;
-              }
-              
-              if (newUser?.user?.id) {
-                const { error: teamError } = await supabase
-                  .from('team_members')
-                  .insert({
-                    id: newUser.user.id,
-                    name: data.name,
-                    email: data.email,
-                    phone: data.phone,
-                    company: data.company,
-                    address: data.address,
-                    is_super_admin: true,
-                    role: 'super_admin',
-                    status: 'active'
-                  });
-                  
-                if (teamError) {
-                  console.error("Error creating team member:", teamError);
-                }
-              }
-              
-              toast({
-                title: "Profile Created",
-                description: "Super Admin profile created successfully.",
-              });
-              
-              window.location.reload();
-            } else {
-              const { error: updateError } = await supabase.auth.updateUser({
-                data: {
-                  name: data.name,
-                  phone: data.phone,
-                  company: data.company,
-                  address: data.address,
-                  bio: data.bio,
-                  is_super_admin: true
-                }
-              });
-              
-              if (updateError) {
-                throw updateError;
-              }
-              
-              const { error: teamError } = await supabase
-                .from('team_members')
-                .upsert({
-                  id: existingUser.user.id,
-                  name: data.name,
-                  email: data.email,
-                  phone: data.phone,
-                  company: data.company,
-                  address: data.address,
-                  is_super_admin: true,
-                  role: 'super_admin',
-                  status: 'active',
-                  last_active: new Date().toISOString()
-                }, { onConflict: 'id' });
-                
-              if (teamError) {
-                console.error("Error updating team member:", teamError);
-              }
-              
-              toast({
-                title: "Profile Updated",
-                description: "Super Admin profile updated successfully.",
-              });
-            }
-          } catch (authError) {
-            console.error("Auth operation failed:", authError);
-            toast({
-              title: "Profile Update Failed",
-              description: "Could not update profile in database.",
-              variant: "destructive",
-            });
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "You need to be logged in to update your profile.",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Error",
+          description: "You need to be logged in to update your profile.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     } finally {
