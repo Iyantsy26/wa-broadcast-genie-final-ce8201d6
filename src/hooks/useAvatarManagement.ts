@@ -34,12 +34,6 @@ export const useAvatarManagement = (user: User | null) => {
         } catch (err) {
           console.error("Error loading avatar from team_members:", err);
         }
-      } else if (localStorage.getItem('isSuperAdmin') === 'true') {
-        // If in Super Admin mode, check localStorage for saved avatar
-        const savedAvatar = localStorage.getItem('superAdminAvatarUrl');
-        if (savedAvatar) {
-          setAvatarUrl(savedAvatar);
-        }
       }
     };
     
@@ -78,15 +72,11 @@ export const useAvatarManagement = (user: User | null) => {
       setUploading(true);
       
       // Get user ID
-      let userId: string;
-      
-      if (user && user.id) {
-        userId = user.id;
-      } else if (localStorage.getItem('isSuperAdmin') === 'true') {
-        userId = 'super-admin';
-      } else {
+      if (!user || !user.id) {
         throw new Error("User not authenticated");
       }
+      
+      const userId = user.id;
       
       try {
         // Create avatars bucket if it doesn't exist
@@ -105,11 +95,12 @@ export const useAvatarManagement = (user: User | null) => {
             
             if (bucketError) {
               console.error("Error creating bucket:", bucketError);
-              // Non-fatal error, continue anyway as the bucket might exist
+              throw bucketError;
             }
           }
         } catch (bucketError) {
-          console.warn("Error checking/creating bucket, will attempt to use anyway:", bucketError);
+          console.error("Error checking/creating bucket:", bucketError);
+          throw bucketError;
         }
         
         // Prepare file details for upload
@@ -123,25 +114,7 @@ export const useAvatarManagement = (user: User | null) => {
           
         if (uploadError) {
           console.error("Upload error:", uploadError);
-          
-          // Fallback for demo: store in localStorage
-          if (userId === 'super-admin') {
-            const reader = new FileReader();
-            reader.onload = () => {
-              if (typeof reader.result === 'string') {
-                localStorage.setItem('superAdminAvatarUrl', reader.result);
-                setAvatarUrl(reader.result);
-                toast({
-                  title: "Avatar updated",
-                  description: "Your profile picture has been updated locally.",
-                });
-              }
-            };
-            reader.readAsDataURL(file);
-            return;
-          } else {
-            throw uploadError;
-          }
+          throw uploadError;
         }
         
         // Get the public URL of the uploaded file
@@ -155,8 +128,8 @@ export const useAvatarManagement = (user: User | null) => {
         
         const publicUrl = urlData.publicUrl;
         
-        // Update relevant storage locations based on user type
-        if (user && user.id && user.id !== 'super-admin') {
+        // Update user metadata and team_members table
+        if (user && user.id) {
           // Update auth user metadata
           const { error: updateError } = await supabase.auth.updateUser({
             data: { avatar_url: publicUrl }
@@ -179,9 +152,6 @@ export const useAvatarManagement = (user: User | null) => {
           } catch (err) {
             console.error("Error updating team_member:", err);
           }
-        } else {
-          // For Super Admin or mock user mode, save in localStorage
-          localStorage.setItem('superAdminAvatarUrl', publicUrl);
         }
         
         // Update the UI with the new avatar
