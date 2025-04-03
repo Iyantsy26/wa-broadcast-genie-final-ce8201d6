@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, Bell, LogOut, Settings, ShieldCheck, Building, Globe } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from "@/hooks/use-toast";
-import { signOutUser, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
+import { signOutAndRedirect, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
 import { UserRole } from "@/services/devices/deviceTypes";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -63,12 +63,21 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   
   const handleSignOut = async () => {
     try {
-      await signOutUser();
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully",
-      });
-      navigate('/login');
+      const success = await signOutAndRedirect();
+      if (success) {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully",
+        });
+        // The redirect is handled in signOutAndRedirect function
+      } else {
+        console.error('Sign out failed');
+        toast({
+          title: "Error",
+          description: "Failed to sign out",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Sign out error:', error);
       toast({

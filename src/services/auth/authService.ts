@@ -281,6 +281,26 @@ export const signOut = async (): Promise<boolean> => {
 };
 
 /**
+ * Sign out the user (using more direct path)
+ */
+export const signOutUser = async () => {
+  try {
+    // Clear super admin mode if active
+    if (localStorage.getItem('super-admin-mode')) {
+      localStorage.removeItem('super-admin-mode');
+      localStorage.removeItem('auth-token');
+      window.location.href = `${window.location.origin}/login`;
+      return true;
+    }
+    
+    return await signOutAndRedirect();
+  } catch (error) {
+    console.error("Error in signOutUser:", error);
+    return false;
+  }
+};
+
+/**
  * Check if the provided credentials match the default Super Admin
  * NOTE: This is for demo purposes only and should not be used in production
  */
@@ -407,25 +427,6 @@ export const signIn = async (email: string, password: string) => {
     return false;
   } catch (error) {
     console.error("Error in signIn:", error);
-    return false;
-  }
-};
-
-/**
- * Sign out the user (using more direct path)
- */
-export const signOutUser = async () => {
-  try {
-    // Clear super admin mode if active
-    if (localStorage.getItem('super-admin-mode')) {
-      localStorage.removeItem('super-admin-mode');
-      localStorage.removeItem('auth-token');
-      return true;
-    }
-    
-    return await signOutAndRedirect();
-  } catch (error) {
-    console.error("Error in signOutUser:", error);
     return false;
   }
 };

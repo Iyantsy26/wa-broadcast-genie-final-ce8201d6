@@ -24,58 +24,12 @@ export const validateAvatarFile = (file: File): { valid: boolean; error?: string
 
 export const createAvatarsBucket = async (): Promise<void> => {
   try {
-    // Check if the bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+    // Call the edge function to ensure the bucket exists with proper permissions
+    const { error } = await supabase.functions.invoke('create-avatars-bucket');
     
-    if (!avatarsBucketExists) {
-      // Create the bucket
-      const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-        public: true, // Make the bucket public
-        fileSizeLimit: 2 * 1024 * 1024, // 2MB
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-      });
-      
-      if (bucketError) {
-        console.error("Error creating bucket:", bucketError);
-        throw bucketError;
-      }
-      
-      // Add public SELECT policy for avatars (allows public access)
-      const { error: policyError } = await supabase.rpc('create_storage_policy', {
-        bucket_name: 'avatars',
-        policy_name: 'Public Read Access',
-        definition: 'true', // Anyone can read
-        operation: 'SELECT'
-      }).single();
-      
-      if (policyError && !policyError.message.includes("already exists")) {
-        console.error("Error setting public read policy:", policyError);
-      }
-      
-      // Add INSERT policy to allow authenticated users to upload their own avatars
-      const { error: insertPolicyError } = await supabase.rpc('create_storage_policy', {
-        bucket_name: 'avatars',
-        policy_name: 'Authenticated Insert Access',
-        definition: 'auth.role() = \'authenticated\'', // Any authenticated user can upload
-        operation: 'INSERT'
-      }).single();
-      
-      if (insertPolicyError && !insertPolicyError.message.includes("already exists")) {
-        console.error("Error setting insert policy:", insertPolicyError);
-      }
-      
-      // Add UPDATE/DELETE policy for own files
-      const { error: updatePolicyError } = await supabase.rpc('create_storage_policy', {
-        bucket_name: 'avatars',
-        policy_name: 'Authenticated Update Own Files',
-        definition: 'auth.role() = \'authenticated\'',
-        operation: 'UPDATE'
-      }).single();
-      
-      if (updatePolicyError && !updatePolicyError.message.includes("already exists")) {
-        console.error("Error setting update policy:", updatePolicyError);
-      }
+    if (error) {
+      console.error("Error creating avatars bucket:", error);
+      throw error;
     }
   } catch (bucketError) {
     console.error("Error checking/creating bucket:", bucketError);
