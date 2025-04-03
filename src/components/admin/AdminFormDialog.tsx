@@ -1,7 +1,5 @@
 
 import React from 'react';
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,18 +10,17 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserCircle, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { AdminUser } from "@/hooks/useAdminManagement";
 import { UserRole } from "@/services/devices/deviceTypes";
+import { AdminUser } from '@/hooks/useAdminManagement';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface AdminFormDialogProps {
   open: boolean;
@@ -54,100 +51,87 @@ const AdminFormDialog: React.FC<AdminFormDialogProps> = ({
   onAvatarChange,
   onSubmit
 }) => {
-  const title = isEdit ? "Edit Administrator" : "Add Administrator";
-  const description = isEdit ? "Update administrator information." : "Add a new administrator to the system.";
-  const submitButtonText = isEdit ? "Update Administrator" : "Add Administrator";
-  const avatarInputId = isEdit ? "edit-avatar-input" : "avatar-input";
+  const availableTags = ["VIP", "Enterprise", "Premium", "New", "Partner"];
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-h-screen overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Administrator" : "Add New Administrator"}</DialogTitle>
           <DialogDescription>
-            {description}
+            {isEdit 
+              ? "Update the administrator's information below." 
+              : "Fill out the form below to add a new administrator."}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-6 py-4">
-          <div className="flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <Avatar className="h-20 w-20">
-                {avatarPreview ? (
-                  <AvatarImage src={avatarPreview} alt="Preview" />
-                ) : (
-                  <AvatarFallback>
-                    {formData.name ? formData.name.substring(0, 2).toUpperCase() : 
-                      <Upload className="h-8 w-8 text-muted-foreground" />
-                    }
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => document.getElementById(avatarInputId)?.click()}
-                >
-                  {isEdit ? "Change Avatar" : "Upload Avatar"}
-                </Button>
-                <input 
-                  id={avatarInputId} 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*"
-                  onChange={onAvatarChange}
-                />
-                <p className="text-xs text-muted-foreground mt-1">Max size: 2MB</p>
-              </div>
+        <div className="grid gap-4 py-4">
+          <div className="flex flex-col items-center justify-center">
+            <Avatar className="h-24 w-24 mb-2">
+              {avatarPreview ? (
+                <AvatarImage src={avatarPreview} alt="Avatar" />
+              ) : (
+                <AvatarFallback>
+                  <UserCircle className="h-12 w-12" />
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <div className="flex items-center mb-4">
+              <Label htmlFor="avatar-upload" className="cursor-pointer">
+                <div className="flex items-center text-sm text-primary">
+                  <Upload className="mr-1 h-4 w-4" />
+                  Change Avatar
+                </div>
+              </Label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onAvatarChange}
+              />
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Name
-              </label>
+              <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name || ''}
                 onChange={onInputChange}
                 placeholder="Full name"
+                required
               />
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
+              <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 value={formData.email || ''}
                 onChange={onInputChange}
-                placeholder="Email address"
+                placeholder="email@example.com"
+                required
               />
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="phone" className="text-sm font-medium">
-                Phone Number
-              </label>
+              <Label htmlFor="phone">Phone Number</Label>
               <Input
                 id="phone"
                 name="phone"
                 value={formData.phone || ''}
                 onChange={onInputChange}
-                placeholder="Phone with country code"
+                placeholder="+1 (555) 123-4567"
               />
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="company" className="text-sm font-medium">
-                Company
-              </label>
+              <Label htmlFor="company">Company</Label>
               <Input
                 id="company"
                 name="company"
@@ -158,83 +142,68 @@ const AdminFormDialog: React.FC<AdminFormDialogProps> = ({
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="join-date" className="text-sm font-medium">
-                Join Date
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.joinDate ? (
-                      format(formData.joinDate, 'PPP')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.joinDate}
-                    onSelect={onJoinDateChange}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="position">Position</Label>
+              <Input
+                id="position"
+                name="position"
+                value={formData.position || ''}
+                onChange={onInputChange}
+                placeholder="Job position"
+              />
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="renewal-date" className="text-sm font-medium">
-                Renewal Date
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.renewalDate ? (
-                      format(formData.renewalDate, 'PPP')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.renewalDate}
-                    onSelect={onRenewalDateChange}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                name="address"
+                value={formData.address || ''}
+                onChange={onInputChange}
+                placeholder="Business address"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select 
+                value={formData.role} 
+                onValueChange={(value) => onRoleChange(value as UserRole['role'])}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select 
+                value={formData.status || 'active'} 
+                onValueChange={(value) => onInputChange({
+                  target: { name: 'status', value }
+                } as React.ChangeEvent<HTMLInputElement>)}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="address" className="text-sm font-medium">
-              Address
-            </label>
-            <Input
-              id="address"
-              name="address"
-              value={formData.address || ''}
-              onChange={onInputChange}
-              placeholder="Full address"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tags</label>
-            <div className="flex flex-wrap gap-2">
-              {['VIP', 'Premium', 'Enterprise'].map((tag) => (
+            <Label>Tags</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {availableTags.map(tag => (
                 <Badge
                   key={tag}
                   variant={formData.tags?.includes(tag) ? "default" : "outline"}
@@ -247,48 +216,81 @@ const AdminFormDialog: React.FC<AdminFormDialogProps> = ({
             </div>
           </div>
           
-          <div className="space-y-2">
-            <label htmlFor="role" className="text-sm font-medium">
-              Role
-            </label>
-            <Select
-              value={formData.role}
-              onValueChange={(value) => onRoleChange(value as UserRole['role'])}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="user">User</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="joinDate">Join Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {formData.joinDate ? (
+                      format(formData.joinDate, "PPP")
+                    ) : (
+                      <span>Select date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={formData.joinDate}
+                    onSelect={onJoinDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="renewalDate">Renewal Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {formData.renewalDate ? (
+                      format(formData.renewalDate, "PPP")
+                    ) : (
+                      <span>Select date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={formData.renewalDate}
+                    onSelect={onRenewalDateChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="plan-details" className="text-sm font-medium">
-              Plan Details
-            </label>
+            <Label htmlFor="planDetails">Plan Details</Label>
             <Input
-              id="plan-details"
+              id="planDetails"
               name="planDetails"
               value={formData.planDetails || ''}
               onChange={onInputChange}
-              placeholder="Plan or subscription details"
+              placeholder="Subscription plan details"
             />
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="notes" className="text-sm font-medium">
-              Notes
-            </label>
+            <Label htmlFor="notes">Notes</Label>
             <Textarea
               id="notes"
               name="notes"
               value={formData.notes || ''}
               onChange={onInputChange}
               placeholder="Additional notes about this administrator"
+              className="resize-none"
+              rows={3}
             />
           </div>
         </div>
@@ -298,7 +300,7 @@ const AdminFormDialog: React.FC<AdminFormDialogProps> = ({
             Cancel
           </Button>
           <Button onClick={onSubmit}>
-            {submitButtonText}
+            {isEdit ? "Save Changes" : "Add Administrator"}
           </Button>
         </DialogFooter>
       </DialogContent>

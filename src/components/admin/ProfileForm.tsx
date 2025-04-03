@@ -70,19 +70,44 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
 
   // Initialize form with user data
   useEffect(() => {
-    if (user) {
-      console.log("Initializing form with user data:", user);
-      form.reset({
-        name: user.user_metadata?.name || "",
-        email: user.email || "",
-        phone: user.user_metadata?.phone || "",
-        company: user.user_metadata?.company || "",
-        address: user.user_metadata?.address || "",
-        bio: user.user_metadata?.bio || "",
-      });
-    } else {
-      console.log("No user data available for form initialization");
-    }
+    const loadProfile = async () => {
+      if (user) {
+        // Try to load from team_members table first
+        try {
+          const { data: teamMember, error } = await supabase
+            .from('team_members')
+            .select('name, email, phone, company, address')
+            .eq('id', user.id)
+            .maybeSingle();
+            
+          if (teamMember) {
+            form.reset({
+              name: teamMember.name || user.user_metadata?.name || "",
+              email: teamMember.email || user.email || "",
+              phone: teamMember.phone || user.user_metadata?.phone || "",
+              company: teamMember.company || user.user_metadata?.company || "",
+              address: teamMember.address || user.user_metadata?.address || "",
+              bio: user.user_metadata?.bio || "",
+            });
+            return;
+          }
+        } catch (err) {
+          console.error("Error loading team member data:", err);
+        }
+        
+        // Fallback to user metadata
+        form.reset({
+          name: user.user_metadata?.name || "",
+          email: user.email || "",
+          phone: user.user_metadata?.phone || "",
+          company: user.user_metadata?.company || "",
+          address: user.user_metadata?.address || "",
+          bio: user.user_metadata?.bio || "",
+        });
+      }
+    };
+    
+    loadProfile();
   }, [user, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
@@ -90,27 +115,156 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
       setIsSaving(true);
       console.log("Submitting profile data:", data);
       
-      // Special case: if we're a Super Admin but no user object in supabase yet
+      // First check if we're in Super Admin mode
       const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
       
-      // First try to create a session if we're in super admin mode but don't have one
-      if (isSuperAdmin && (!user || user.id === 'super-admin')) {
-        console.log("Super Admin mode - attempting to create or use account");
+      // If we have a valid Supabase user
+      if (user && user.id) {
+        console.log("Updating profile for user:", user.id);
+        
+        // Try to update team_members table first
         try {
-          // Check if the super admin account exists
-          const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: "super-admin-password", // This is just a placeholder
+          const { error: teamError } = await supabase
+            .from('team_members')
+            .upsert({
+              id: user.id,
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              company: data.company,
+              address: data.address,
+              is_super_admin: isSuperAdmin,
+              role: isSuperAdmin ? 'super_admin' : 'admin',
+              status: 'active',
+              last_active: new Date().toISOString()
+            }, { onConflict: 'id' });
+            
+          if (teamError) {
+            console.error("Error updating team_members:", teamError);
+          } else {
+            console.log("Updated team_members successfully");
+          }
+        } catch (teamErr) {
+          console.error("Exception updating team_members:", teamErr);
+        }
+        
+        // Update user email if it's changed and user is super admin
+        if (isSuperAdmin && data.email !== user.email) {
+          console.log("Updating email from", user.email, "to", data.email);
+          try {
+            const { error: emailError } = await supabase.auth.updateUser({
+              email: data.email,
+            });
+            
+            if (emailError) {
+              console.error("Email update error:", emailError);
+              toast({
+                title: "Email Update Failed",
+                description: "Could not update email, but other profile data was saved.",
+                variant: "destructive",
+              });
+            }
+          } catch (emailUpdateError) {
+            console.error("Failed to update email:", emailUpdateError);
+          }
+        }
+        
+        // Update user metadata
+        console.log("Updating user metadata");
+        try {
+          const { error: metadataError } = await supabase.auth.updateUser({
+            data: {
+              name: data.name,
+              phone: data.phone,
+              company: data.company,
+              address: data.address,
+              bio: data.bio
+            }
           });
           
-          if (checkError || !existingUser.user) {
-            console.log("Super admin account doesn't exist or can't be accessed, trying to create it");
-            
-            // Try to create the account
-            const { data: newUser, error: signupError } = await supabase.auth.signUp({
+          if (metadataError) {
+            console.error("Metadata update error:", metadataError);
+            throw metadataError;
+          }
+          
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated successfully.",
+          });
+          
+          console.log("Successfully updated profile data:", data);
+        } catch (metadataError) {
+          console.error("Failed to update metadata:", metadataError);
+          toast({
+            title: "Profile Update Failed",
+            description: "Could not update profile information in Auth metadata.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Special handling for super admin without auth
+        if (isSuperAdmin) {
+          console.log("Creating/updating super admin account");
+          
+          try {
+            // Check if the account exists
+            const { data: existingUser, error: signInError } = await supabase.auth.signInWithPassword({
               email: data.email,
-              password: Math.random().toString(36).substring(2, 15), // Generate a random password
-              options: {
+              password: "super-admin-password", // This is a placeholder 
+            });
+            
+            if (signInError || !existingUser.user) {
+              // Try to create account
+              const { data: newUser, error: signupError } = await supabase.auth.signUp({
+                email: data.email,
+                password: Math.random().toString(36).substring(2, 15), // Random password
+                options: {
+                  data: {
+                    name: data.name,
+                    phone: data.phone,
+                    company: data.company,
+                    address: data.address,
+                    bio: data.bio,
+                    is_super_admin: true
+                  }
+                }
+              });
+              
+              if (signupError) {
+                throw signupError;
+              }
+              
+              // Add to team_members
+              if (newUser?.user?.id) {
+                const { error: teamError } = await supabase
+                  .from('team_members')
+                  .insert({
+                    id: newUser.user.id,
+                    name: data.name,
+                    email: data.email,
+                    phone: data.phone,
+                    company: data.company,
+                    address: data.address,
+                    is_super_admin: true,
+                    role: 'super_admin',
+                    status: 'active'
+                  });
+                  
+                if (teamError) {
+                  console.error("Error creating team member:", teamError);
+                }
+              }
+              
+              toast({
+                title: "Profile Created",
+                description: "Super Admin profile created successfully.",
+              });
+              
+              // Reload to update session
+              window.location.reload();
+            } else {
+              // Update existing user
+              const { error: updateError } = await supabase.auth.updateUser({
                 data: {
                   name: data.name,
                   phone: data.phone,
@@ -119,166 +273,49 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
                   bio: data.bio,
                   is_super_admin: true
                 }
+              });
+              
+              if (updateError) {
+                throw updateError;
               }
-            });
-            
-            if (signupError) {
-              console.error("Failed to create super admin account:", signupError);
-              // Still save to localStorage as fallback
-              localStorage.setItem('superAdminProfile', JSON.stringify(data));
+              
+              // Update team_members
+              const { error: teamError } = await supabase
+                .from('team_members')
+                .upsert({
+                  id: existingUser.user.id,
+                  name: data.name,
+                  email: data.email,
+                  phone: data.phone,
+                  company: data.company,
+                  address: data.address,
+                  is_super_admin: true,
+                  role: 'super_admin',
+                  status: 'active',
+                  last_active: new Date().toISOString()
+                }, { onConflict: 'id' });
+                
+              if (teamError) {
+                console.error("Error updating team member:", teamError);
+              }
               
               toast({
-                title: "Profile Partially Updated",
-                description: "Profile saved locally only. Could not create database account.",
+                title: "Profile Updated",
+                description: "Super Admin profile updated successfully.",
               });
-              setIsSaving(false);
-              return;
             }
-            
-            console.log("Created new super admin account:", newUser);
-            
-            // Save locally as well
-            localStorage.setItem('superAdminProfile', JSON.stringify(data));
-            
+          } catch (authError) {
+            console.error("Auth operation failed:", authError);
             toast({
-              title: "Profile Updated",
-              description: "Super Admin profile created and updated successfully.",
-            });
-            
-            window.location.reload(); // Reload to update the session
-            return;
-          } else {
-            console.log("Successfully logged in as existing super admin:", existingUser);
-            
-            // Update the existing user
-            const { error: updateError } = await supabase.auth.updateUser({
-              data: {
-                name: data.name,
-                phone: data.phone,
-                company: data.company,
-                address: data.address,
-                bio: data.bio,
-                is_super_admin: true
-              }
-            });
-            
-            if (updateError) {
-              console.error("Failed to update super admin profile:", updateError);
-              // Still save to localStorage as fallback
-              localStorage.setItem('superAdminProfile', JSON.stringify(data));
-              
-              toast({
-                title: "Profile Partially Updated",
-                description: "Profile saved locally only. Could not update database.",
-              });
-              setIsSaving(false);
-              return;
-            }
-            
-            console.log("Updated super admin profile");
-            
-            // Save locally as well
-            localStorage.setItem('superAdminProfile', JSON.stringify(data));
-            
-            toast({
-              title: "Profile Updated",
-              description: "Super Admin profile updated successfully.",
-            });
-            
-            // Reload to update the session
-            window.location.reload();
-            return;
-          }
-        } catch (authError) {
-          console.error("Auth operation failed:", authError);
-          // Fallback to localStorage
-          localStorage.setItem('superAdminProfile', JSON.stringify(data));
-          
-          toast({
-            title: "Profile Updated Locally",
-            description: "Could not update database. Profile saved locally only.",
-          });
-          setIsSaving(false);
-          return;
-        }
-      }
-      
-      // Normal user flow with authentication
-      if (!user) {
-        console.error("No user found when submitting form");
-        toast({
-          title: "Error",
-          description: "You need to be logged in to update your profile.",
-          variant: "destructive",
-        });
-        setIsSaving(false);
-        return;
-      }
-      
-      // Update user email if it's changed and user is super admin
-      if (isSuperAdmin && data.email !== user.email) {
-        console.log("Updating email from", user.email, "to", data.email);
-        try {
-          const { error: emailError } = await supabase.auth.updateUser({
-            email: data.email,
-          });
-          
-          if (emailError) {
-            console.error("Email update error:", emailError);
-            toast({
-              title: "Email Update Failed",
-              description: "Could not update email, but other profile data was saved.",
+              title: "Profile Update Failed",
+              description: "Could not update profile in database.",
               variant: "destructive",
             });
           }
-        } catch (emailUpdateError) {
-          console.error("Failed to update email:", emailUpdateError);
-        }
-      }
-      
-      // Update other user metadata
-      console.log("Updating user metadata");
-      try {
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: {
-            name: data.name,
-            phone: data.phone,
-            company: data.company,
-            address: data.address,
-            bio: data.bio
-          }
-        });
-        
-        if (metadataError) {
-          console.error("Metadata update error:", metadataError);
-          throw metadataError;
-        }
-        
-        // Also update localStorage as a fallback/cache
-        if (isSuperAdmin) {
-          localStorage.setItem('superAdminProfile', JSON.stringify(data));
-        }
-        
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully.",
-        });
-        
-        console.log("Successfully updated profile data:", data);
-      } catch (metadataError) {
-        console.error("Failed to update metadata:", metadataError);
-        
-        // Even if the Supabase update fails, we can still update the form data locally
-        if (isSuperAdmin) {
-          localStorage.setItem('superAdminProfile', JSON.stringify(data));
-          toast({
-            title: "Profile Partially Updated",
-            description: "Profile saved locally for Super Admin mode.",
-          });
         } else {
           toast({
-            title: "Profile Update Failed",
-            description: "Could not update profile information.",
+            title: "Error",
+            description: "You need to be logged in to update your profile.",
             variant: "destructive",
           });
         }

@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { format } from "date-fns";
 import {
   Table,
   TableBody,
@@ -9,27 +8,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
+import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Edit,
-  Trash,
-  MoreVertical,
-  Shield,
-  UserX,
-  ShieldAlert,
-  CheckCircle,
+import { Badge } from "@/components/ui/badge";
+import { 
+  MoreHorizontal, 
+  Edit2, 
+  Trash2, 
+  ShieldCheck, 
+  Ban 
 } from "lucide-react";
-import { AdminUser } from "@/hooks/useAdminManagement";
+import { AdminUser } from '@/hooks/useAdminManagement';
+import { format } from 'date-fns';
 
 interface AdminTableProps {
   admins: AdminUser[];
@@ -39,6 +35,29 @@ interface AdminTableProps {
   onSuspend: (adminId: string) => void;
 }
 
+const getRoleBadgeVariant = (role: string) => {
+  switch (role) {
+    case 'super_admin':
+      return 'destructive';
+    case 'admin':
+      return 'default';
+    default:
+      return 'secondary';
+  }
+};
+
+const getStatusBadgeVariant = (status?: string) => {
+  switch (status) {
+    case 'suspended':
+      return 'destructive';
+    case 'pending':
+      return 'warning';
+    case 'active':
+    default:
+      return 'success';
+  }
+};
+
 const AdminTable: React.FC<AdminTableProps> = ({
   admins,
   onEdit,
@@ -46,111 +65,115 @@ const AdminTable: React.FC<AdminTableProps> = ({
   onManageRoles,
   onSuspend
 }) => {
+  if (admins.length === 0) {
+    return (
+      <div className="text-center py-8 border rounded-md">
+        <p className="text-muted-foreground">No administrators found</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]">Avatar</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Company</TableHead>
+            <TableHead className="w-[40px]"></TableHead>
+            <TableHead>Admin</TableHead>
             <TableHead>Role</TableHead>
-            <TableHead>Tags</TableHead>
+            <TableHead>Company/Position</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Join Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="w-[80px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {admins.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                No administrators found
+          {admins.map(admin => (
+            <TableRow key={admin.id}>
+              <TableCell>
+                <Avatar className="h-8 w-8">
+                  {admin.avatar ? (
+                    <AvatarImage src={admin.avatar} alt={admin.name} />
+                  ) : (
+                    <AvatarFallback>
+                      {admin.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </TableCell>
+              <TableCell className="font-medium">
+                <div>
+                  <p className="font-semibold">{admin.name}</p>
+                  <p className="text-xs text-muted-foreground">{admin.email}</p>
+                  {admin.phone && (
+                    <p className="text-xs text-muted-foreground">{admin.phone}</p>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant={getRoleBadgeVariant(admin.role)}>
+                  {admin.role === 'super_admin' ? 'Super Admin' : 
+                   admin.role === 'admin' ? 'Admin' : 'User'}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {admin.company ? (
+                  <div>
+                    <p>{admin.company}</p>
+                    {admin.position && (
+                      <p className="text-xs text-muted-foreground">{admin.position}</p>
+                    )}
+                  </div>
+                ) : admin.position ? (
+                  admin.position
+                ) : (
+                  <span className="text-muted-foreground">Not specified</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <Badge variant={getStatusBadgeVariant(admin.status)}>
+                  {admin.status || 'Active'}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {admin.joinDate ? format(admin.joinDate, 'PPP') : 'N/A'}
+              </TableCell>
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(admin)}>
+                      <Edit2 className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onManageRoles(admin)}>
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Manage Roles
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onSuspend(admin.id)}
+                      disabled={admin.status === 'suspended'}
+                    >
+                      <Ban className="mr-2 h-4 w-4" />
+                      Suspend
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onDelete(admin)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
-          ) : (
-            admins.map((admin) => (
-              <TableRow key={admin.id}>
-                <TableCell>
-                  <Avatar className="h-8 w-8">
-                    {admin.avatar ? (
-                      <AvatarImage src={admin.avatar} alt={admin.name} />
-                    ) : (
-                      <AvatarFallback>
-                        {admin.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                </TableCell>
-                <TableCell className="font-medium">{admin.name}</TableCell>
-                <TableCell>{admin.email}</TableCell>
-                <TableCell>{admin.company}</TableCell>
-                <TableCell>
-                  {admin.role === 'super_admin' && (
-                    <Badge variant="destructive" className="flex items-center w-fit">
-                      <ShieldAlert className="h-3 w-3 mr-1" />
-                      Super Admin
-                    </Badge>
-                  )}
-                  {admin.role === 'admin' && (
-                    <Badge variant="default" className="flex items-center w-fit">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Admin
-                    </Badge>
-                  )}
-                  {admin.role === 'user' && (
-                    <Badge variant="secondary" className="flex items-center w-fit">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      User
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {admin.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>{format(admin.joinDate, 'PP')}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onEdit(admin)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onManageRoles(admin)}>
-                        <Shield className="h-4 w-4 mr-2" />
-                        Manage Roles
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onSuspend(admin.id)}>
-                        <UserX className="h-4 w-4 mr-2" />
-                        Suspend
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => onDelete(admin)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
+          ))}
         </TableBody>
       </Table>
     </div>

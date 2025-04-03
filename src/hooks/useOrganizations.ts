@@ -14,12 +14,10 @@ export const useOrganizations = () => {
     setErrorMsg(null);
     
     try {
-      // Use an alternative approach to avoid the infinite recursion RLS policy issue
-      // Instead of using organization_members in the query, just fetch organizations directly
+      // Direct query to organizations to avoid the recursive RLS policy issue
       const { data, error } = await supabase
         .from('organizations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('id, name, slug, created_at, updated_at, is_active, owner_id');
         
       if (error) {
         console.error('Error fetching organizations:', error);
@@ -33,39 +31,69 @@ export const useOrganizations = () => {
         return;
       }
       
-      // For each org, calculate member count by fetching each org's members separately
+      // For each org, calculate member count separately
       const orgsWithMemberCount = await Promise.all((data || []).map(async (org) => {
         try {
-          // Use a separate count query for each organization's members
+          // Get organization subscription info
+          const { data: subscriptionData, error: subscriptionError } = await supabase
+            .from('organization_subscriptions')
+            .select('plan_id, status, current_period_end')
+            .eq('organization_id', org.id)
+            .maybeSingle();
+            
+          // Get plan info if subscription exists
+          let planData = null;
+          if (subscriptionData?.plan_id) {
+            const { data: planInfo } = await supabase
+              .from('plans')
+              .select('name, price, interval, features')
+              .eq('id', subscriptionData.plan_id)
+              .maybeSingle();
+              
+            planData = planInfo;
+          }
+          
+          // Get member count
           const { count, error: countError } = await supabase
             .from('organization_members')
-            .select('*', { count: 'exact', head: true })
+            .select('id', { count: 'exact', head: true })
             .eq('organization_id', org.id);
-          
+            
           if (countError) {
-            console.error(`Error getting member count for org ${org.id}:`, countError);
-            return {
-              ...org,
-              memberCount: 0,
-            };
+            console.warn(`Error getting member count for org ${org.id}:`, countError);
+          }
+          
+          // Get owner info
+          let ownerData = null;
+          if (org.owner_id) {
+            const { data: teamMember } = await supabase
+              .from('team_members')
+              .select('name, email')
+              .eq('id', org.owner_id)
+              .maybeSingle();
+              
+            ownerData = teamMember;
           }
           
           return {
             ...org,
             memberCount: count || 0,
+            subscription: subscriptionData,
+            plan: planData,
+            owner: ownerData
           };
         } catch (err) {
-          console.error(`Error getting member count for org ${org.id}:`, err);
+          console.error(`Error processing org data for ${org.id}:`, err);
           return {
             ...org,
-            memberCount: 0,
+            memberCount: 0
           };
         }
       }));
       
       setOrganizations(orgsWithMemberCount);
     } catch (error: any) {
-      console.error('Error fetching organizations:', error);
+      console.error('Error in useOrganizations:', error);
       setErrorMsg(`Failed to load organizations: ${error.message || 'Unknown error'}`);
       toast({
         title: 'Error',
@@ -73,7 +101,6 @@ export const useOrganizations = () => {
         variant: 'destructive',
       });
       
-      // Set empty array to prevent infinite loading state
       setOrganizations([]);
     } finally {
       setIsLoading(false);
@@ -117,11 +144,74 @@ export const useOrganizations = () => {
     }
   };
 
+  const updateOrganization = async (orgId: string, data: any) => {
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update(data)
+        .eq('id', orgId);
+        
+      if (error) {
+        console.error('Error updating organization:', error);
+        throw error;
+      }
+      
+      toast({
+        title: 'Organization Updated',
+        description: 'The organization has been updated successfully',
+      });
+      
+      fetchOrganizations();
+      return true;
+    } catch (error: any) {
+      console.error('Error updating organization:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to update organization: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const createOrganization = async (data: any) => {
+    try {
+      const { data: newOrg, error } = await supabase
+        .from('organizations')
+        .insert(data)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error creating organization:', error);
+        throw error;
+      }
+      
+      toast({
+        title: 'Organization Created',
+        description: 'The new organization has been created successfully',
+      });
+      
+      fetchOrganizations();
+      return newOrg;
+    } catch (error: any) {
+      console.error('Error creating organization:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to create organization: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+
   return {
     organizations,
     isLoading,
     errorMsg,
     fetchOrganizations,
     handleDeleteOrg,
+    updateOrganization,
+    createOrganization
   };
 };
