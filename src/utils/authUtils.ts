@@ -17,7 +17,7 @@ export const signInWithEmail = async (email: string, password: string) => {
     email,
     password,
     options: {
-      emailRedirectTo: `${getCurrentDomain()}/dashboard`
+      redirectTo: `${getCurrentDomain()}/dashboard`
     }
   });
   
@@ -32,7 +32,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
     email,
     password,
     options: {
-      emailRedirectTo: `${getCurrentDomain()}/dashboard`,
+      redirectTo: `${getCurrentDomain()}/dashboard`,
       data: {
         // You can add additional user metadata here if needed
       }
