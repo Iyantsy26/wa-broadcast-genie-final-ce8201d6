@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -76,11 +75,11 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
         try {
           const { data: teamMember, error } = await supabase
             .from('team_members')
-            .select('name, email, phone, company, address')
+            .select('name, email, phone, company, address, position')
             .eq('id', user.id)
             .maybeSingle();
             
-          if (teamMember) {
+          if (!error && teamMember) {
             form.reset({
               name: teamMember.name || user.user_metadata?.name || "",
               email: teamMember.email || user.email || "",

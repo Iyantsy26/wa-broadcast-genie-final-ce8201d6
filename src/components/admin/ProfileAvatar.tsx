@@ -166,12 +166,18 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
         
         // Always update team_members table
         if (userId !== 'super-admin') {
+          // Include all required fields for team_members table
           const { error: teamError } = await supabase
             .from('team_members')
             .upsert({
               id: userId,
               avatar: publicUrl,
-              last_active: new Date().toISOString()
+              last_active: new Date().toISOString(),
+              // Required fields that cannot be null
+              name: user?.user_metadata?.name || 'User',
+              email: user?.email || 'user@example.com',
+              role: user?.user_metadata?.role || 'user',
+              status: 'active'
             }, { onConflict: 'id' });
             
           if (teamError) {

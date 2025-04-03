@@ -131,7 +131,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
                 )}
               </TableCell>
               <TableCell>
-                <Badge variant={getStatusBadgeVariant(admin.status)}>
+                <Badge variant={getStatusBadgeVariant(admin.status) as "default" | "destructive" | "outline" | "secondary" | "warning" | "success"}>
                   {admin.status || 'Active'}
                 </Badge>
               </TableCell>
