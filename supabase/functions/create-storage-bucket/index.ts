@@ -15,13 +15,17 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request body to get bucket name and options
+    const requestData = await req.json();
+    const { bucketName = "avatars", isPublic = true } = requestData;
+    
     // Create a Supabase client with the service role key
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
 
-    // Create storage bucket for profile avatars if it doesn't exist
+    // Create storage bucket if it doesn't exist
     const { data: existingBuckets, error: listError } = await supabaseAdmin.storage.listBuckets();
     
     if (listError) {
@@ -29,12 +33,11 @@ serve(async (req) => {
       throw new Error(`Failed to list buckets: ${listError.message}`);
     }
     
-    const bucketName = "profile-avatars";
     const bucketExists = existingBuckets.some(b => b.name === bucketName);
     
     if (!bucketExists) {
       const { error: createError } = await supabaseAdmin.storage.createBucket(bucketName, {
-        public: true,
+        public: isPublic,
         fileSizeLimit: 5242880, // 5MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
       });
@@ -44,11 +47,7 @@ serve(async (req) => {
         throw new Error(`Failed to create bucket: ${createError.message}`);
       }
       
-      // Setup default permissions
-      const { error: policiesError } = await supabaseAdmin.storage.from(bucketName).createSignedUploadUrl('dummy-file');
-      if (policiesError) {
-        console.error("Warning: Could not automatically set policies:", policiesError);
-      }
+      console.log(`Successfully created bucket: ${bucketName}`);
       
       return new Response(
         JSON.stringify({ 

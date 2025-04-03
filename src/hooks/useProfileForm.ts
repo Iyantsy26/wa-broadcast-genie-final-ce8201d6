@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,7 +28,6 @@ export const useProfileForm = (user: User | null) => {
     },
   });
 
-  // Check if user is a super admin
   useEffect(() => {
     const checkSuperAdmin = async () => {
       if (user) {
@@ -43,14 +41,12 @@ export const useProfileForm = (user: User | null) => {
     checkSuperAdmin();
   }, [user]);
 
-  // Load profile data
   useEffect(() => {
     const loadProfile = async () => {
       console.log("Loading profile for user:", user?.id);
       if (user) {
         setOriginalEmail(user.email);
         try {
-          // Handle special case for "super-admin" ID which is not a valid UUID
           if (user.id === 'super-admin') {
             console.log("Loading super-admin profile from localStorage");
             const superAdminProfile = localStorage.getItem('superAdminProfile');
@@ -78,7 +74,6 @@ export const useProfileForm = (user: User | null) => {
             return;
           }
           
-          // For regular users with valid UUIDs, try to fetch from database
           console.log("Fetching team member data for:", user.id);
           const { data: teamMember, error } = await supabase
             .from('team_members')
@@ -88,7 +83,6 @@ export const useProfileForm = (user: User | null) => {
             
           if (!error && teamMember) {
             console.log("Found team member data:", teamMember);
-            // Use optional chaining and nullish coalescing to safely access properties
             form.reset({
               name: teamMember?.name || user.user_metadata?.name || "",
               email: teamMember?.email || user.email || "",
@@ -96,7 +90,7 @@ export const useProfileForm = (user: User | null) => {
               company: teamMember?.company || user.user_metadata?.company || "",
               address: teamMember?.address || user.user_metadata?.address || "",
               bio: user.user_metadata?.bio || "",
-              customId: teamMember?.custom_id || "SSoo3", // Default Super Admin ID if not set
+              customId: teamMember?.custom_id || "SSoo3",
             });
             return;
           } else {
@@ -104,7 +98,6 @@ export const useProfileForm = (user: User | null) => {
           }
         } catch (err) {
           console.error("Error loading team member data:", err);
-          // Fallback to user metadata
           form.reset({
             name: user.user_metadata?.name || "",
             email: user.email || "",
@@ -112,11 +105,10 @@ export const useProfileForm = (user: User | null) => {
             company: user.user_metadata?.company || "",
             address: user.user_metadata?.address || "",
             bio: user.user_metadata?.bio || "",
-            customId: isSuperAdmin ? "SSoo3" : "", // Default for super admin
+            customId: isSuperAdmin ? "SSoo3" : "",
           });
         }
       } else if (localStorage.getItem('isSuperAdmin') === 'true') {
-        // For super admin mode without actual user, try to load from localStorage
         console.log("Loading super-admin profile without user from localStorage");
         const savedProfile = localStorage.getItem('superAdminProfile');
         if (savedProfile) {
@@ -130,7 +122,7 @@ export const useProfileForm = (user: User | null) => {
               company: profileData.company || "",
               address: profileData.address || "",
               bio: profileData.bio || "",
-              customId: profileData.customId || "SSoo3", // Default Super Admin ID
+              customId: profileData.customId || "SSoo3",
             });
             console.log("Loaded profile data from localStorage:", profileData);
           } catch (error) {
@@ -147,7 +139,6 @@ export const useProfileForm = (user: User | null) => {
     loadProfile();
   }, [user, form, isSuperAdmin]);
 
-  // Helper function to set default super admin profile
   const setDefaultSuperAdminProfile = () => {
     form.reset({
       name: "Super Admin",
@@ -156,20 +147,17 @@ export const useProfileForm = (user: User | null) => {
       company: "",
       address: "",
       bio: "",
-      customId: "SSoo3", // Default Super Admin ID
+      customId: "SSoo3",
     });
   };
 
-  // Handle form submission with improved error handling and persistence for super admin
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSaving(true);
       console.log("Submitting profile data:", data);
       
-      // Check if we're in Super Admin mode with no actual user
       const isSuperAdminMode = localStorage.getItem('isSuperAdmin') === 'true';
       
-      // Always save to localStorage for Super Admin
       if (isSuperAdmin || isSuperAdminMode || (user && user.id === 'super-admin')) {
         console.log("Saving Super Admin profile to localStorage");
         localStorage.setItem('superAdminProfile', JSON.stringify(data));
@@ -179,9 +167,7 @@ export const useProfileForm = (user: User | null) => {
         console.log("Updating profile for user:", user.id);
         
         try {
-          // Skip team_members update for super-admin if it's the special "super-admin" string ID
           if (user.id !== 'super-admin') {
-            // First update team_members table
             const { error: teamError } = await supabase
               .from('team_members')
               .upsert([{
@@ -206,49 +192,61 @@ export const useProfileForm = (user: User | null) => {
             console.log("Skipping team_members update for special super-admin ID");
           }
           
-          // Then update user metadata - this works for all users including super-admin
-          const { error: metadataError } = await supabase.auth.updateUser({
-            data: {
+          try {
+            const { error: metadataError } = await supabase.auth.updateUser({
+              data: {
+                name: data.name,
+                phone: data.phone,
+                company: data.company,
+                address: data.address,
+                bio: data.bio,
+                is_super_admin: true,
+                custom_id: data.customId
+              }
+            });
+            
+            if (metadataError) {
+              console.error("Metadata update error:", metadataError);
+              throw new Error(`Failed to update auth metadata: ${metadataError.message}`);
+            }
+            
+            console.log("Updated user metadata successfully");
+          } catch (metadataError) {
+            console.error("Error updating user metadata:", metadataError);
+          }
+          
+          if (isSuperAdmin && data.email !== originalEmail) {
+            console.log("Updating email from", originalEmail, "to", data.email);
+            try {
+              const { error: emailError } = await supabase.auth.updateUser({
+                email: data.email,
+              });
+              
+              if (emailError) {
+                console.error("Email update error:", emailError);
+                throw new Error(`Failed to update email: ${emailError.message}`);
+              }
+              
+              toast({
+                title: "Email update initiated",
+                description: "A confirmation email has been sent to your new email address. Please check your inbox to confirm the change.",
+              });
+            } catch (emailError) {
+              console.error("Error updating email:", emailError);
+            }
+          }
+          
+          if (isSuperAdmin || user.id === 'super-admin') {
+            console.log("Using saveProfileToSupabase helper for Super Admin");
+            await saveProfileToSupabase({
               name: data.name,
+              email: data.email,
               phone: data.phone,
               company: data.company,
               address: data.address,
               bio: data.bio,
-              // Important: add these fields to ensure persistence across sessions
-              is_super_admin: true,
-              custom_id: data.customId
-            }
-          });
-          
-          if (metadataError) {
-            console.error("Metadata update error:", metadataError);
-            throw new Error(`Failed to update auth metadata: ${metadataError.message}`);
-          }
-          
-          console.log("Updated user metadata successfully");
-          
-          // Handle email change separately - email changes require confirmation
-          if (isSuperAdmin && data.email !== originalEmail) {
-            console.log("Updating email from", originalEmail, "to", data.email);
-            const { error: emailError } = await supabase.auth.updateUser({
-              email: data.email,
+              customId: data.customId
             });
-            
-            if (emailError) {
-              console.error("Email update error:", emailError);
-              throw new Error(`Failed to update email: ${emailError.message}`);
-            }
-            
-            toast({
-              title: "Email update initiated",
-              description: "A confirmation email has been sent to your new email address. Please check your inbox to confirm the change.",
-            });
-          }
-          
-          // If this is a Super Admin, also use the saveProfileToSupabase helper
-          if (isSuperAdmin || user.id === 'super-admin') {
-            console.log("Using saveProfileToSupabase helper for Super Admin");
-            await saveProfileToSupabase(data);
           }
           
           setFormState({ 
@@ -271,28 +269,16 @@ export const useProfileForm = (user: User | null) => {
           });
         }
       } else if (isSuperAdminMode) {
-        // Handle profile updates in Super Admin mode without actual user
-        try {
-          console.log("Saving Super Admin profile to localStorage only (no user)");
-          // Already saved to localStorage above
-          
-          setFormState({ 
-            wasUpdated: true, 
-            timestamp: Date.now() 
-          });
-          
-          toast({
-            title: "Profile updated",
-            description: "Your super admin profile has been updated successfully.",
-          });
-        } catch (error: any) {
-          console.error("Error saving super admin profile:", error);
-          toast({
-            title: "Profile Update Failed",
-            description: error.message || "Could not update super admin profile.",
-            variant: "destructive",
-          });
-        }
+        console.log("Saving Super Admin profile to localStorage only (no user)");
+        setFormState({ 
+          wasUpdated: true, 
+          timestamp: Date.now() 
+        });
+        
+        toast({
+          title: "Profile updated",
+          description: "Your super admin profile has been updated successfully.",
+        });
       } else {
         toast({
           title: "Error",

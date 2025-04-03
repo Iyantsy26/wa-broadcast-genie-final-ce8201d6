@@ -64,47 +64,44 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
     fetchAvatar();
   }, [user, isSuperAdminMode]);
   
-  // Initialize the storage bucket if it doesn't exist
+  // Initialize the storage bucket using the edge function
   useEffect(() => {
-    const initializeStorage = async () => {
+    const initBucket = async () => {
       try {
-        // First check if bucket exists directly
-        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+        toast({
+          title: "Setting up storage",
+          description: "Initializing storage for avatars...",
+        });
         
-        const bucketName = "profile-avatars";
-        const bucketExists = buckets?.some(b => b.name === bucketName);
-        
-        if (!bucketExists) {
-          toast({
-            title: "Creating storage",
-            description: "Setting up storage for avatars...",
-          });
-          
-          try {
-            // Create the bucket
-            const { error } = await supabase.storage.createBucket(bucketName, {
-              public: true,
-            });
-            
-            if (error) {
-              console.error("Error creating bucket:", error);
-              throw error;
-            }
-            
-            toast({
-              title: "Storage created",
-              description: "Avatar storage has been set up successfully.",
-            });
-          } catch (createError: any) {
-            console.warn("Error creating bucket, will try to use it anyway:", createError);
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-storage-bucket`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ bucketName: 'avatars', isPublic: true })
           }
+        );
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log("Storage bucket setup:", result.message);
+          toast({
+            title: "Storage ready",
+            description: "Avatar storage has been set up successfully.",
+          });
+        } else {
+          console.warn("Storage setup warning:", result.error);
         }
       } catch (error) {
-        console.warn("Storage bucket initialization error:", error);
+        console.error("Error initializing avatar storage:", error);
       }
     };
     
-    initializeStorage();
+    initBucket();
   }, [toast]);
   
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,33 +117,9 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       
       setUploading(true);
       
-      // Create the bucket first if it doesn't exist
-      try {
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = buckets?.some(b => b.name === 'profile-avatars');
-        
-        if (!bucketExists) {
-          toast({
-            title: "Creating storage",
-            description: "Setting up storage for avatars...",
-          });
-          
-          const { error } = await supabase.storage.createBucket('profile-avatars', {
-            public: true,
-          });
-          
-          if (error) {
-            console.error("Error creating bucket:", error);
-            throw error;
-          }
-        }
-      } catch (bucketCheckError) {
-        console.warn("Error checking buckets:", bucketCheckError);
-      }
-      
-      // Now upload the file
+      // Upload the file to the avatars bucket
       const { error: uploadError, data } = await supabase.storage
-        .from('profile-avatars')
+        .from('avatars')
         .upload(filePath, file, { upsert: true });
       
       if (uploadError) {
@@ -155,7 +128,7 @@ const ProfileAvatar = ({ user }: ProfileAvatarProps) => {
       
       // Get the public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('profile-avatars')
+        .from('avatars')
         .getPublicUrl(filePath);
       
       setAvatarUrl(publicUrl);
