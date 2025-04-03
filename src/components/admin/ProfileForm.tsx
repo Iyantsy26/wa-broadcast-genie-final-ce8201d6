@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -39,7 +38,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
-  // Check if user is super admin to enable email editing
   useEffect(() => {
     const checkSuperAdmin = async () => {
       if (localStorage.getItem('isSuperAdmin') === 'true') {
@@ -68,26 +66,23 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
     },
   });
 
-  // Initialize form with user data
   useEffect(() => {
     const loadProfile = async () => {
       if (user) {
-        // Try to load from team_members table first
         try {
           const { data: teamMember, error } = await supabase
             .from('team_members')
-            .select('name, email, phone, position, avatar, role') // Remove company and address if they don't exist
+            .select('name, email, phone, position, avatar, role, company, address')
             .eq('id', user.id)
             .maybeSingle();
             
           if (!error && teamMember) {
-            // We need to handle the case where company and address might not exist
             form.reset({
               name: teamMember.name || user.user_metadata?.name || "",
               email: teamMember.email || user.email || "",
               phone: teamMember.phone || user.user_metadata?.phone || "",
-              company: user.user_metadata?.company || "", // Use user metadata since company might not be in team_members
-              address: user.user_metadata?.address || "", // Use user metadata since address might not be in team_members
+              company: teamMember.company || user.user_metadata?.company || "",
+              address: teamMember.address || user.user_metadata?.address || "",
               bio: user.user_metadata?.bio || "",
             });
             return;
@@ -96,7 +91,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           console.error("Error loading team member data:", err);
         }
         
-        // Fallback to user metadata
         form.reset({
           name: user.user_metadata?.name || "",
           email: user.email || "",
@@ -116,14 +110,11 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
       setIsSaving(true);
       console.log("Submitting profile data:", data);
       
-      // First check if we're in Super Admin mode
       const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
       
-      // If we have a valid Supabase user
       if (user && user.id) {
         console.log("Updating profile for user:", user.id);
         
-        // Try to update team_members table first
         try {
           const { error: teamError } = await supabase
             .from('team_members')
@@ -149,7 +140,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           console.error("Exception updating team_members:", teamErr);
         }
         
-        // Update user email if it's changed and user is super admin
         if (isSuperAdmin && data.email !== user.email) {
           console.log("Updating email from", user.email, "to", data.email);
           try {
@@ -170,7 +160,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           }
         }
         
-        // Update user metadata
         console.log("Updating user metadata");
         try {
           const { error: metadataError } = await supabase.auth.updateUser({
@@ -203,22 +192,19 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           });
         }
       } else {
-        // Special handling for super admin without auth
         if (isSuperAdmin) {
           console.log("Creating/updating super admin account");
           
           try {
-            // Check if the account exists
             const { data: existingUser, error: signInError } = await supabase.auth.signInWithPassword({
               email: data.email,
-              password: "super-admin-password", // This is a placeholder 
+              password: "super-admin-password",
             });
             
             if (signInError || !existingUser.user) {
-              // Try to create account
               const { data: newUser, error: signupError } = await supabase.auth.signUp({
                 email: data.email,
-                password: Math.random().toString(36).substring(2, 15), // Random password
+                password: Math.random().toString(36).substring(2, 15),
                 options: {
                   data: {
                     name: data.name,
@@ -235,7 +221,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
                 throw signupError;
               }
               
-              // Add to team_members
               if (newUser?.user?.id) {
                 const { error: teamError } = await supabase
                   .from('team_members')
@@ -261,10 +246,8 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
                 description: "Super Admin profile created successfully.",
               });
               
-              // Reload to update session
               window.location.reload();
             } else {
-              // Update existing user
               const { error: updateError } = await supabase.auth.updateUser({
                 data: {
                   name: data.name,
@@ -280,7 +263,6 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
                 throw updateError;
               }
               
-              // Update team_members
               const { error: teamError } = await supabase
                 .from('team_members')
                 .upsert({

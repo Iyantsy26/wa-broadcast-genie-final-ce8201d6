@@ -546,7 +546,9 @@ export type Database = {
       }
       team_members: {
         Row: {
+          address: string | null
           avatar: string | null
+          company: string | null
           created_at: string
           department_id: string | null
           email: string
@@ -555,12 +557,15 @@ export type Database = {
           last_active: string | null
           name: string
           phone: string | null
+          position: string | null
           role: string
           status: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
           avatar?: string | null
+          company?: string | null
           created_at?: string
           department_id?: string | null
           email: string
@@ -569,12 +574,15 @@ export type Database = {
           last_active?: string | null
           name: string
           phone?: string | null
+          position?: string | null
           role: string
           status: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
           avatar?: string | null
+          company?: string | null
           created_at?: string
           department_id?: string | null
           email?: string
@@ -583,6 +591,7 @@ export type Database = {
           last_active?: string | null
           name?: string
           phone?: string | null
+          position?: string | null
           role?: string
           status?: string
           updated_at?: string
