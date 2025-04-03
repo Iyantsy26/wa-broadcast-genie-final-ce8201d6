@@ -80,11 +80,11 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           if (!error && teamMember) {
             // Use optional chaining and nullish coalescing to safely access properties
             form.reset({
-              name: teamMember.name || user.user_metadata?.name || "",
-              email: teamMember.email || user.email || "",
-              phone: teamMember.phone || user.user_metadata?.phone || "",
-              company: teamMember.company || user.user_metadata?.company || "",
-              address: teamMember.address || user.user_metadata?.address || "",
+              name: teamMember?.name || user.user_metadata?.name || "",
+              email: teamMember?.email || user.email || "",
+              phone: teamMember?.phone || user.user_metadata?.phone || "",
+              company: teamMember?.company || user.user_metadata?.company || "",
+              address: teamMember?.address || user.user_metadata?.address || "",
               bio: user.user_metadata?.bio || "",
             });
             return;

@@ -1,4 +1,5 @@
 
+// This is just a partial update to add proper handling of the company, address and position properties
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { UserRole } from "@/services/devices/deviceTypes";
