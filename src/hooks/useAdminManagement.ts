@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { UserRole } from "@/services/devices/deviceTypes";
@@ -71,13 +72,14 @@ export const useAdminManagement = () => {
           name: member.name,
           email: member.email,
           phone: member.phone || '',
-          company: member.company || '', // Safely access company which might be undefined
+          // Safely access potentially missing fields with nullish coalescing
+          company: member.company || '', 
           avatar: member.avatar,
           role: member.role as UserRole['role'],
           tags: [],
           joinDate: new Date(member.created_at),
-          address: member.address || '', // Safely access address which might be undefined
-          position: member.position || '', // Safely access position which might be undefined
+          address: member.address || '',
+          position: member.position || '',
           status: member.status || 'active'
         }));
         

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -77,6 +78,7 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
             .maybeSingle();
             
           if (!error && teamMember) {
+            // Use optional chaining and nullish coalescing to safely access properties
             form.reset({
               name: teamMember.name || user.user_metadata?.name || "",
               email: teamMember.email || user.email || "",
@@ -91,6 +93,7 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           console.error("Error loading team member data:", err);
         }
         
+        // Fallback to user metadata if team member data isn't available
         form.reset({
           name: user.user_metadata?.name || "",
           email: user.email || "",
