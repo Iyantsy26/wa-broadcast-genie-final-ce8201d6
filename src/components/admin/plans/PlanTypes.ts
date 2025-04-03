@@ -18,7 +18,7 @@ export interface SubscriptionPlan {
   currency?: string;
 }
 
-// Define currency symbols as a simple record without circular references
+// Define currency symbols without circular references
 export const CURRENCY_SYMBOLS = {
   USD: '$',
   INR: '₹',
@@ -26,8 +26,8 @@ export const CURRENCY_SYMBOLS = {
   GBP: '£'
 } as const;
 
-// Define currency code type based on the keys of CURRENCY_SYMBOLS
-export type CurrencyCode = keyof typeof CURRENCY_SYMBOLS;
+// Define currency code type directly from literals
+export type CurrencyCode = 'USD' | 'INR' | 'EUR' | 'GBP';
 
 export const planFeatureSchema = z.object({
   id: z.string(),

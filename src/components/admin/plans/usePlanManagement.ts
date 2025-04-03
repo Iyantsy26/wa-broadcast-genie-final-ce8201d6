@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +43,7 @@ export const usePlanManagement = () => {
       
       if (data && data.length > 0) {
         const formattedPlans = data.map(plan => {
-          // Cast to avoid TypeScript errors when accessing properties
+          // Parse the features object from JSON safely
           const featuresObj = plan.features as unknown as Record<string, any>;
           
           return {
@@ -53,8 +52,8 @@ export const usePlanManagement = () => {
             description: plan.description || '',
             price: plan.price || 0,
             interval: plan.interval as 'monthly' | 'yearly',
-            features: featuresObj?.features || [],
-            isPopular: featuresObj?.isPopular || false,
+            features: Array.isArray(featuresObj?.features) ? featuresObj.features : [],
+            isPopular: Boolean(featuresObj?.isPopular || false),
             currency: featuresObj?.currency || 'INR'
           };
         });
@@ -147,6 +146,9 @@ export const usePlanManagement = () => {
         currency: plan.currency || 'INR'
       };
       
+      // Convert the features object to JSON compatible with Supabase
+      const jsonFeatures = featuresObject as unknown as Json;
+      
       const { error } = await supabase
         .from('plans')
         .upsert({
@@ -155,7 +157,7 @@ export const usePlanManagement = () => {
           description: plan.description,
           price: plan.price,
           interval: plan.interval,
-          features: featuresObject as unknown as Json,
+          features: jsonFeatures,
           is_active: true
         });
         
