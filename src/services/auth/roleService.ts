@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
 import { checkUserHasRole } from "./roleUtils";
-import { DEFAULT_SUPER_ADMIN_EMAIL } from "./authConstants";
+import { DEFAULT_SUPER_ADMIN_EMAIL, DEFAULT_SUPER_ADMIN_PASSWORD } from "./authConstants";
 
 /**
  * Check if the current user has a specific role
