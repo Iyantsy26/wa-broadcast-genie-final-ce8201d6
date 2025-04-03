@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,40 +31,77 @@ export const validateAvatarFile = (file: File, toast: ReturnType<typeof useToast
 
 export const uploadAvatarToStorage = async (userId: string, file: File) => {
   try {
-    // Check if the avatars bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+    // Create a separate bucket path for super-admin avatars if the user is super-admin
+    const bucketName = 'avatars';
+    const isSuperAdmin = userId === 'super-admin';
     
-    if (!avatarsBucketExists) {
-      // Create avatars bucket if it doesn't exist
-      console.log("Creating avatars bucket");
-      await supabase.storage.createBucket('avatars', {
-        public: true,
-        fileSizeLimit: MAX_FILE_SIZE
-      });
+    try {
+      // Check if the avatars bucket exists
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const avatarsBucketExists = buckets?.some(bucket => bucket.name === bucketName);
+      
+      if (!avatarsBucketExists) {
+        // Create avatars bucket if it doesn't exist
+        console.log("Creating avatars bucket");
+        const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: MAX_FILE_SIZE
+        });
+        
+        if (bucketError) {
+          console.error("Error creating bucket:", bucketError);
+          throw bucketError;
+        }
+      }
+    } catch (bucketError) {
+      console.log("Error checking/creating bucket, will attempt to use anyway:", bucketError);
     }
     
     // Prepare file details
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const fileName = isSuperAdmin ? 
+      `${userId}-${Date.now()}.${fileExt}` : 
+      `${userId.substring(0, 8)}-${Date.now()}.${fileExt}`;
     
     // Upload the file
     console.log("Uploading file to avatars bucket:", fileName);
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from(bucketName)
       .upload(fileName, file, { upsert: true });
       
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      throw uploadError;
+      
+      // Fallback: for demo or development purposes, just store in localStorage
+      if (isSuperAdmin) {
+        const reader = new FileReader();
+        return new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              localStorage.setItem('superAdminAvatarUrl', reader.result);
+              resolve(reader.result);
+            } else {
+              reject(new Error("Failed to get string result from FileReader"));
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } else {
+        throw uploadError;
+      }
     }
     
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('avatars')
+      .from(bucketName)
       .getPublicUrl(fileName);
       
     if (urlData && urlData.publicUrl) {
+      // If super admin, also store in localStorage as backup
+      if (isSuperAdmin) {
+        localStorage.setItem('superAdminAvatarUrl', urlData.publicUrl);
+      }
       return urlData.publicUrl;
     }
     
@@ -89,6 +127,13 @@ export const updateUserAvatar = async (userId: string, publicUrl: string) => {
 };
 
 export const updateTeamMemberAvatar = async (userId: string, publicUrl: string, userData?: { name?: string; email?: string; role?: string; custom_id?: string }) => {
+  // Skip team_members update for super-admin as it's a special case
+  // and the UUID format causes errors
+  if (userId === 'super-admin') {
+    console.log("Skipping team_members update for super-admin");
+    return;
+  }
+  
   if (userId !== 'super-admin') {
     // Get existing user data if not provided
     let name = userData?.name;

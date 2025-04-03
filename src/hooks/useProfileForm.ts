@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +13,7 @@ export const useProfileForm = (user: User | null) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [originalEmail, setOriginalEmail] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -123,7 +125,7 @@ export const useProfileForm = (user: User | null) => {
     loadProfile();
   }, [user, form, isSuperAdmin]);
 
-  // Handle form submission with improved email handling
+  // Handle form submission with improved error handling for super admin
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSaving(true);
@@ -136,29 +138,35 @@ export const useProfileForm = (user: User | null) => {
         console.log("Updating profile for user:", user.id);
         
         try {
-          // First update team_members table
-          const { error: teamError } = await supabase
-            .from('team_members')
-            .upsert({
-              id: user.id,
-              name: data.name,
-              email: data.email,
-              phone: data.phone,
-              company: data.company,
-              address: data.address,
-              is_super_admin: isSuperAdmin,
-              role: isSuperAdmin ? 'super_admin' : 'admin',
-              status: 'active',
-              last_active: new Date().toISOString(),
-              // Don't update custom_id here - it's read-only
-            }, { onConflict: 'id' });
+          // Skip team_members update for super-admin if it's the special "super-admin" string ID
+          // Only attempt team_members update if it's a valid UUID
+          if (user.id !== 'super-admin') {
+            // First update team_members table
+            const { error: teamError } = await supabase
+              .from('team_members')
+              .upsert({
+                id: user.id,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                company: data.company,
+                address: data.address,
+                is_super_admin: isSuperAdmin,
+                role: isSuperAdmin ? 'super_admin' : 'admin',
+                status: 'active',
+                last_active: new Date().toISOString(),
+                // Don't update custom_id here - it's read-only
+              }, { onConflict: 'id' });
+              
+            if (teamError) {
+              console.error("Error updating team_members:", teamError);
+              throw new Error(`Failed to update team members profile: ${teamError.message}`);
+            }
             
-          if (teamError) {
-            console.error("Error updating team_members:", teamError);
-            throw new Error(`Failed to update team members profile: ${teamError.message}`);
+            console.log("Updated team_members successfully");
+          } else {
+            console.log("Skipping team_members update for special super-admin ID");
           }
-          
-          console.log("Updated team_members successfully");
           
           // Then update user metadata
           const { error: metadataError } = await supabase.auth.updateUser({
@@ -192,6 +200,11 @@ export const useProfileForm = (user: User | null) => {
               title: "Email update initiated",
               description: "A confirmation email has been sent to your new email address. Please check your inbox to confirm the change.",
             });
+          }
+          
+          // Always update localStorage for super admin profile
+          if (isSuperAdmin || isSuperAdminMode) {
+            localStorage.setItem('superAdminProfile', JSON.stringify(data));
           }
           
           toast({
@@ -242,6 +255,7 @@ export const useProfileForm = (user: User | null) => {
       });
     } finally {
       setIsSaving(false);
+      setIsEditing(false);
     }
   };
 
@@ -249,6 +263,8 @@ export const useProfileForm = (user: User | null) => {
     form,
     isSaving,
     isSuperAdmin,
+    isEditing,
+    setIsEditing,
     onSubmit
   };
 };
