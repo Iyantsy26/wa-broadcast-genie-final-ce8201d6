@@ -1,10 +1,22 @@
 
+// This Supabase Edge Function ensures the avatars bucket exists with proper permissions
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
 
 console.log("Create avatars bucket function is running!");
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
   try {
     // Create a Supabase client with the Admin key
     const supabaseAdmin = createClient(
@@ -44,41 +56,41 @@ serve(async (req) => {
       // Add RLS policies for the bucket
       try {
         // Allow public read access to the avatars
-        await supabaseAdmin.rpc('set_bucket_rls_policy', { 
+        await supabaseAdmin.rpc('set_bucket_policy', { 
           bucket_name: 'avatars', 
           policy_name: 'Public Read Access', 
-          definition: 'true', 
-          operation: 'SELECT' 
+          policy_definition: 'true', 
+          policy_operation: 'SELECT' 
         });
 
         // Allow authenticated users to upload their own avatars
-        await supabaseAdmin.rpc('set_bucket_rls_policy', { 
+        await supabaseAdmin.rpc('set_bucket_policy', { 
           bucket_name: 'avatars', 
-          policy_name: 'Auth User Upload Access', 
-          definition: 'auth.uid() = SPLIT_PART(name, \'-\', 1)', 
-          operation: 'INSERT' 
+          policy_name: 'Auth User Access', 
+          policy_definition: 'auth.role() = \'authenticated\'', 
+          policy_operation: 'INSERT' 
         });
 
         // Allow users to update/delete their own avatars
-        await supabaseAdmin.rpc('set_bucket_rls_policy', { 
+        await supabaseAdmin.rpc('set_bucket_policy', { 
           bucket_name: 'avatars', 
           policy_name: 'Auth User Update Access', 
-          definition: 'auth.uid() = SPLIT_PART(name, \'-\', 1)', 
-          operation: 'UPDATE' 
+          policy_definition: 'auth.role() = \'authenticated\'', 
+          policy_operation: 'UPDATE' 
         });
 
-        await supabaseAdmin.rpc('set_bucket_rls_policy', { 
+        await supabaseAdmin.rpc('set_bucket_policy', { 
           bucket_name: 'avatars', 
           policy_name: 'Auth User Delete Access', 
-          definition: 'auth.uid() = SPLIT_PART(name, \'-\', 1)', 
-          operation: 'DELETE' 
+          policy_definition: 'auth.role() = \'authenticated\'', 
+          policy_operation: 'DELETE' 
         });
 
         return new Response(JSON.stringify({ 
           success: true, 
           message: 'Avatars bucket created with proper RLS policies' 
         }), {
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200
         });
       } catch (policyError) {
@@ -89,7 +101,7 @@ serve(async (req) => {
           message: 'Avatars bucket created but RLS policy setup failed',
           error: policyError
         }), {
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 207
         });
       }
@@ -99,7 +111,7 @@ serve(async (req) => {
       success: true, 
       message: 'Avatars bucket already exists' 
     }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
     });
   } catch (error) {
@@ -109,7 +121,7 @@ serve(async (req) => {
       message: 'Failed to create avatars bucket',
       error: error.message 
     }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
   }

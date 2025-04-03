@@ -5,7 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   validateAvatarFile, 
   uploadAvatarToStorage, 
-  updateUserAvatarInDatabase 
+  updateUserAvatarInDatabase,
+  createAvatarsBucket 
 } from "@/utils/avatarUtils";
 
 export const useAvatarUpload = (user: User | null) => {
@@ -24,6 +25,9 @@ export const useAvatarUpload = (user: User | null) => {
     
     try {
       setUploading(true);
+      
+      // First, ensure bucket exists with correct policies
+      await createAvatarsBucket();
       
       // Validate the file
       const validation = validateAvatarFile(file);

@@ -31,7 +31,7 @@ export const createAvatarsBucket = async (): Promise<void> => {
     if (!avatarsBucketExists) {
       // Create the bucket
       const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-        public: true,
+        public: true, // Make the bucket public
         fileSizeLimit: 2 * 1024 * 1024, // 2MB
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
       });
@@ -39,6 +39,42 @@ export const createAvatarsBucket = async (): Promise<void> => {
       if (bucketError) {
         console.error("Error creating bucket:", bucketError);
         throw bucketError;
+      }
+      
+      // Add public SELECT policy for avatars (allows public access)
+      const { error: policyError } = await supabase.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Public Read Access',
+        definition: 'true', // Anyone can read
+        operation: 'SELECT'
+      }).single();
+      
+      if (policyError && !policyError.message.includes("already exists")) {
+        console.error("Error setting public read policy:", policyError);
+      }
+      
+      // Add INSERT policy to allow authenticated users to upload their own avatars
+      const { error: insertPolicyError } = await supabase.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Authenticated Insert Access',
+        definition: 'auth.role() = \'authenticated\'', // Any authenticated user can upload
+        operation: 'INSERT'
+      }).single();
+      
+      if (insertPolicyError && !insertPolicyError.message.includes("already exists")) {
+        console.error("Error setting insert policy:", insertPolicyError);
+      }
+      
+      // Add UPDATE/DELETE policy for own files
+      const { error: updatePolicyError } = await supabase.rpc('create_storage_policy', {
+        bucket_name: 'avatars',
+        policy_name: 'Authenticated Update Own Files',
+        definition: 'auth.role() = \'authenticated\'',
+        operation: 'UPDATE'
+      }).single();
+      
+      if (updatePolicyError && !updatePolicyError.message.includes("already exists")) {
+        console.error("Error setting update policy:", updatePolicyError);
       }
     }
   } catch (bucketError) {
@@ -48,7 +84,7 @@ export const createAvatarsBucket = async (): Promise<void> => {
 };
 
 export const uploadAvatarToStorage = async (userId: string, file: File): Promise<string> => {
-  // First ensure bucket exists
+  // First ensure bucket exists with proper policies
   await createAvatarsBucket();
   
   // Prepare file details
