@@ -24,6 +24,7 @@ import BrandingSettings from "@/components/admin/BrandingSettings";
 import CompactAdminManagement from "@/components/admin/CompactAdminManagement";
 import OrganizationManagement from "@/components/admin/OrganizationManagement";
 import EnhancedDashboard from "@/components/admin/EnhancedDashboard";
+import SystemSettings from "@/components/admin/SystemSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { getDefaultSuperAdminEmail } from "@/services/auth/authService";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -194,7 +195,7 @@ const SuperAdmin = () => {
       </div>
       
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 w-full">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 w-full">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart className="h-4 w-4" />
             <span className="hidden sm:inline">Dashboard</span>
@@ -218,6 +219,10 @@ const SuperAdmin = () => {
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Settings</span>
+          </TabsTrigger>
+          <TabsTrigger value="system" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">System</span>
           </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -252,6 +257,10 @@ const SuperAdmin = () => {
               System settings functionality coming soon
             </div>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="system" className="space-y-4">
+          <SystemSettings />
         </TabsContent>
         
         <TabsContent value="profile" className="space-y-6">

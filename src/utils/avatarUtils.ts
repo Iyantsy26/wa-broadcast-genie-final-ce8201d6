@@ -53,6 +53,24 @@ export const uploadAvatarToStorage = async (userId: string, file: File): Promise
       
     if (uploadError) {
       console.error("Upload error:", uploadError);
+      
+      // Provide more detailed error logs
+      if (uploadError.message.includes('row-level security policy')) {
+        console.error("RLS policy violation. This could be due to insufficient permissions.");
+        console.error("User ID:", userId);
+        
+        // Try to get more details about the bucket policies
+        const { data: policies, error: policiesError } = await supabase
+          .rpc('get_storage_policies', { bucket_name: 'avatars' })
+          .catch(() => ({ data: null, error: { message: 'Could not fetch policies' } }));
+          
+        if (policiesError) {
+          console.error("Error fetching policies:", policiesError);
+        } else {
+          console.log("Current bucket policies:", policies);
+        }
+      }
+      
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
     
@@ -99,6 +117,12 @@ export const updateUserAvatarInDatabase = async (userId: string, avatarUrl: stri
       } else {
         console.log("No team_member record found for avatar update - this is normal for some users");
       }
+    }
+    
+    // Store permanently for super admin in localStorage
+    if (localStorage.getItem('isSuperAdmin') === 'true') {
+      localStorage.setItem('superAdminAvatarUrl', avatarUrl);
+      console.log("Saved super admin avatar to localStorage for persistence");
     }
   } catch (error) {
     console.error("Error in updateUserAvatarInDatabase:", error);
