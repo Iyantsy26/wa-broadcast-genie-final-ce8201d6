@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, Bell, LogOut, Settings, ShieldCheck, Building, Globe } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from "@/hooks/use-toast";
-import { signOutAndRedirect, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
+import { signOut, isAuthenticated, checkUserRole, getDefaultSuperAdminEmail } from "@/services/auth/authService";
 import { UserRole } from "@/services/devices/deviceTypes";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -63,13 +64,14 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   
   const handleSignOut = async () => {
     try {
-      const success = await signOutAndRedirect();
+      const success = await signOut();
       if (success) {
         toast({
           title: "Signed out",
           description: "You have been signed out successfully",
         });
-        // The redirect is handled in signOutAndRedirect function
+        // Redirect to login page after signing out
+        navigate('/login');
       } else {
         console.error('Sign out failed');
         toast({

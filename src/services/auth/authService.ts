@@ -1,11 +1,15 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "../devices/deviceTypes";
 import { checkUserHasRole } from "./roleUtils";
-import { signInWithEmail, signOutAndRedirect } from "@/utils/authUtils";
+import { signInWithEmail, signOutAndRedirect as authUtilsSignOutAndRedirect } from "@/utils/authUtils";
 
 // Default Super Admin credentials
 const DEFAULT_SUPER_ADMIN_EMAIL = "ssadmin@admin.com";
 const DEFAULT_SUPER_ADMIN_PASSWORD = "123456";
+
+// Export the signOutAndRedirect function from authUtils
+export { authUtilsSignOutAndRedirect as signOutAndRedirect };
 
 /**
  * Check if the current user has a specific role
@@ -269,10 +273,14 @@ export const signOut = async (): Promise<boolean> => {
   try {
     // Clear super admin status from localStorage
     localStorage.removeItem('isSuperAdmin');
-    // Don't remove superAdminProfile or superAdminAvatarUrl on sign out
-    // This allows the profile to persist across sessions
     
     const { error } = await supabase.auth.signOut();
+    
+    if (!error) {
+      // Redirect to login page after signing out
+      window.location.href = `${window.location.origin}/login`;
+    }
+    
     return !error;
   } catch (error) {
     console.error('Error signing out:', error);
@@ -302,7 +310,6 @@ export const signOutUser = async () => {
 
 /**
  * Check if the provided credentials match the default Super Admin
- * NOTE: This is for demo purposes only and should not be used in production
  */
 export const isDefaultSuperAdmin = (email: string, password: string): boolean => {
   return email === DEFAULT_SUPER_ADMIN_EMAIL && password === DEFAULT_SUPER_ADMIN_PASSWORD;
