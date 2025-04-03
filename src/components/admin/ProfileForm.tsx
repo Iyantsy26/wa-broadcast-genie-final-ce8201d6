@@ -15,7 +15,16 @@ interface ProfileFormProps {
 }
 
 const ProfileForm = ({ user }: ProfileFormProps) => {
-  const { form, isSaving, isSuperAdmin, isEditing, setIsEditing, onSubmit } = useProfileForm(user);
+  const { 
+    form, 
+    isSaving, 
+    isSuperAdmin, 
+    isEditing, 
+    setIsEditing, 
+    onSubmit, 
+    formState
+  } = useProfileForm(user);
+  
   const isSuperAdminMode = localStorage.getItem('isSuperAdmin') === 'true';
   const customId = form.watch('customId');
   
@@ -43,6 +52,7 @@ const ProfileForm = ({ user }: ProfileFormProps) => {
           profile={profileData}
           isEditing={isEditing}
           onEdit={handleEditClick}
+          formState={formState}
         />
       )}
     
