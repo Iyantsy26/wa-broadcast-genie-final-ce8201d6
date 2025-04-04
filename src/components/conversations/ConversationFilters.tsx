@@ -20,21 +20,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
-  MessageSquare,
   RefreshCw,
-  CheckCircle,
-  Clock,
   SlidersHorizontal,
   User,
   X,
   Tag,
+  Users,
+  UserRound,
+  Building2,
 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import DateRangePicker from './DateRangePicker';
+import { ChatType } from '@/types/conversation';
 
 interface ConversationFiltersProps {
-  statusFilter: string;
-  setStatusFilter: (status: string) => void;
+  chatTypeFilter: ChatType | 'all';
+  setChatTypeFilter: (type: ChatType | 'all') => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   dateRange?: DateRange;
@@ -49,8 +50,8 @@ interface ConversationFiltersProps {
 }
 
 const ConversationFilters: React.FC<ConversationFiltersProps> = ({
-  statusFilter,
-  setStatusFilter,
+  chatTypeFilter,
+  setChatTypeFilter,
   searchTerm,
   setSearchTerm,
   dateRange,
@@ -64,7 +65,7 @@ const ConversationFilters: React.FC<ConversationFiltersProps> = ({
   resetAllFilters
 }) => {
   const activeFilterCount = [
-    statusFilter !== 'all',
+    chatTypeFilter !== 'all',
     !!dateRange?.from,
     !!assigneeFilter,
     !!tagFilter,
@@ -100,28 +101,24 @@ const ConversationFilters: React.FC<ConversationFiltersProps> = ({
             
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Status: {statusFilter === 'all' ? 'All' : statusFilter}
+                <User className="h-4 w-4 mr-2" />
+                Contact Type: {chatTypeFilter === 'all' ? 'All' : chatTypeFilter}
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
-                    <DropdownMenuRadioItem value="all">All Statuses</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="new">
-                      <MessageSquare className="h-4 w-4 text-blue-600 mr-2" />
-                      New
+                  <DropdownMenuRadioGroup value={chatTypeFilter} onValueChange={(value) => setChatTypeFilter(value as ChatType | 'all')}>
+                    <DropdownMenuRadioItem value="all">All Contacts</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="client">
+                      <Building2 className="h-4 w-4 text-emerald-600 mr-2" />
+                      Clients
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="active">
-                      <RefreshCw className="h-4 w-4 text-green-600 mr-2" />
-                      Active
+                    <DropdownMenuRadioItem value="lead">
+                      <UserRound className="h-4 w-4 text-amber-600 mr-2" />
+                      Leads
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="resolved">
-                      <CheckCircle className="h-4 w-4 text-purple-600 mr-2" />
-                      Resolved
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="waiting">
-                      <Clock className="h-4 w-4 text-amber-600 mr-2" />
-                      Waiting
+                    <DropdownMenuRadioItem value="team">
+                      <Users className="h-4 w-4 text-indigo-600 mr-2" />
+                      Team
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
@@ -199,35 +196,39 @@ const ConversationFilters: React.FC<ConversationFiltersProps> = ({
         </DropdownMenu>
         
         <Button 
-          variant={statusFilter === 'all' ? "secondary" : "outline"} 
+          variant={chatTypeFilter === 'all' ? "secondary" : "outline"} 
           size="sm" 
           className="text-xs"
-          onClick={() => setStatusFilter('all')}
+          onClick={() => setChatTypeFilter('all')}
         >
           All
         </Button>
         <Button 
-          variant={statusFilter === 'new' ? "secondary" : "outline"}
+          variant={chatTypeFilter === 'client' ? "secondary" : "outline"}
           size="sm" 
           className="text-xs"
-          onClick={() => setStatusFilter('new')}
+          onClick={() => setChatTypeFilter('client')}
         >
-          <MessageSquare className="h-3 w-3 mr-1 text-blue-600" />
-          New
+          <Building2 className="h-3 w-3 mr-1 text-emerald-600" />
+          Clients
         </Button>
         <Button 
-          variant={statusFilter === 'active' ? "secondary" : "outline"}
+          variant={chatTypeFilter === 'lead' ? "secondary" : "outline"}
           size="sm" 
           className="text-xs"
-          onClick={() => setStatusFilter('active')}
+          onClick={() => setChatTypeFilter('lead')}
         >
-          <RefreshCw className="h-3 w-3 mr-1 text-green-600" />
-          Active
+          <UserRound className="h-3 w-3 mr-1 text-amber-600" />
+          Leads
         </Button>
-        
-        <Button variant="outline" size="sm" className="text-xs">
-          <Badge className="h-4 w-4 px-1 text-[10px] bg-blue-500">3</Badge>
-          <span className="ml-1">Unread</span>
+        <Button 
+          variant={chatTypeFilter === 'team' ? "secondary" : "outline"}
+          size="sm" 
+          className="text-xs"
+          onClick={() => setChatTypeFilter('team')}
+        >
+          <Users className="h-3 w-3 mr-1 text-indigo-600" />
+          Team
         </Button>
       </div>
     </div>

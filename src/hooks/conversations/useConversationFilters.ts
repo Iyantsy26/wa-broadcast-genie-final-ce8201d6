@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
-import { Conversation } from '@/types/conversation';
+import { Conversation, ChatType } from '@/types/conversation';
 
 export const useConversationFilters = (conversations: Conversation[]) => {
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
   const [groupedConversations, setGroupedConversations] = useState<{[name: string]: Conversation[]}>({});
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [chatTypeFilter, setChatTypeFilter] = useState<ChatType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [assigneeFilter, setAssigneeFilter] = useState<string>('');
@@ -18,6 +19,10 @@ export const useConversationFilters = (conversations: Conversation[]) => {
     
     if (statusFilter !== 'all') {
       filtered = filtered.filter(convo => convo.status === statusFilter);
+    }
+    
+    if (chatTypeFilter !== 'all') {
+      filtered = filtered.filter(convo => convo.chatType === chatTypeFilter);
     }
     
     if (searchTerm) {
@@ -57,7 +62,11 @@ export const useConversationFilters = (conversations: Conversation[]) => {
     setFilteredConversations(filtered);
     
     const grouped = filtered.reduce((acc, conversation) => {
-      const name = conversation.contact.name;
+      // Group by contact type and name
+      const prefix = conversation.chatType === 'client' ? 'Client' : 
+                    conversation.chatType === 'lead' ? 'Lead' : 'Team';
+      const name = `${prefix}: ${conversation.contact.name}`;
+      
       if (!acc[name]) {
         acc[name] = [];
       }
@@ -66,10 +75,11 @@ export const useConversationFilters = (conversations: Conversation[]) => {
     }, {} as {[name: string]: Conversation[]});
     
     setGroupedConversations(grouped);
-  }, [conversations, statusFilter, searchTerm, dateRange, assigneeFilter, tagFilter]);
+  }, [conversations, statusFilter, chatTypeFilter, searchTerm, dateRange, assigneeFilter, tagFilter]);
 
   const resetAllFilters = () => {
     setStatusFilter('all');
+    setChatTypeFilter('all');
     setDateRange(undefined);
     setAssigneeFilter('');
     setTagFilter('');
@@ -80,11 +90,13 @@ export const useConversationFilters = (conversations: Conversation[]) => {
     filteredConversations,
     groupedConversations,
     statusFilter,
+    chatTypeFilter,
     searchTerm,
     dateRange,
     assigneeFilter,
     tagFilter,
     setStatusFilter,
+    setChatTypeFilter,
     setSearchTerm,
     setDateRange,
     setAssigneeFilter,

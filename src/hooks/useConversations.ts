@@ -3,6 +3,8 @@ import { useConversationState } from './conversations/useConversationState';
 import { useConversationFilters } from './conversations/useConversationFilters';
 import { useConversationMessages } from './conversations/useConversationMessages';
 import { useConversationActions } from './conversations/useConversationActions';
+import { useState } from 'react';
+import { Conversation, ChatType } from '@/types/conversation';
 
 export const useConversations = () => {
   const {
@@ -20,11 +22,13 @@ export const useConversations = () => {
     filteredConversations,
     groupedConversations,
     statusFilter,
+    chatTypeFilter,
     searchTerm,
     dateRange,
     assigneeFilter,
     tagFilter,
     setStatusFilter,
+    setChatTypeFilter,
     setSearchTerm,
     setDateRange,
     setAssigneeFilter,
@@ -55,6 +59,7 @@ export const useConversations = () => {
   return {
     // State
     conversations,
+    setConversations,
     filteredConversations,
     groupedConversations,
     activeConversation,
@@ -64,6 +69,7 @@ export const useConversations = () => {
     
     // Filters
     statusFilter,
+    chatTypeFilter,
     searchTerm,
     dateRange,
     assigneeFilter,
@@ -76,6 +82,7 @@ export const useConversations = () => {
     setActiveConversation,
     setIsSidebarOpen,
     setStatusFilter,
+    setChatTypeFilter,
     setSearchTerm,
     setDateRange,
     setAssigneeFilter,

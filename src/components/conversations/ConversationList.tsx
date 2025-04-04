@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Conversation } from '@/types/conversation';
+import { Conversation, ChatType } from '@/types/conversation';
 import { DateRange } from 'react-day-picker';
 import ConversationFilters from './ConversationFilters';
 import ActiveFilterBadges from './ActiveFilterBadges';
@@ -12,8 +12,8 @@ interface ConversationListProps {
   groupedConversations: {[name: string]: Conversation[]};
   activeConversation: Conversation | null;
   setActiveConversation: (conversation: Conversation) => void;
-  statusFilter: string;
-  setStatusFilter: (status: string) => void;
+  chatTypeFilter: ChatType | 'all';
+  setChatTypeFilter: (type: ChatType | 'all') => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   dateRange?: DateRange;
@@ -32,8 +32,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
   groupedConversations,
   activeConversation,
   setActiveConversation,
-  statusFilter,
-  setStatusFilter,
+  chatTypeFilter,
+  setChatTypeFilter,
   searchTerm,
   setSearchTerm,
   dateRange,
@@ -42,16 +42,26 @@ const ConversationList: React.FC<ConversationListProps> = ({
   setAssigneeFilter,
   tagFilter,
   setTagFilter,
-  resetAllFilters
+  resetAllFilters,
+  pinConversation,
+  archiveConversation
 }) => {
   const assignees = Array.from(new Set(conversations.filter(c => c.assignedTo).map(c => c.assignedTo as string)));
   const tags = Array.from(new Set(conversations.flatMap(c => c.tags || [])));
 
+  // Filter conversations based on contact type
+  const displayConversations = React.useMemo(() => {
+    if (chatTypeFilter === 'all') {
+      return conversations;
+    }
+    return conversations.filter(c => c.chatType === chatTypeFilter);
+  }, [conversations, chatTypeFilter]);
+
   return (
     <div className="w-1/3 flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden">
       <ConversationFilters 
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
+        chatTypeFilter={chatTypeFilter}
+        setChatTypeFilter={setChatTypeFilter}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         dateRange={dateRange}
@@ -66,11 +76,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
       />
       
       <ActiveFilterBadges 
-        statusFilter={statusFilter}
+        chatTypeFilter={chatTypeFilter}
         dateRange={dateRange}
         assigneeFilter={assigneeFilter}
         tagFilter={tagFilter}
-        setStatusFilter={setStatusFilter}
+        setChatTypeFilter={setChatTypeFilter}
         setDateRange={setDateRange}
         setAssigneeFilter={setAssigneeFilter}
         setTagFilter={setTagFilter}
@@ -78,21 +88,30 @@ const ConversationList: React.FC<ConversationListProps> = ({
       
       <div className="flex-1 overflow-auto">
         {Object.keys(groupedConversations).length > 0 ? (
-          Object.entries(groupedConversations).map(([name, groupConversations]) => (
-            <div key={name} className="mb-2">
-              <div className="px-3 py-1 bg-muted font-medium text-sm sticky top-0">
-                {name} ({groupConversations.length})
+          Object.entries(groupedConversations).map(([name, groupConversations]) => {
+            // Filter by contact type
+            const filteredGroupConversations = chatTypeFilter === 'all'
+              ? groupConversations
+              : groupConversations.filter(c => c.chatType === chatTypeFilter);
+              
+            if (filteredGroupConversations.length === 0) return null;
+            
+            return (
+              <div key={name} className="mb-2">
+                <div className="px-3 py-1 bg-muted font-medium text-sm sticky top-0">
+                  {name} ({filteredGroupConversations.length})
+                </div>
+                {filteredGroupConversations.map((conversation) => (
+                  <ConversationItem 
+                    key={conversation.id}
+                    conversation={conversation}
+                    isActive={activeConversation?.id === conversation.id}
+                    onClick={() => setActiveConversation(conversation)}
+                  />
+                ))}
               </div>
-              {groupConversations.map((conversation) => (
-                <ConversationItem 
-                  key={conversation.id}
-                  conversation={conversation}
-                  isActive={activeConversation?.id === conversation.id}
-                  onClick={() => setActiveConversation(conversation)}
-                />
-              ))}
-            </div>
-          ))
+            );
+          })
         ) : (
           <EmptyConversations resetAllFilters={resetAllFilters} />
         )}

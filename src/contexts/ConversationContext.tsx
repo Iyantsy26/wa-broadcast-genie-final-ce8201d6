@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, ReactNode, useRef } from 'react';
 import { useConversations } from '@/hooks/useConversations';
-import { Conversation, Message, Contact } from '@/types/conversation';
+import { Conversation, Message, Contact, ChatType } from '@/types/conversation';
 import { DateRange } from 'react-day-picker';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ConversationContextType {
   conversations: Conversation[];
@@ -12,7 +13,7 @@ interface ConversationContextType {
   messages: Message[];
   isSidebarOpen: boolean;
   isTyping: boolean;
-  statusFilter: string;
+  chatTypeFilter: ChatType | 'all';
   searchTerm: string;
   dateRange?: DateRange;
   assigneeFilter: string;
@@ -26,7 +27,7 @@ interface ConversationContextType {
   // Methods
   setActiveConversation: (conversation: Conversation) => void;
   setIsSidebarOpen: (isOpen: boolean) => void;
-  setStatusFilter: (status: string) => void;
+  setChatTypeFilter: (type: ChatType | 'all') => void;
   setSearchTerm: (term: string) => void;
   setDateRange: (range?: DateRange) => void;
   setAssigneeFilter: (assignee: string) => void;
@@ -50,6 +51,7 @@ interface ConversationContextType {
   handleUseCannedReply: (replyId: string) => void;
   handleTranslateMessage: (messageId: string, targetLanguage: string) => void;
   handleRequestAIAssistance: (prompt: string) => Promise<string>;
+  handleAddContact: (name: string, phone: string, type: ChatType) => void;
   
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
@@ -63,6 +65,7 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [replyToMessage, setReplyToMessage] = React.useState<Message | null>(null);
   const [selectedDevice, setSelectedDevice] = React.useState<string>('');
   const [aiAssistantActive, setAiAssistantActive] = React.useState<boolean>(false);
+  const [chatTypeFilter, setChatTypeFilter] = React.useState<ChatType | 'all'>('all');
   
   // Mock canned replies
   const [cannedReplies] = React.useState([
@@ -105,6 +108,52 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
     await new Promise(resolve => setTimeout(resolve, 1000));
     return "This is a response from the AI assistant. In a real implementation, this would come from an AI service.";
   };
+
+  // Add new contact and create conversation
+  const handleAddContact = (name: string, phone: string, type: ChatType) => {
+    // Create a new contact
+    const newContact: Contact = {
+      id: uuidv4(),
+      name,
+      phone,
+      type,
+      isOnline: false
+    };
+    
+    // Create a new conversation
+    const newConversation: Conversation = {
+      id: uuidv4(),
+      contact: newContact,
+      lastMessage: {
+        content: 'Start a new conversation',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      status: 'new',
+      chatType: type,
+      unreadCount: 0
+    };
+    
+    // Add conversation to state
+    conversationsState.setConversations([
+      newConversation,
+      ...conversationsState.conversations
+    ]);
+    
+    // Set as active conversation
+    conversationsState.setActiveConversation(newConversation);
+  };
+  
+  // Filter conversations based on chat type
+  React.useEffect(() => {
+    if (chatTypeFilter !== 'all') {
+      const filtered = conversationsState.filteredConversations.filter(
+        conversation => conversation.chatType === chatTypeFilter
+      );
+      conversationsState.setActiveConversation(filtered[0] || null);
+    }
+  }, [chatTypeFilter]);
   
   // Simulate typing indicator when sending messages
   React.useEffect(() => {
@@ -125,6 +174,16 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
     conversationsState.messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationsState.messages]);
 
+  // Reset filters
+  const resetAllFilters = () => {
+    setChatTypeFilter('all');
+    conversationsState.setStatusFilter('all');
+    conversationsState.setSearchTerm('');
+    conversationsState.setDateRange(undefined);
+    conversationsState.setAssigneeFilter('');
+    conversationsState.setTagFilter('');
+  };
+
   return (
     <ConversationContext.Provider value={{
       ...conversationsState,
@@ -136,11 +195,15 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
       setSelectedDevice,
       aiAssistantActive,
       setAiAssistantActive,
+      chatTypeFilter,
+      setChatTypeFilter,
+      resetAllFilters: resetAllFilters,
       handleReplyToMessage,
       handleCancelReply,
       handleUseCannedReply,
       handleTranslateMessage,
       handleRequestAIAssistance,
+      handleAddContact,
       handleAddReaction: (messageId, emoji) => {
         console.log(`Adding reaction ${emoji} to message ${messageId}`);
         // In a real implementation, this would update the message
