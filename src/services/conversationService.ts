@@ -7,6 +7,8 @@ import { deleteConversation } from './conversations/deleteConversation';
 import { archiveConversation } from './conversations/archiveConversation';
 import { addTagToConversation, removeTag } from './conversations/tagOperations';
 import { assignConversation } from './conversations/assignOperations';
+import { translateMessage } from './conversations/translateMessage';
+import { generateAIResponse } from './conversations/generateAIResponse';
 
 export {
   getConversations,
@@ -17,5 +19,7 @@ export {
   archiveConversation,
   addTagToConversation,
   removeTag,
-  assignConversation
+  assignConversation,
+  translateMessage,
+  generateAIResponse
 };

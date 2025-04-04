@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,19 +17,28 @@ import {
   Smile,
   Image, 
   Video, 
-  FileText 
+  FileText,
+  MessageSquareDiff,
+  X
 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Message } from '@/types/conversation';
 
 interface MessageInputProps {
   onSendMessage: (content: string, file: File | null) => void;
   onVoiceMessageSent?: (durationInSeconds: number) => void;
+  onRequestAIAssistance?: (prompt: string) => Promise<string>;
+  replyTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({ 
   onSendMessage,
-  onVoiceMessageSent
+  onVoiceMessageSent,
+  onRequestAIAssistance,
+  replyTo,
+  onCancelReply
 }) => {
   const [messageInput, setMessageInput] = useState<string>('');
   const [isRecording, setIsRecording] = useState(false);
@@ -36,10 +46,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showFilePreview, setShowFilePreview] = useState(false);
   const [activeAttachmentType, setActiveAttachmentType] = useState<string | null>(null);
+  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recordingTimerRef = useRef<number | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const emojis = ['😀', '😂', '😊', '😍', '🥰', '😘', '😎', '👍', '🙏', '❤️', '🔥', '⭐', '🎉', '✅', '🤔', '👏', '🌟', '💯', '🤣', '😢'];
+  // Expanded emoji selection
+  const emojis = [
+    '😀', '😂', '😊', '😍', '🥰', '😘', '😎', '👍', '🙏', '❤️', 
+    '🔥', '⭐', '🎉', '✅', '🤔', '👏', '🌟', '💯', '🤣', '😢',
+    '👌', '🙌', '💪', '🤝', '😉', '🥳', '😇', '💭', '💬', '🚀'
+  ];
 
   const handleSendMessage = () => {
     if (messageInput.trim() || selectedFile) {
@@ -111,10 +128,47 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const addEmoji = (emoji: string) => {
     setMessageInput(prev => prev + emoji);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  const handleAIAssist = async () => {
+    if (!onRequestAIAssistance || !messageInput.trim()) return;
+    
+    setIsGeneratingResponse(true);
+    try {
+      const prompt = `Help me professionally respond to: "${messageInput}"`;
+      const response = await onRequestAIAssistance(prompt);
+      setMessageInput(response);
+    } catch (error) {
+      console.error('Error getting AI assistance:', error);
+      toast({
+        title: "AI Assistance Error",
+        description: "Failed to generate response. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingResponse(false);
+    }
   };
 
   return (
     <div className="p-3 border-t">
+      {replyTo && (
+        <div className="mb-2 p-2 bg-gray-100 rounded-md flex items-center justify-between">
+          <div className="flex-1">
+            <span className="text-xs text-muted-foreground">Replying to:</span>
+            <p className="text-sm truncate">{replyTo.content}</p>
+          </div>
+          {onCancelReply && (
+            <Button variant="ghost" size="sm" onClick={onCancelReply}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
+      
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -167,6 +221,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </Popover>
         
         <Textarea
+          ref={textareaRef}
           placeholder="Type a message..."
           className="min-h-[44px] max-h-[120px] resize-none"
           value={messageInput}
@@ -177,8 +232,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
               handleSendMessage();
             }
           }}
-          disabled={isRecording}
+          disabled={isRecording || isGeneratingResponse}
         />
+        
+        {onRequestAIAssistance && messageInput.trim() && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            disabled={isGeneratingResponse}
+            onClick={handleAIAssist}
+            title="Get AI assistance with this message"
+          >
+            <MessageSquareDiff className="h-5 w-5" />
+          </Button>
+        )}
         
         {!isRecording ? (
           <Button 
@@ -206,7 +273,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <Button 
           size="icon" 
           onClick={handleSendMessage}
-          disabled={(!messageInput.trim() && !selectedFile) || isRecording}
+          disabled={(!messageInput.trim() && !selectedFile) || isRecording || isGeneratingResponse}
         >
           <Send className="h-4 w-4" />
         </Button>
@@ -237,6 +304,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
           >
             Remove
           </Button>
+        </div>
+      )}
+      
+      {isGeneratingResponse && (
+        <div className="mt-2 p-2 bg-gray-100 rounded-md">
+          <div className="flex items-center gap-2">
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-1">
+                <div className="h-2 bg-gray-300 rounded"></div>
+                <div className="h-2 bg-gray-300 rounded w-3/4"></div>
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground">AI is writing...</span>
+          </div>
         </div>
       )}
     </div>
