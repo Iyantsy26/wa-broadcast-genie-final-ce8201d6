@@ -22,6 +22,7 @@ import Admin from "./pages/Admin";
 import WhiteLabel from "./pages/WhiteLabel";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
+import Conversations from "./pages/Conversations";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
 
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/devices" element={<Devices />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/clients" element={<Clients />} />
+            <Route path="/conversations" element={<Conversations />} />
             <Route path="/team" element={<TeamManagement />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/tickets" element={<Tickets />} />

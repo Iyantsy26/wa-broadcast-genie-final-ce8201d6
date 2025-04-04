@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Building,
   Globe,
-  LogIn
+  LogIn,
+  MessageSquare
 } from 'lucide-react';
 import { signOut } from '@/services/auth/authService';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +53,11 @@ const navItems: NavItem[] = [
     title: 'Chatbots',
     href: '/chatbots',
     icon: <Bot className="h-5 w-5" />,
+  },
+  {
+    title: 'Conversations',
+    href: '/conversations',
+    icon: <MessageSquare className="h-5 w-5" />,
   },
   {
     title: 'Devices',
