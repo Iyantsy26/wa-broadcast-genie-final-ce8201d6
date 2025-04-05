@@ -6,9 +6,17 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle, XCircle, Smartphone 
+  CheckCircle, XCircle, Smartphone, Mail, Phone, MessageSquare
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TeamMember } from "@/services/teamService";
+import { useToast } from "@/hooks/use-toast";
 
 interface TeamMembersListProps {
   members: TeamMember[];
@@ -19,6 +27,8 @@ const TeamMembersList = ({
   members,
   onViewProfile
 }: TeamMembersListProps) => {
+  const { toast } = useToast();
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -72,6 +82,39 @@ const TeamMembersList = ({
     }
   };
 
+  const handleSendEmail = (email: string) => {
+    window.location.href = `mailto:${email}`;
+    toast({
+      title: "Opening email client",
+      description: `Creating email to ${email}`
+    });
+  };
+
+  const handleCallPhone = (phone?: string) => {
+    if (!phone) {
+      toast({
+        title: "No phone number available",
+        description: "This team member doesn't have a phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+    window.location.href = `tel:${phone}`;
+    toast({
+      title: "Making call",
+      description: `Calling ${phone}`
+    });
+  };
+
+  const handleSendMessage = (id: string, name: string) => {
+    toast({
+      title: "Starting conversation",
+      description: `Opening chat with ${name}`
+    });
+    // This would typically navigate to a chat with this team member
+    // For now, just show a toast
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -82,6 +125,7 @@ const TeamMembersList = ({
           <TableHead>Status</TableHead>
           <TableHead>WhatsApp Accounts</TableHead>
           <TableHead>Last Active</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -138,6 +182,63 @@ const TeamMembersList = ({
               ) : (
                 '—'
               )}
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8"
+                        onClick={() => handleSendEmail(member.email)}
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Email</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8"
+                        onClick={() => handleCallPhone(member.phone)}
+                      >
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Call</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8"
+                        onClick={() => handleSendMessage(member.id, member.name)}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Message</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </TableCell>
           </TableRow>
         ))}

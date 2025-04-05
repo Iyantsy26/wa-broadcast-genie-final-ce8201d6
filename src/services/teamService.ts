@@ -11,8 +11,12 @@ export interface TeamMember {
   role: 'admin' | 'manager' | 'agent';
   status: 'active' | 'inactive' | 'pending';
   whatsappAccounts: string[];
+  whatsappPermissions?: any[];
   department?: string;
   lastActive?: string;
+  position?: string;
+  address?: string;
+  company?: string;
 }
 
 export interface Department {
@@ -30,58 +34,77 @@ export interface Role {
   description: string;
 }
 
-// In-memory store for mock team members
-let mockTeamMembers: TeamMember[] = [
-  {
-    id: uuidv4(),
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 123 456 7890',
-    avatar: 'https://i.pravatar.cc/150?u=1',
-    role: 'admin',
-    status: 'active',
-    whatsappAccounts: ['Main Account'],
-    department: 'Customer Support',
-    lastActive: new Date().toISOString(),
-  },
-  {
-    id: uuidv4(),
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    phone: '+44 987 654 3210',
-    avatar: 'https://i.pravatar.cc/150?u=2',
-    role: 'manager',
-    status: 'active',
-    whatsappAccounts: ['Sales Account'],
-    department: 'Sales',
-    lastActive: new Date().toISOString(),
-  },
-  {
-    id: uuidv4(),
-    name: 'Sam Wilson',
-    email: 'sam.wilson@example.com',
-    phone: '+1 555 123 4567',
-    avatar: 'https://i.pravatar.cc/150?u=3',
-    role: 'agent',
-    status: 'inactive',
-    whatsappAccounts: [],
-    department: 'Marketing',
-    lastActive: new Date().toISOString(),
-  }
-];
-
 // Team Member functions
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
   try {
-    // For debugging purposes, let's attempt to fetch real data but not rely on it
-    try {
-      const { data, error } = await supabase.from('team_members').select('*');
-      console.log("Supabase data attempt:", data, error);
-    } catch (e) {
-      console.log("Failed to fetch from Supabase:", e);
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*, department_id');
+      
+    if (error) {
+      console.error('Error fetching team members:', error);
+      throw error;
     }
     
-    return [...mockTeamMembers];
+    // Get WhatsApp account assignments for team members
+    const { data: accountAssignments, error: accountsError } = await supabase
+      .from('team_member_whatsapp_accounts')
+      .select('team_member_id, whatsapp_account_id');
+      
+    if (accountsError) {
+      console.error('Error fetching WhatsApp account assignments:', accountsError);
+    }
+    
+    // Get WhatsApp accounts data
+    const { data: whatsappAccounts, error: whatsappError } = await supabase
+      .from('whatsapp_accounts')
+      .select('id, account_name');
+      
+    if (whatsappError) {
+      console.error('Error fetching WhatsApp accounts:', whatsappError);
+    }
+    
+    // Get departments data for mapping
+    const { data: departments } = await supabase
+      .from('departments')
+      .select('id, name');
+    
+    const departmentMap = (departments || []).reduce((acc, dept) => {
+      acc[dept.id] = dept.name;
+      return acc;
+    }, {} as Record<string, string>);
+    
+    // Create a map of team member IDs to their WhatsApp accounts
+    const memberAccountsMap: Record<string, string[]> = {};
+    
+    (accountAssignments || []).forEach(assignment => {
+      if (!memberAccountsMap[assignment.team_member_id]) {
+        memberAccountsMap[assignment.team_member_id] = [];
+      }
+      
+      const account = whatsappAccounts?.find(acc => acc.id === assignment.whatsapp_account_id);
+      if (account) {
+        memberAccountsMap[assignment.team_member_id].push(account.account_name);
+      }
+    });
+    
+    // Convert database data to TeamMember interface
+    return (data || []).map(member => ({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      phone: member.phone,
+      avatar: member.avatar,
+      role: member.role,
+      status: member.status,
+      company: member.company,
+      position: member.position,
+      address: member.address,
+      whatsappAccounts: memberAccountsMap[member.id] || [],
+      whatsappPermissions: member.whatsapp_permissions || [],
+      department: member.department_id ? departmentMap[member.department_id] : undefined,
+      lastActive: member.last_active
+    }));
   } catch (error) {
     console.error('Error in getTeamMembers:', error);
     return [];
@@ -90,8 +113,60 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
 
 export const getTeamMemberById = async (id: string): Promise<TeamMember | undefined> => {
   try {
-    // Use the mock data instead of trying to fetch from Supabase
-    return mockTeamMembers.find(member => member.id === id);
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*, department_id')
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching team member:', error);
+      return undefined;
+    }
+    
+    // Get the member's WhatsApp accounts
+    const { data: accountAssignments } = await supabase
+      .from('team_member_whatsapp_accounts')
+      .select('whatsapp_account_id')
+      .eq('team_member_id', id);
+      
+    const accountIds = accountAssignments?.map(a => a.whatsapp_account_id) || [];
+    
+    // Get WhatsApp accounts data
+    const { data: whatsappAccounts } = await supabase
+      .from('whatsapp_accounts')
+      .select('account_name')
+      .in('id', accountIds.length > 0 ? accountIds : ['00000000-0000-0000-0000-000000000000']);
+      
+    // Get department name
+    let departmentName;
+    if (data.department_id) {
+      const { data: department } = await supabase
+        .from('departments')
+        .select('name')
+        .eq('id', data.department_id)
+        .single();
+        
+      departmentName = department?.name;
+    }
+    
+    // Convert to TeamMember interface
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      avatar: data.avatar,
+      role: data.role,
+      status: data.status,
+      company: data.company,
+      position: data.position,
+      address: data.address,
+      whatsappAccounts: whatsappAccounts?.map(acc => acc.account_name) || [],
+      whatsappPermissions: data.whatsapp_permissions || [],
+      department: departmentName,
+      lastActive: data.last_active
+    };
   } catch (error) {
     console.error('Error in getTeamMemberById:', error);
     return undefined;
@@ -100,49 +175,87 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
 
 export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<TeamMember> => {
   try {
-    console.log("Adding team member:", member);
-    
-    // Create a new mock member and add it to our in-memory array
-    const newId = uuidv4();
-    const timestamp = new Date().toISOString();
-    
-    const mockMember: TeamMember = {
-      id: newId,
-      name: member.name,
-      email: member.email,
-      phone: member.phone,
-      avatar: member.avatar,
-      role: member.role,
-      status: member.status,
-      whatsappAccounts: member.whatsappAccounts || [],
-      department: member.department,
-      lastActive: timestamp
-    };
-    
-    // Add to our mock data store
-    mockTeamMembers.push(mockMember);
-    
-    // For debugging, let's still try to insert but catch the error
-    try {
-      const { data, error } = await supabase.from('team_members').insert({
-        name: member.name,
-        email: member.email,
-        phone: member.phone || null,
-        avatar: member.avatar || null,
-        role: member.role,
-        status: member.status,
-      });
-      
-      if (error) {
-        console.log("Supabase insert error (expected):", error);
-      } else {
-        console.log("Supabase insert success (unexpected):", data);
-      }
-    } catch (e) {
-      console.log("Failed to insert to Supabase:", e);
+    // First, get the department ID if a department was provided
+    let departmentId = null;
+    if (member.department) {
+      const { data: deptData } = await supabase
+        .from('departments')
+        .select('id')
+        .eq('name', member.department)
+        .single();
+        
+      departmentId = deptData?.id;
     }
     
-    return mockMember;
+    // Insert the new member
+    const { data, error } = await supabase
+      .from('team_members')
+      .insert({
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        avatar: member.avatar,
+        role: member.role,
+        status: member.status,
+        position: member.position,
+        address: member.address,
+        company: member.company,
+        department_id: departmentId,
+        whatsapp_permissions: member.whatsappPermissions || [],
+        last_active: member.lastActive || new Date().toISOString()
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error adding team member:', error);
+      throw error;
+    }
+    
+    // Now handle WhatsApp account assignments
+    if (member.whatsappAccounts && member.whatsappAccounts.length > 0) {
+      // First, get the IDs of the WhatsApp accounts
+      const { data: whatsappData, error: whatsappError } = await supabase
+        .from('whatsapp_accounts')
+        .select('id, account_name')
+        .in('account_name', member.whatsappAccounts);
+        
+      if (whatsappError) {
+        console.error('Error fetching WhatsApp accounts:', whatsappError);
+      } else if (whatsappData && whatsappData.length > 0) {
+        // Insert account assignments
+        const assignments = whatsappData.map(account => ({
+          team_member_id: data.id,
+          whatsapp_account_id: account.id
+        }));
+        
+        const { error: assignError } = await supabase
+          .from('team_member_whatsapp_accounts')
+          .insert(assignments);
+          
+        if (assignError) {
+          console.error('Error assigning WhatsApp accounts:', assignError);
+        }
+      }
+    }
+    
+    // Return the newly created team member
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      avatar: data.avatar,
+      role: data.role,
+      status: data.status,
+      position: data.position,
+      address: data.address,
+      company: data.company,
+      whatsappAccounts: member.whatsappAccounts || [],
+      whatsappPermissions: member.whatsapp_permissions || [],
+      department: member.department,
+      lastActive: data.last_active
+    };
   } catch (error) {
     console.error('Error in addTeamMember:', error);
     throw error;
@@ -151,24 +264,113 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
 
 export const updateTeamMember = async (id: string, updates: Partial<TeamMember>): Promise<TeamMember> => {
   try {
-    // Find the member in our mock data
-    const memberIndex = mockTeamMembers.findIndex(m => m.id === id);
-    
-    if (memberIndex === -1) {
-      throw new Error("Team member not found");
+    // If department name is provided, get the department ID
+    let departmentId = undefined;
+    if (updates.department) {
+      const { data: deptData } = await supabase
+        .from('departments')
+        .select('id')
+        .eq('name', updates.department)
+        .single();
+        
+      departmentId = deptData?.id;
     }
     
-    // Update the mock data
-    const updatedMember = {
-      ...mockTeamMembers[memberIndex],
-      ...updates,
-      // Make sure ID doesn't get overwritten
-      id: mockTeamMembers[memberIndex].id
+    // Prepare the update data
+    const updateData: any = {
+      name: updates.name,
+      email: updates.email,
+      phone: updates.phone,
+      avatar: updates.avatar,
+      role: updates.role,
+      status: updates.status,
+      position: updates.position,
+      address: updates.address,
+      company: updates.company,
+      whatsapp_permissions: updates.whatsappPermissions,
     };
     
-    mockTeamMembers[memberIndex] = updatedMember;
+    // Only add defined fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
     
-    return updatedMember;
+    // Add department_id if it was resolved
+    if (departmentId !== undefined) {
+      updateData.department_id = departmentId;
+    }
+    
+    // Update the team member in the database
+    const { data, error } = await supabase
+      .from('team_members')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error updating team member:', error);
+      throw error;
+    }
+    
+    // If WhatsApp accounts were updated, handle the assignments
+    if (updates.whatsappAccounts) {
+      // First, get the IDs of the WhatsApp accounts
+      const { data: whatsappData, error: whatsappError } = await supabase
+        .from('whatsapp_accounts')
+        .select('id, account_name');
+        
+      if (whatsappError) {
+        console.error('Error fetching WhatsApp accounts:', whatsappError);
+      } else if (whatsappData) {
+        // Delete existing assignments
+        await supabase
+          .from('team_member_whatsapp_accounts')
+          .delete()
+          .eq('team_member_id', id);
+          
+        // Find the accounts that match the names in updates.whatsappAccounts
+        const accountsToAssign = whatsappData.filter(account => 
+          updates.whatsappAccounts?.includes(account.account_name)
+        );
+        
+        if (accountsToAssign.length > 0) {
+          // Insert new assignments
+          const assignments = accountsToAssign.map(account => ({
+            team_member_id: id,
+            whatsapp_account_id: account.id
+          }));
+          
+          const { error: assignError } = await supabase
+            .from('team_member_whatsapp_accounts')
+            .insert(assignments);
+            
+          if (assignError) {
+            console.error('Error reassigning WhatsApp accounts:', assignError);
+          }
+        }
+      }
+    }
+    
+    // Get the updated team member with all related data
+    return await getTeamMemberById(id) || {
+      id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      avatar: data.avatar,
+      role: data.role,
+      status: data.status,
+      position: data.position,
+      address: data.address,
+      company: data.company,
+      whatsappAccounts: updates.whatsappAccounts || [],
+      whatsappPermissions: data.whatsapp_permissions || [],
+      department: updates.department,
+      lastActive: data.last_active
+    };
   } catch (error) {
     console.error('Error in updateTeamMember:', error);
     throw error;
@@ -177,17 +379,25 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
 
 export const deleteTeamMember = async (id: string): Promise<void> => {
   try {
-    // Remove from mock data
-    mockTeamMembers = mockTeamMembers.filter(member => member.id !== id);
+    // First delete the WhatsApp account assignments
+    const { error: assignError } = await supabase
+      .from('team_member_whatsapp_accounts')
+      .delete()
+      .eq('team_member_id', id);
+      
+    if (assignError) {
+      console.error('Error deleting team member WhatsApp assignments:', assignError);
+    }
     
-    // Try to delete from Supabase for debugging purposes
+    // Then delete the team member
     const { error } = await supabase
       .from('team_members')
       .delete()
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting team member from Supabase:', error);
+      console.error('Error deleting team member:', error);
+      throw error;
     }
   } catch (error) {
     console.error('Error in deleteTeamMember:', error);
@@ -201,6 +411,63 @@ export const activateTeamMember = async (id: string): Promise<TeamMember> => {
 
 export const deactivateTeamMember = async (id: string): Promise<TeamMember> => {
   return updateTeamMember(id, { status: 'inactive' });
+};
+
+// Get WhatsApp accounts that can be assigned to team members
+export const getWhatsAppAccounts = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('whatsapp_accounts')
+      .select('id, account_name, phone_number, status');
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error getting WhatsApp accounts:', error);
+    return [];
+  }
+};
+
+// Update team member's WhatsApp permissions
+export const updateWhatsAppPermissions = async (
+  teamMemberId: string, 
+  accountIds: string[]
+): Promise<void> => {
+  try {
+    // First, delete existing assignments
+    const { error: deleteError } = await supabase
+      .from('team_member_whatsapp_accounts')
+      .delete()
+      .eq('team_member_id', teamMemberId);
+      
+    if (deleteError) {
+      console.error('Error deleting existing assignments:', deleteError);
+      throw deleteError;
+    }
+    
+    // Then insert new assignments
+    if (accountIds.length > 0) {
+      const assignments = accountIds.map(accountId => ({
+        team_member_id: teamMemberId,
+        whatsapp_account_id: accountId
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('team_member_whatsapp_accounts')
+        .insert(assignments);
+        
+      if (insertError) {
+        console.error('Error inserting WhatsApp account assignments:', insertError);
+        throw insertError;
+      }
+    }
+  } catch (error) {
+    console.error('Error updating WhatsApp permissions:', error);
+    throw error;
+  }
 };
 
 // In-memory department store

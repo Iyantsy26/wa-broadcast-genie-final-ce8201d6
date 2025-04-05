@@ -544,6 +544,42 @@ export type Database = {
         }
         Relationships: []
       }
+      team_member_whatsapp_accounts: {
+        Row: {
+          created_at: string
+          id: string
+          team_member_id: string
+          whatsapp_account_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          team_member_id: string
+          whatsapp_account_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          team_member_id?: string
+          whatsapp_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_whatsapp_accounts_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_whatsapp_accounts_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           address: string | null
@@ -562,6 +598,7 @@ export type Database = {
           role: string
           status: string
           updated_at: string
+          whatsapp_permissions: Json | null
         }
         Insert: {
           address?: string | null
@@ -580,6 +617,7 @@ export type Database = {
           role: string
           status: string
           updated_at?: string
+          whatsapp_permissions?: Json | null
         }
         Update: {
           address?: string | null
@@ -598,6 +636,7 @@ export type Database = {
           role?: string
           status?: string
           updated_at?: string
+          whatsapp_permissions?: Json | null
         }
         Relationships: [
           {
