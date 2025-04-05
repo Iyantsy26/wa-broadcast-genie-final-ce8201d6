@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Conversation } from '@/types/conversation';
+import { Conversation, ChatType } from '@/types/conversation';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,9 @@ import {
   Pin,
   UserPlus,
   Trash2,
+  Building2,
+  UserRound,
+  Users
 } from 'lucide-react';
 
 interface ConversationListProps {
@@ -40,8 +43,8 @@ interface ConversationListProps {
   groupedConversations: {[name: string]: Conversation[]};
   activeConversation: Conversation | null;
   setActiveConversation: (conversation: Conversation) => void;
-  statusFilter: string;
-  setStatusFilter: (status: string) => void;
+  chatTypeFilter: ChatType | 'all';
+  setChatTypeFilter: (status: ChatType | 'all') => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   dateRange?: DateRange;
@@ -62,10 +65,11 @@ interface FilteredTagsResult {
 
 const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
+  groupedConversations,
   activeConversation,
   setActiveConversation,
-  statusFilter,
-  setStatusFilter,
+  chatTypeFilter,
+  setChatTypeFilter,
   searchTerm,
   setSearchTerm,
   dateRange,
@@ -125,8 +129,17 @@ const ConversationList: React.FC<ConversationListProps> = ({
     }
   };
   
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'client': return <Building2 className="h-4 w-4 mr-1" />;
+      case 'lead': return <UserRound className="h-4 w-4 mr-1" />;
+      case 'team': return <Users className="h-4 w-4 mr-1" />;
+      default: return null;
+    }
+  };
+  
   const hasActiveFilters = 
-    statusFilter !== 'all' || 
+    chatTypeFilter !== 'all' || 
     searchTerm !== '' || 
     dateRange !== undefined || 
     assigneeFilter !== '' || 
@@ -164,47 +177,39 @@ const ConversationList: React.FC<ConversationListProps> = ({
             <PopoverContent className="w-72">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Status</h4>
+                  <h4 className="font-medium text-sm">Contact Type</h4>
                   <div className="flex flex-wrap gap-2">
                     <Button 
-                      variant={statusFilter === 'all' ? "default" : "outline"} 
+                      variant={chatTypeFilter === 'all' ? "default" : "outline"} 
                       size="sm"
-                      onClick={() => setStatusFilter('all')}
+                      onClick={() => setChatTypeFilter('all')}
                       className="h-8"
                     >
                       All
                     </Button>
                     <Button 
-                      variant={statusFilter === 'new' ? "default" : "outline"} 
+                      variant={chatTypeFilter === 'client' ? "default" : "outline"} 
                       size="sm"
-                      onClick={() => setStatusFilter('new')}
+                      onClick={() => setChatTypeFilter('client')}
                       className="h-8"
                     >
-                      New
+                      Clients
                     </Button>
                     <Button 
-                      variant={statusFilter === 'active' ? "default" : "outline"} 
+                      variant={chatTypeFilter === 'lead' ? "default" : "outline"} 
                       size="sm"
-                      onClick={() => setStatusFilter('active')}
+                      onClick={() => setChatTypeFilter('lead')}
                       className="h-8"
                     >
-                      Active
+                      Leads
                     </Button>
                     <Button 
-                      variant={statusFilter === 'waiting' ? "default" : "outline"} 
+                      variant={chatTypeFilter === 'team' ? "default" : "outline"} 
                       size="sm"
-                      onClick={() => setStatusFilter('waiting')}
+                      onClick={() => setChatTypeFilter('team')}
                       className="h-8"
                     >
-                      Waiting
-                    </Button>
-                    <Button 
-                      variant={statusFilter === 'resolved' ? "default" : "outline"} 
-                      size="sm"
-                      onClick={() => setStatusFilter('resolved')}
-                      className="h-8"
-                    >
-                      Resolved
+                      Team
                     </Button>
                   </div>
                 </div>
@@ -311,10 +316,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
       {/* Active filter badges */}
       {hasActiveFilters && (
         <div className="p-2 bg-muted/40 flex flex-wrap gap-2">
-          {statusFilter !== 'all' && (
+          {chatTypeFilter !== 'all' && (
             <Badge variant="secondary" className="flex items-center gap-1 h-6">
-              Status: {statusFilter}
-              <button onClick={() => setStatusFilter('all')}>
+              {getTypeIcon(chatTypeFilter)}
+              {getTypeLabel(chatTypeFilter)}
+              <button onClick={() => setChatTypeFilter('all')}>
                 <X className="h-3 w-3 ml-1" />
               </button>
             </Badge>

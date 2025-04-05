@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode, useRef } from 'react';
 import { useConversations } from '@/hooks/useConversations';
 import { Conversation, Message, Contact, ChatType } from '@/types/conversation';
@@ -178,7 +179,6 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Reset filters
   const resetAllFilters = () => {
     setChatTypeFilter('all');
-    conversationsState.setStatusFilter('all');
     conversationsState.setSearchTerm('');
     conversationsState.setDateRange(undefined);
     conversationsState.setAssigneeFilter('');
