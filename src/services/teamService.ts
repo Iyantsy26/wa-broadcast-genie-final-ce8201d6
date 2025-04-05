@@ -1,6 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "@/hooks/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 export interface TeamMember {
   id: string;
@@ -47,7 +49,6 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     }
     
     // Get WhatsApp account assignments for team members
-    // We need to use rpc or a raw query since the team_member_whatsapp_accounts table is not in the types
     const { data: accountAssignments, error: accountsError } = await supabase
       .rpc('get_team_member_whatsapp_accounts');
       
@@ -78,7 +79,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     const memberAccountsMap: Record<string, string[]> = {};
     
     if (accountAssignments) {
-      accountAssignments.forEach((assignment: { team_member_id: string, whatsapp_account_id: string }) => {
+      (accountAssignments as any[]).forEach((assignment: { team_member_id: string, whatsapp_account_id: string }) => {
         if (!memberAccountsMap[assignment.team_member_id]) {
           memberAccountsMap[assignment.team_member_id] = [];
         }
@@ -103,7 +104,11 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
       position: member.position,
       address: member.address,
       whatsappAccounts: memberAccountsMap[member.id] || [],
-      whatsappPermissions: member.whatsapp_permissions || [],
+      whatsappPermissions: member.whatsapp_permissions ? 
+        (Array.isArray(member.whatsapp_permissions) ? 
+          member.whatsapp_permissions : 
+          []) : 
+        [],
       department: member.department_id ? departmentMap[member.department_id] : undefined,
       lastActive: member.last_active
     }));
@@ -127,10 +132,15 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
     }
     
     // Get the member's WhatsApp accounts using RPC function
-    const { data: accountAssignments } = await supabase
+    const { data: accountAssignments, error: assignError } = await supabase
       .rpc('get_team_member_whatsapp_accounts_by_id', { member_id: id });
       
-    const accountIds = accountAssignments?.map((a: { whatsapp_account_id: string }) => a.whatsapp_account_id) || [];
+    if (assignError) {
+      console.error('Error fetching WhatsApp assignments:', assignError);
+    }
+    
+    const accountIds = accountAssignments ? 
+      (accountAssignments as any[]).map((a: any) => a.whatsapp_account_id) : [];
     
     // Get WhatsApp accounts data
     const { data: whatsappAccounts } = await supabase
@@ -150,6 +160,16 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
       departmentName = department?.name;
     }
     
+    // Parse whatsapp permissions safely
+    let whatsappPermissions: any[] = [];
+    if (data.whatsapp_permissions) {
+      if (Array.isArray(data.whatsapp_permissions)) {
+        whatsappPermissions = data.whatsapp_permissions;
+      } else if (typeof data.whatsapp_permissions === 'object') {
+        whatsappPermissions = [data.whatsapp_permissions];
+      }
+    }
+    
     // Convert to TeamMember interface
     return {
       id: data.id,
@@ -163,7 +183,7 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
       position: data.position,
       address: data.address,
       whatsappAccounts: whatsappAccounts?.map(acc => acc.account_name) || [],
-      whatsappPermissions: data.whatsapp_permissions || [],
+      whatsappPermissions,
       department: departmentName,
       lastActive: data.last_active
     };
@@ -230,7 +250,9 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
         }));
         
         const { error: assignError } = await supabase
-          .rpc('insert_team_member_whatsapp_accounts', { accounts: assignments });
+          .rpc('insert_team_member_whatsapp_accounts', { 
+            accounts: JSON.stringify(assignments) 
+          });
           
         if (assignError) {
           console.error('Error assigning WhatsApp accounts:', assignError);
@@ -325,9 +347,13 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
         console.error('Error fetching WhatsApp accounts:', whatsappError);
       } else if (whatsappData) {
         // Delete existing assignments using RPC function
-        await supabase
+        const { error: deleteError } = await supabase
           .rpc('delete_team_member_whatsapp_accounts', { member_id: id });
           
+        if (deleteError) {
+          console.error('Error deleting existing assignments:', deleteError);
+        }
+        
         // Find the accounts that match the names in updates.whatsappAccounts
         const accountsToAssign = whatsappData.filter(account => 
           updates.whatsappAccounts?.includes(account.account_name)
@@ -341,7 +367,9 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
           }));
           
           const { error: assignError } = await supabase
-            .rpc('insert_team_member_whatsapp_accounts', { accounts: assignments });
+            .rpc('insert_team_member_whatsapp_accounts', { 
+              accounts: JSON.stringify(assignments) 
+            });
             
           if (assignError) {
             console.error('Error reassigning WhatsApp accounts:', assignError);
@@ -356,6 +384,16 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
       return updatedMember;
     }
     
+    // Parse whatsapp permissions safely
+    let whatsappPermissions: any[] = [];
+    if (data.whatsapp_permissions) {
+      if (Array.isArray(data.whatsapp_permissions)) {
+        whatsappPermissions = data.whatsapp_permissions;
+      } else if (typeof data.whatsapp_permissions === 'object') {
+        whatsappPermissions = [data.whatsapp_permissions];
+      }
+    }
+    
     return {
       id,
       name: data.name,
@@ -368,7 +406,7 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
       address: data.address,
       company: data.company,
       whatsappAccounts: updates.whatsappAccounts || [],
-      whatsappPermissions: data.whatsapp_permissions || [],
+      whatsappPermissions,
       department: updates.department,
       lastActive: data.last_active
     };
@@ -453,7 +491,9 @@ export const updateWhatsAppPermissions = async (
       }));
       
       const { error: insertError } = await supabase
-        .rpc('insert_team_member_whatsapp_accounts', { accounts: assignments });
+        .rpc('insert_team_member_whatsapp_accounts', { 
+          accounts: JSON.stringify(assignments) 
+        });
         
       if (insertError) {
         console.error('Error inserting WhatsApp account assignments:', insertError);

@@ -727,6 +727,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_team_member_whatsapp_accounts: {
+        Args: {
+          member_id: string
+        }
+        Returns: undefined
+      }
       generate_custom_user_id: {
         Args: {
           role_type: string
@@ -738,6 +744,28 @@ export type Database = {
           org_id: string
         }
         Returns: Json
+      }
+      get_team_member_whatsapp_accounts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          team_member_id: string
+          whatsapp_account_id: string
+        }[]
+      }
+      get_team_member_whatsapp_accounts_by_id: {
+        Args: {
+          member_id: string
+        }
+        Returns: {
+          team_member_id: string
+          whatsapp_account_id: string
+        }[]
+      }
+      insert_team_member_whatsapp_accounts: {
+        Args: {
+          accounts: Json
+        }
+        Returns: undefined
       }
       is_admin: {
         Args: Record<PropertyKey, never>
