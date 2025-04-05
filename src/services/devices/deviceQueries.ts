@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceAccount, AccountLimitResult } from './deviceTypes';
-import { mockDeviceAccounts } from './mockData';
 import { getUserPlan, getAccountLimits } from './planService';
 
 /**
@@ -9,25 +8,19 @@ import { getUserPlan, getAccountLimits } from './planService';
  */
 export const getDeviceAccounts = async (): Promise<DeviceAccount[]> => {
   try {
-    // Using mock data as fallback if database access fails
-    try {
-      const { data, error } = await supabase
-        .from('device_accounts')
-        .select('*');
-      
-      if (error) {
-        console.error('Error in getDeviceAccounts:', error);
-        return mockDeviceAccounts;
-      }
-      
-      return data as DeviceAccount[];
-    } catch (dbError) {
-      console.log('Using mock data for development:', dbError);
-      return mockDeviceAccounts;
+    const { data, error } = await supabase
+      .from('device_accounts')
+      .select('*');
+    
+    if (error) {
+      console.error('Error in getDeviceAccounts:', error);
+      throw error;
     }
+    
+    return data as DeviceAccount[];
   } catch (error) {
     console.error('Error in getDeviceAccounts:', error);
-    return mockDeviceAccounts;
+    throw error;
   }
 };
 

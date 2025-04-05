@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, Info } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   DeviceAccount,
   getDeviceAccounts,
@@ -20,7 +22,6 @@ import AddDeviceDialog from '@/components/devices/AddDeviceDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
 import EditDeviceDialog from '@/components/devices/EditDeviceDialog';
 import WebWhatsAppSheet from '@/components/devices/WebWhatsAppSheet';
-import DemoAlert from '@/components/devices/DemoAlert';
 
 const planFeatures = {
   starter: {
@@ -68,6 +69,26 @@ const Devices = () => {
   useEffect(() => {
     fetchDeviceAccounts();
     fetchUserPlanInfo();
+
+    // Set up real-time listener for device account changes
+    const channel = supabase
+      .channel('device-changes')
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'device_accounts'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          fetchDeviceAccounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchUserPlanInfo = async () => {
@@ -115,13 +136,6 @@ const Devices = () => {
     try {
       setLoading(true);
       await updateDeviceStatus(accountId, 'connected');
-      
-      setAccounts(prevAccounts => 
-        prevAccounts.map(acc => 
-          acc.id === accountId ? { ...acc, status: 'connected' } : acc
-        )
-      );
-      
       toast({
         title: "Device reconnected",
         description: "Successfully reconnected WhatsApp device.",
@@ -201,37 +215,20 @@ const Devices = () => {
         plan_tier: userPlan,
       };
       
-      try {
-        const addedAccount = await addDeviceAccount(newAccount);
-        
-        setAccounts(prevAccounts => [addedAccount, ...prevAccounts]);
-        
-        toast({
-          title: "Device added",
-          description: `Successfully added WhatsApp device.`,
-        });
-        
-        const updatedLimits = await checkAccountLimit();
-        setAccountLimit(updatedLimits);
-        
-        resetFormFields();
-        
-        if (type === 'browser_qr') {
-          generateQrCode();
-        }
-      } catch (error: any) {
-        console.error("Error adding account:", error);
-        let errorMessage = "Failed to add WhatsApp device";
-        
-        if (error.message) {
-          errorMessage = `Error: ${error.message}`;
-        }
-        
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      await addDeviceAccount(newAccount);
+      
+      toast({
+        title: "Device added",
+        description: `Successfully added WhatsApp device.`,
+      });
+      
+      const updatedLimits = await checkAccountLimit();
+      setAccountLimit(updatedLimits);
+      
+      resetFormFields();
+      
+      if (type === 'browser_qr') {
+        generateQrCode();
       }
     } catch (error: any) {
       console.error("Error in handleAddAccount:", error);
@@ -274,7 +271,7 @@ const Devices = () => {
       setCodeSent(true);
       toast({
         title: "Verification code sent",
-        description: `A verification code has been sent to ${countryCode} ${phoneNumber}. For demo purposes, you can enter any 6-digit code.`,
+        description: `A verification code has been sent to ${countryCode} ${phoneNumber}.`,
       });
     }, 1500);
   };
@@ -310,13 +307,6 @@ const Devices = () => {
   const handleDisconnect = async (accountId: string) => {
     try {
       await updateDeviceStatus(accountId, 'disconnected');
-      
-      setAccounts(prevAccounts => 
-        prevAccounts.map(acc => 
-          acc.id === accountId ? { ...acc, status: 'disconnected' } : acc
-        )
-      );
-      
       toast({
         title: "Device disconnected",
         description: "Successfully disconnected WhatsApp device.",
@@ -346,10 +336,6 @@ const Devices = () => {
       const success = await deleteDeviceAccount(accountToDelete);
       
       if (success) {
-        setAccounts(prevAccounts => 
-          prevAccounts.filter(acc => acc.id !== accountToDelete)
-        );
-        
         toast({
           title: "Device removed",
           description: "Successfully removed WhatsApp device.",
@@ -389,12 +375,6 @@ const Devices = () => {
       const success = await updateDeviceAccount(id, updates);
       
       if (success) {
-        setAccounts(prevAccounts => 
-          prevAccounts.map(acc => 
-            acc.id === id ? { ...acc, ...updates } : acc
-          )
-        );
-        
         toast({
           title: "Device updated",
           description: "Successfully updated WhatsApp device.",
@@ -475,8 +455,6 @@ const Devices = () => {
         accountLimit={accountLimit}
         planFeatures={planFeatures}
       />
-
-      <DemoAlert />
 
       <DeviceList
         accounts={accounts}
