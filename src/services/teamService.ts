@@ -49,8 +49,10 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     }
     
     // Get WhatsApp account assignments for team members
+    // Use a raw query to overcome typing issues with the RPC function
     const { data: accountAssignments, error: accountsError } = await supabase
-      .rpc('get_team_member_whatsapp_accounts');
+      .from('team_member_whatsapp_accounts')
+      .select('team_member_id, whatsapp_account_id');
       
     if (accountsError) {
       console.error('Error fetching WhatsApp account assignments:', accountsError);
@@ -79,7 +81,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     const memberAccountsMap: Record<string, string[]> = {};
     
     if (accountAssignments) {
-      (accountAssignments as any[]).forEach((assignment: { team_member_id: string, whatsapp_account_id: string }) => {
+      accountAssignments.forEach((assignment: any) => {
         if (!memberAccountsMap[assignment.team_member_id]) {
           memberAccountsMap[assignment.team_member_id] = [];
         }
@@ -131,16 +133,18 @@ export const getTeamMemberById = async (id: string): Promise<TeamMember | undefi
       return undefined;
     }
     
-    // Get the member's WhatsApp accounts using RPC function
+    // Get the member's WhatsApp accounts using direct table query
     const { data: accountAssignments, error: assignError } = await supabase
-      .rpc('get_team_member_whatsapp_accounts_by_id', { member_id: id });
+      .from('team_member_whatsapp_accounts')
+      .select('whatsapp_account_id')
+      .eq('team_member_id', id);
       
     if (assignError) {
       console.error('Error fetching WhatsApp assignments:', assignError);
     }
     
     const accountIds = accountAssignments ? 
-      (accountAssignments as any[]).map((a: any) => a.whatsapp_account_id) : [];
+      accountAssignments.map(a => a.whatsapp_account_id) : [];
     
     // Get WhatsApp accounts data
     const { data: whatsappAccounts } = await supabase
@@ -243,19 +247,18 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
       if (whatsappError) {
         console.error('Error fetching WhatsApp accounts:', whatsappError);
       } else if (whatsappData && whatsappData.length > 0) {
-        // Insert account assignments using RPC function
+        // Insert account assignments directly to the join table
         const assignments = whatsappData.map(account => ({
           team_member_id: data.id,
           whatsapp_account_id: account.id
         }));
         
-        const { error: assignError } = await supabase
-          .rpc('insert_team_member_whatsapp_accounts', { 
-            accounts: JSON.stringify(assignments) 
-          });
+        const { error: insertError } = await supabase
+          .from('team_member_whatsapp_accounts')
+          .insert(assignments);
           
-        if (assignError) {
-          console.error('Error assigning WhatsApp accounts:', assignError);
+        if (insertError) {
+          console.error('Error assigning WhatsApp accounts:', insertError);
         }
       }
     }
@@ -346,9 +349,11 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
       if (whatsappError) {
         console.error('Error fetching WhatsApp accounts:', whatsappError);
       } else if (whatsappData) {
-        // Delete existing assignments using RPC function
+        // Delete existing assignments directly
         const { error: deleteError } = await supabase
-          .rpc('delete_team_member_whatsapp_accounts', { member_id: id });
+          .from('team_member_whatsapp_accounts')
+          .delete()
+          .eq('team_member_id', id);
           
         if (deleteError) {
           console.error('Error deleting existing assignments:', deleteError);
@@ -360,16 +365,15 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
         );
         
         if (accountsToAssign.length > 0) {
-          // Insert new assignments using RPC function
+          // Insert new assignments directly
           const assignments = accountsToAssign.map(account => ({
             team_member_id: id,
             whatsapp_account_id: account.id
           }));
           
           const { error: assignError } = await supabase
-            .rpc('insert_team_member_whatsapp_accounts', { 
-              accounts: JSON.stringify(assignments) 
-            });
+            .from('team_member_whatsapp_accounts')
+            .insert(assignments);
             
           if (assignError) {
             console.error('Error reassigning WhatsApp accounts:', assignError);
@@ -418,9 +422,11 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
 
 export const deleteTeamMember = async (id: string): Promise<void> => {
   try {
-    // First delete the WhatsApp account assignments using RPC function
+    // First delete the WhatsApp account assignments directly
     const { error: assignError } = await supabase
-      .rpc('delete_team_member_whatsapp_accounts', { member_id: id });
+      .from('team_member_whatsapp_accounts')
+      .delete()
+      .eq('team_member_id', id);
       
     if (assignError) {
       console.error('Error deleting team member WhatsApp assignments:', assignError);
@@ -474,16 +480,18 @@ export const updateWhatsAppPermissions = async (
   accountIds: string[]
 ): Promise<void> => {
   try {
-    // First, delete existing assignments using RPC function
+    // First, delete existing assignments directly
     const { error: deleteError } = await supabase
-      .rpc('delete_team_member_whatsapp_accounts', { member_id: teamMemberId });
+      .from('team_member_whatsapp_accounts')
+      .delete()
+      .eq('team_member_id', teamMemberId);
       
     if (deleteError) {
       console.error('Error deleting existing assignments:', deleteError);
       throw deleteError;
     }
     
-    // Then insert new assignments using RPC function
+    // Then insert new assignments directly
     if (accountIds.length > 0) {
       const assignments = accountIds.map(accountId => ({
         team_member_id: teamMemberId,
@@ -491,9 +499,8 @@ export const updateWhatsAppPermissions = async (
       }));
       
       const { error: insertError } = await supabase
-        .rpc('insert_team_member_whatsapp_accounts', { 
-          accounts: JSON.stringify(assignments) 
-        });
+        .from('team_member_whatsapp_accounts')
+        .insert(assignments);
         
       if (insertError) {
         console.error('Error inserting WhatsApp account assignments:', insertError);
