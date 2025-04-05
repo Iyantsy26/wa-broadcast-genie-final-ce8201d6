@@ -459,6 +459,10 @@ const TeamManagement = () => {
                 <TeamMembersList
                   members={filteredMembers}
                   onViewProfile={handleViewProfile}
+                  onActivate={handleActivateMember}
+                  onDeactivate={handleDeactivateMember}
+                  onResetPassword={handleResetPassword}
+                  onDelete={handleDeleteMember}
                 />
               )}
             </CardContent>

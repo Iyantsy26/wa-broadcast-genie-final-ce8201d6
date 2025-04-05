@@ -347,21 +347,82 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
   }
 };
 
+/**
+ * Update a team member's details
+ */
 export const updateTeamMember = async (id: string, updates: Partial<TeamMember>): Promise<TeamMember> => {
   try {
+    console.log(`Updating team member ${id} with:`, updates);
+    
     // If department name is provided, get the department ID
     let departmentId = undefined;
     if (updates.department) {
-      const { data: deptData } = await supabase
-        .from('departments')
-        .select('id')
-        .eq('name', updates.department)
-        .single();
-        
-      departmentId = deptData?.id;
+      try {
+        const { data: deptData } = await supabase
+          .from('departments')
+          .select('id')
+          .eq('name', updates.department)
+          .single();
+          
+        departmentId = deptData?.id;
+      } catch (error) {
+        console.error("Error finding department:", error);
+      }
     }
     
-    // Find the team member in our mock data
+    // Prepare the update data for the database
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    // Map fields from the updates object to database columns
+    if (updates.name) updateData.name = updates.name;
+    if (updates.email) updateData.email = updates.email;
+    if (updates.phone) updateData.phone = updates.phone;
+    if (updates.avatar) updateData.avatar = updates.avatar;
+    if (updates.role) updateData.role = updates.role;
+    if (updates.status) updateData.status = updates.status;
+    if (updates.position) updateData.position = updates.position;
+    if (updates.address) updateData.address = updates.address;
+    if (updates.company) updateData.company = updates.company;
+    if (departmentId !== undefined) updateData.department_id = departmentId;
+    
+    // Try to update in the database first
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .update(updateData)
+        .eq('id', id)
+        .select('*')
+        .single();
+      
+      if (error) {
+        console.error("Error updating team member in database:", error);
+        throw error;
+      }
+      
+      console.log("Updated team member in database:", data);
+      
+      // Now update the mock data as a backup
+      const memberIndex = mockTeamMembers.findIndex(m => m.id === id);
+      if (memberIndex >= 0) {
+        mockTeamMembers[memberIndex] = {
+          ...mockTeamMembers[memberIndex],
+          ...updates,
+          lastActive: new Date().toISOString()
+        };
+      }
+      
+      // Fetch the updated team member to return
+      const updatedMember = await getTeamMemberById(id);
+      if (updatedMember) {
+        return updatedMember;
+      }
+    } catch (error) {
+      console.error("Database update failed, falling back to mock data:", error);
+    }
+    
+    // Fallback to mock data if database update fails
     const mockMember = mockTeamMembers.find(m => m.id === id);
     if (!mockMember) {
       throw new Error("Team member not found in mock data");
@@ -402,12 +463,66 @@ export const deleteTeamMember = async (id: string): Promise<void> => {
   }
 };
 
+/**
+ * Activate a team member (change status to 'active')
+ */
 export const activateTeamMember = async (id: string): Promise<TeamMember> => {
-  return updateTeamMember(id, { status: 'active' });
+  console.log(`Activating team member with ID: ${id}`);
+  try {
+    // First try to update in the database
+    const { data, error } = await supabase
+      .from('team_members')
+      .update({ 
+        status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error("Error activating team member in database:", error);
+    } else {
+      console.log("Successfully activated team member in database:", data);
+    }
+
+    // Fallback to updateTeamMember which handles both database and mock data
+    return updateTeamMember(id, { status: 'active' });
+  } catch (error) {
+    console.error('Error in activateTeamMember:', error);
+    // Fallback to updateTeamMember which will update the mock data
+    return updateTeamMember(id, { status: 'active' });
+  }
 };
 
+/**
+ * Deactivate a team member (change status to 'inactive')
+ */
 export const deactivateTeamMember = async (id: string): Promise<TeamMember> => {
-  return updateTeamMember(id, { status: 'inactive' });
+  console.log(`Deactivating team member with ID: ${id}`);
+  try {
+    // First try to update in the database
+    const { data, error } = await supabase
+      .from('team_members')
+      .update({ 
+        status: 'inactive',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error("Error deactivating team member in database:", error);
+    } else {
+      console.log("Successfully deactivated team member in database:", data);
+    }
+
+    // Fallback to updateTeamMember which handles both database and mock data
+    return updateTeamMember(id, { status: 'inactive' });
+  } catch (error) {
+    console.error('Error in deactivateTeamMember:', error);
+    // Fallback to updateTeamMember which will update the mock data
+    return updateTeamMember(id, { status: 'inactive' });
+  }
 };
 
 // Get WhatsApp accounts that can be assigned to team members
