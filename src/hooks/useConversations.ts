@@ -21,13 +21,11 @@ export const useConversations = () => {
   const {
     filteredConversations,
     groupedConversations,
-    statusFilter,
     chatTypeFilter,
     searchTerm,
     dateRange,
     assigneeFilter,
     tagFilter,
-    setStatusFilter,
     setChatTypeFilter,
     setSearchTerm,
     setDateRange,
@@ -68,7 +66,6 @@ export const useConversations = () => {
     isSidebarOpen,
     
     // Filters
-    statusFilter,
     chatTypeFilter,
     searchTerm,
     dateRange,
@@ -81,7 +78,6 @@ export const useConversations = () => {
     // State setters
     setActiveConversation,
     setIsSidebarOpen,
-    setStatusFilter,
     setChatTypeFilter,
     setSearchTerm,
     setDateRange,

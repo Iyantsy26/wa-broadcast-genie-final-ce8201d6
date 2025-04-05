@@ -12,14 +12,14 @@ const ChatPage = () => {
     activeConversation,
     messages,
     isSidebarOpen,
-    statusFilter,
+    chatTypeFilter,
     searchTerm,
     dateRange,
     assigneeFilter,
     tagFilter,
     setActiveConversation,
     setIsSidebarOpen,
-    setStatusFilter,
+    setChatTypeFilter,
     setSearchTerm,
     setDateRange,
     setAssigneeFilter,
@@ -51,8 +51,8 @@ const ChatPage = () => {
           groupedConversations={groupedConversations}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
+          chatTypeFilter={chatTypeFilter}
+          setChatTypeFilter={setChatTypeFilter}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           dateRange={dateRange}

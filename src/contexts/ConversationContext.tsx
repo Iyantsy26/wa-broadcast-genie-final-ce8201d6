@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode, useRef } from 'react';
 import { useConversations } from '@/hooks/useConversations';
 import { Conversation, Message, Contact, ChatType } from '@/types/conversation';
@@ -56,8 +55,10 @@ interface ConversationContextType {
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
 
+// Create the context
 export const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
+// Provider component
 export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const conversationsState = useConversations();
   const [isTyping, setIsTyping] = React.useState<boolean>(false);
@@ -214,6 +215,7 @@ export const ConversationProvider: React.FC<{ children: ReactNode }> = ({ childr
   );
 };
 
+// Hook to use the context
 export const useConversation = () => {
   const context = useContext(ConversationContext);
   if (context === undefined) {
