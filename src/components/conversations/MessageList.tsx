@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { Message } from '@/types/conversation';
 import MessageItem from './MessageItem';
 import { Contact } from '@/types/conversation';
-import { useConversation } from '@/contexts/ConversationContext';
 
 interface MessageListProps {
   messages: Message[];
@@ -19,8 +18,6 @@ const MessageList: React.FC<MessageListProps> = ({
   isTyping,
   messagesEndRef
 }) => {
-  const { handleReplyToMessage } = useConversation();
-  
   // Group messages by date
   const messagesByDate = useMemo(() => {
     const groups: { [key: string]: Message[] } = {};
@@ -88,7 +85,6 @@ const MessageList: React.FC<MessageListProps> = ({
                 contact={contact}
                 isSequential={isSequential}
                 isLast={!nextMessage || nextMessage.isOutbound !== message.isOutbound}
-                onReply={handleReplyToMessage}
               />
             );
           })}
