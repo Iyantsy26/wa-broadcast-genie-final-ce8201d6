@@ -62,11 +62,6 @@ const AIAssistantPanel = () => {
     navigator.clipboard.writeText(text);
   };
   
-  // Update to use setAiAssistantActive instead of toggleAssistant
-  const toggleAssistant = () => {
-    setAiAssistantActive(false);
-  };
-  
   return (
     <div className="w-72 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
       {/* Header */}
@@ -75,7 +70,7 @@ const AIAssistantPanel = () => {
           <Bot className="h-4 w-4 text-primary" />
           <h3 className="font-semibold">AI Assistant</h3>
         </div>
-        <Button variant="ghost" size="icon" onClick={toggleAssistant}>
+        <Button variant="ghost" size="icon" onClick={() => setAiAssistantActive(false)}>
           <X className="h-4 w-4" />
         </Button>
       </div>

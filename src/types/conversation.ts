@@ -119,9 +119,11 @@ export interface Lead {
   referrer_name?: string;
 }
 
-// Import DateRange from react-day-picker to use in our components
-import { DateRange as DayPickerDateRange } from 'react-day-picker';
-export type DateRange = DayPickerDateRange;
+// Define DateRange to match the expected format
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
 
 // Define types for Canned Replies
 export interface CannedReply {

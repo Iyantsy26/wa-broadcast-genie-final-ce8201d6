@@ -28,14 +28,16 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
     ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : {};
   
-  // Implement missing toggleSidebar as a function that calls setIsSidebarOpen
+  // Implement toggleSidebar as a function that calls setIsSidebarOpen
   const toggleSidebar = () => {
     setIsSidebarOpen(true);
   };
 
-  // Aliases for compatibility
-  const sendMessage = handleSendMessage;
-  const sendVoiceMessage = handleVoiceMessageSent;
+  // Adapter to match the expected interface for voice messages
+  const handleVoiceMessage = async (durationInSeconds: number): Promise<void> => {
+    handleVoiceMessageSent(durationInSeconds);
+    return Promise.resolve();
+  };
   
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -62,8 +64,8 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
       <MessageInputBar
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
-        onSendMessage={sendMessage}
-        onSendVoiceMessage={sendVoiceMessage}
+        onSendMessage={handleSendMessage}
+        onSendVoiceMessage={handleVoiceMessage}
       />
     </div>
   );
