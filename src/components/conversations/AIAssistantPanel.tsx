@@ -1,191 +1,137 @@
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, Languages, Edit, Upload, X } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  X,
+  Bot,
+  SendHorizonal,
+  Copy
+} from 'lucide-react';
+import { useConversation } from '@/contexts/ConversationContext';
 
-interface AIAssistantPanelProps {
-  onRequestAIAssistance: (prompt: string) => Promise<string>;
-  onClose: () => void;
-}
-
-const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
-  onRequestAIAssistance,
-  onClose
-}) => {
+const AIAssistantPanel = () => {
+  const { toggleAssistant } = useConversation();
   const [prompt, setPrompt] = useState('');
-  const [response, setResponse] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('write');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [responses, setResponses] = useState<Array<{
+    prompt: string;
+    response: string;
+    timestamp: string;
+  }>>([
+    {
+      prompt: "Help me draft a message to follow up with a client who hasn't responded in 2 weeks",
+      response: "Subject: Following Up on Our Previous Conversation\n\nDear [Client Name],\n\nI hope this message finds you well. I wanted to check in on our previous discussion from two weeks ago regarding [specific topic/project]. I understand schedules can get busy, and I'm reaching out to see if you have any updates or if there's anything I can assist you with at this point.\n\nIf you need more information or would like to schedule a call to discuss further, please let me know.\n\nLooking forward to hearing from you soon.\n\nBest regards,\n[Your Name]",
+      timestamp: new Date().toISOString()
+    }
+  ]);
+  
+  const generateResponse = () => {
     if (!prompt.trim()) return;
     
-    setIsLoading(true);
-    try {
-      const result = await onRequestAIAssistance(prompt);
-      setResponse(result);
-    } catch (error) {
-      console.error('Error getting AI assistance:', error);
-      setResponse('Sorry, there was an error processing your request.');
-    } finally {
-      setIsLoading(false);
-    }
+    setIsGenerating(true);
+    
+    // Simulate AI response generation
+    setTimeout(() => {
+      const demoResponses = [
+        "I've drafted a response for you:\n\nThank you for reaching out. I appreciate your interest in our services. Based on what you've shared, I believe our [Product/Service] would be an excellent fit for your needs. I'd be happy to schedule a call to discuss the details further and answer any questions you might have.\n\nWould you be available for a 30-minute conversation this week? If so, please let me know what times work best for you.\n\nLooking forward to connecting soon.",
+        
+        "Here's a professional response you can use:\n\nI wanted to follow up regarding the proposal we discussed last week. I've taken your feedback into account and have made the adjustments we talked about. The updated version is attached to this message for your review.\n\nI believe these changes address your concerns about [specific concern]. Please take a look when you have a moment, and let me know if you'd like to proceed or if you need any further modifications.\n\nThank you for your continued interest in working with us.",
+        
+        "For your situation, I recommend:\n\nI understand your frustration regarding [issue]. We take matters like this very seriously, and I want to assure you that we're working diligently to resolve it.\n\nI've escalated this to our technical team, who are investigating the root cause. We expect to have a solution in place within the next 24-48 hours. In the meantime, a temporary workaround is to [suggestion].\n\nI'll personally follow up with you tomorrow with an update. Thank you for your patience and understanding."
+      ];
+      
+      const randomResponse = demoResponses[Math.floor(Math.random() * demoResponses.length)];
+      
+      setResponses(prev => [
+        {
+          prompt: prompt,
+          response: randomResponse,
+          timestamp: new Date().toISOString()
+        },
+        ...prev
+      ]);
+      
+      setPrompt('');
+      setIsGenerating(false);
+    }, 2000);
   };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setUploadedFiles(prev => [...prev, ...newFiles]);
-    }
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
-
-  const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
+  
   return (
-    <div className="w-96 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between p-3 border-b">
+    <div className="w-72 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-between items-center p-3 border-b">
         <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          <h3 className="font-medium">Personal AI Assistant</h3>
+          <Bot className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold">AI Assistant</h3>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+        <Button variant="ghost" size="icon" onClick={toggleAssistant}>
           <X className="h-4 w-4" />
         </Button>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid grid-cols-3 p-2">
-          <TabsTrigger value="write" className="flex items-center gap-1">
-            <Edit className="h-4 w-4" />
-            <span>Write</span>
-          </TabsTrigger>
-          <TabsTrigger value="translate" className="flex items-center gap-1">
-            <Languages className="h-4 w-4" />
-            <span>Translate</span>
-          </TabsTrigger>
-          <TabsTrigger value="files" className="flex items-center gap-1">
-            <Upload className="h-4 w-4" />
-            <span>Files</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="write" className="flex-1 flex flex-col p-3 space-y-3">
-          <form onSubmit={handleSubmit} className="flex-1 flex flex-col space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="prompt">What do you need help with?</Label>
-              <Textarea
-                id="prompt"
-                placeholder="Write a professional response to customer asking about pricing..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="flex-1 min-h-[100px]"
-              />
-            </div>
-            
-            <Button type="submit" disabled={isLoading || !prompt.trim()}>
-              {isLoading ? 'Processing...' : 'Generate Response'}
-            </Button>
-            
-            {response && (
-              <div className="space-y-1">
-                <Label>AI Response</Label>
-                <div className="border rounded-md p-3 bg-gray-50 text-sm overflow-auto max-h-[200px]">
-                  {response}
-                </div>
-                <div className="flex justify-end">
-                  <Button size="sm" variant="outline" onClick={() => {
-                    if (response) {
-                      navigator.clipboard.writeText(response);
-                    }
-                  }}>
-                    Copy to Clipboard
+      {/* Input area */}
+      <div className="p-3 border-b">
+        <Textarea
+          placeholder="What would you like help with?"
+          className="min-h-[80px] mb-2"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
+        <Button 
+          className="w-full"
+          onClick={generateResponse}
+          disabled={!prompt.trim() || isGenerating}
+        >
+          {isGenerating ? (
+            <span className="flex items-center">
+              <span className="mr-2">Generating</span>
+              <span className="flex gap-1">
+                <span className="animate-bounce">.</span>
+                <span className="animate-bounce delay-150">.</span>
+                <span className="animate-bounce delay-300">.</span>
+              </span>
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <SendHorizonal className="mr-2 h-4 w-4" />
+              Generate Response
+            </span>
+          )}
+        </Button>
+      </div>
+      
+      {/* Response history */}
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-4">
+          {responses.map((item, index) => (
+            <div key={index} className="bg-muted/40 rounded-md p-3">
+              <div className="text-xs text-muted-foreground mb-1">
+                <span className="font-medium">Prompt:</span> {item.prompt}
+              </div>
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-xs font-medium">Response:</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={() => copyToClipboard(item.response)}
+                  >
+                    <Copy className="h-3 w-3" />
                   </Button>
                 </div>
+                <div className="text-xs whitespace-pre-wrap">{item.response}</div>
               </div>
-            )}
-          </form>
-        </TabsContent>
-        
-        <TabsContent value="translate" className="flex-1 p-3 space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="text-to-translate">Text to Translate</Label>
-            <Textarea
-              id="text-to-translate"
-              placeholder="Enter text to translate..."
-              className="min-h-[100px]"
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <Label htmlFor="target-language">Target Language</Label>
-            <select id="target-language" className="w-full border rounded-md p-2">
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="it">Italian</option>
-              <option value="pt">Portuguese</option>
-              <option value="zh">Chinese</option>
-            </select>
-          </div>
-          
-          <Button>Translate</Button>
-        </TabsContent>
-        
-        <TabsContent value="files" className="flex-1 p-3 space-y-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Training Files</CardTitle>
-              <CardDescription>
-                Upload files to train your personal AI assistant with company-specific knowledge.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="file-upload">Upload Files (PDF, DOC, TXT)</Label>
-                  <Input 
-                    id="file-upload" 
-                    type="file" 
-                    multiple 
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                  />
-                </div>
-                
-                {uploadedFiles.length > 0 && (
-                  <div>
-                    <Label>Uploaded Files:</Label>
-                    <div className="mt-2 space-y-2">
-                      {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between border rounded-md p-2">
-                          <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                          <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" disabled={uploadedFiles.length === 0}>
-                Train Assistant with Files
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 };
