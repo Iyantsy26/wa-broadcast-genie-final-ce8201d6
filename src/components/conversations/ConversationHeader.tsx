@@ -1,189 +1,121 @@
 
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Conversation } from '@/types/conversation';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from '@/components/ui/badge';
+import {
+  MoreHorizontal,
+  Phone,
+  Video,
+  Search,
+  Info,
+  Building2,
+  UserRound,
+  Users
+} from 'lucide-react';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  User,
-  MoreVertical,
-  Archive,
-  Star,
-  Bell,
-  BellOff,
-  Ban,
-  Flag,
-  Trash,
-  MessageSquareText,
-  Phone,
-  Video,
-} from 'lucide-react';
-import { Contact } from '@/types/conversation';
-import { useConversation } from '@/contexts/ConversationContext';
-import { format } from 'date-fns';
 
 interface ConversationHeaderProps {
-  contact: Contact;
-  onInfoClick: () => void;
+  conversation: Conversation;
+  onOpenContactInfo: () => void;
 }
 
-const ConversationHeader: React.FC<ConversationHeaderProps> = ({
-  contact,
-  onInfoClick
+const ConversationHeader: React.FC<ConversationHeaderProps> = ({ 
+  conversation,
+  onOpenContactInfo
 }) => {
-  const {
-    toggleContactStar,
-    muteContact,
-    archiveContact,
-    blockContact,
-    reportContact,
-    clearChat
-  } = useConversation();
+  const contact = conversation.contact;
   
-  const getContactTypeColor = () => {
-    switch (contact.type) {
-      case 'team':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+  const getContactTypeIcon = () => {
+    switch (conversation.chatType) {
       case 'client':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        return <Building2 className="h-3 w-3 mr-1" />;
       case 'lead':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
+        return <UserRound className="h-3 w-3 mr-1" />;
+      case 'team':
+        return <Users className="h-3 w-3 mr-1" />;
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return null;
     }
   };
   
-  const getLastSeenText = () => {
-    if (contact.isOnline) {
-      return 'Online';
+  const getContactTypeBadgeClass = () => {
+    switch (conversation.chatType) {
+      case 'client':
+        return 'bg-emerald-100 text-emerald-700';
+      case 'lead':
+        return 'bg-amber-100 text-amber-700';
+      case 'team':
+        return 'bg-indigo-100 text-indigo-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
-    
-    if (contact.lastSeen) {
-      const lastSeenDate = new Date(contact.lastSeen);
-      const now = new Date();
-      
-      if (now.getTime() - lastSeenDate.getTime() < 24 * 60 * 60 * 1000) {
-        return `Last seen today at ${format(lastSeenDate, 'HH:mm')}`;
-      } else if (now.getTime() - lastSeenDate.getTime() < 48 * 60 * 60 * 1000) {
-        return `Last seen yesterday at ${format(lastSeenDate, 'HH:mm')}`;
-      } else {
-        return `Last seen on ${format(lastSeenDate, 'dd MMM')}`;
-      }
-    }
-    
-    return null;
   };
   
   return (
-    <div className="p-3 border-b bg-card flex justify-between items-center">
+    <div className="flex items-center justify-between p-3 border-b">
       <div className="flex items-center gap-3">
-        <Avatar className="h-10 w-10">
+        <Avatar className="h-9 w-9">
           <AvatarImage src={contact.avatar} />
-          <AvatarFallback className="bg-muted">
-            {contact.name.split(' ')
-              .map(n => n[0])
-              .join('')}
+          <AvatarFallback>
+            {contact.name.split(' ').map(n => n[0]).join('')}
           </AvatarFallback>
         </Avatar>
+        
         <div>
-          <div className="font-medium flex items-center gap-2">
+          <div className="font-medium flex items-center gap-1.5">
             {contact.name}
             {contact.isOnline && (
-              <span className="h-2 w-2 rounded-full bg-green-500"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
             )}
-            
-            <Badge className={`${getContactTypeColor()} ml-1 text-xs`}>
-              {contact.type === 'team' ? 'Team' : 
-               contact.type === 'client' ? 'Client' : 'Lead'}
-            </Badge>
           </div>
           
-          <div className="text-xs text-muted-foreground">
-            {contact.role || getLastSeenText() || contact.phone}
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Badge variant="outline" className={`px-1.5 py-0 h-4 mr-1.5 ${getContactTypeBadgeClass()}`}>
+              {getContactTypeIcon()}
+              {conversation.chatType.charAt(0).toUpperCase() + conversation.chatType.slice(1)}
+            </Badge>
+            
+            {contact.phone && <span>{contact.phone}</span>}
+            {!contact.phone && contact.lastSeen && (
+              <span>Last seen {new Date(contact.lastSeen).toLocaleDateString()}</span>
+            )}
           </div>
         </div>
       </div>
       
       <div className="flex items-center gap-1">
-        {/* Call/Video buttons if not team member */}
-        {contact.type !== 'team' && (
-          <>
-            <Button variant="ghost" size="icon" title="Voice call">
-              <Phone className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" title="Video call">
-              <Video className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-        
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onInfoClick}
-          title="Contact info"
-        >
-          <User className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Phone className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Video className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Search className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpenContactInfo}>
+          <Info className="h-4 w-4" />
         </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => toggleContactStar(contact.id)}>
-              <Star className="mr-2 h-4 w-4" />
-              {contact.isStarred ? 'Remove from starred' : 'Add to starred'}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={() => muteContact(contact.id, !contact.isMuted)}>
-              {contact.isMuted ? (
-                <>
-                  <Bell className="mr-2 h-4 w-4" />
-                  Unmute notifications
-                </>
-              ) : (
-                <>
-                  <BellOff className="mr-2 h-4 w-4" />
-                  Mute notifications
-                </>
-              )}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={() => archiveContact(contact.id)}>
-              <Archive className="mr-2 h-4 w-4" />
-              Archive conversation
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={() => clearChat(contact.id)}>
-              <MessageSquareText className="mr-2 h-4 w-4" />
-              Clear messages
-            </DropdownMenuItem>
-            
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuItem onClick={() => blockContact(contact.id)}>
-              <Ban className="mr-2 h-4 w-4" />
-              Block {contact.name}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={() => reportContact(contact.id, 'spam')}>
-              <Flag className="mr-2 h-4 w-4" />
-              Report {contact.name}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem className="text-destructive" onClick={() => clearChat(contact.id)}>
-              <Trash className="mr-2 h-4 w-4" />
-              Delete conversation
-            </DropdownMenuItem>
+            <DropdownMenuItem>Mute notifications</DropdownMenuItem>
+            <DropdownMenuItem>Block contact</DropdownMenuItem>
+            <DropdownMenuItem>Clear chat</DropdownMenuItem>
+            <DropdownMenuItem>Export chat</DropdownMenuItem>
+            <DropdownMenuItem className="text-red-600">Delete chat</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

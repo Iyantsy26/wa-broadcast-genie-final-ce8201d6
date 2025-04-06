@@ -17,6 +17,7 @@ const ChatPage = () => {
     dateRange,
     assigneeFilter,
     tagFilter,
+    selectedContactId,
     setActiveConversation,
     setIsSidebarOpen,
     setChatTypeFilter,
@@ -33,6 +34,9 @@ const ChatPage = () => {
     handleAssignConversation,
     messagesEndRef
   } = useConversation();
+
+  // Get messages for active conversation
+  const activeMessages = selectedContactId && messages[selectedContactId] ? messages[selectedContactId] : [];
 
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">
@@ -69,7 +73,7 @@ const ChatPage = () => {
         {activeConversation ? (
           <MessagePanel 
             conversation={activeConversation}
-            messages={messages}
+            messages={activeMessages}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
             onSendMessage={handleSendMessage}
             onVoiceMessageSent={handleVoiceMessageSent}

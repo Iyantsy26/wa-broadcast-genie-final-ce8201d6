@@ -6,25 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
-import { 
   CheckCircle, 
   Clock, 
-  MoreVertical, 
-  Play, 
-  Reply, 
-  SmilePlus,
-  Forward,
-  Trash2,
+  Reply,
   Globe,
-  Lock,
 } from 'lucide-react';
 
 interface MessageListProps {
-  messages: Record<string, Message[]>;
+  messages: Message[];
   contactName: string;
   isTyping: boolean;
   onReaction: (messageId: string, emoji: string) => void;
@@ -40,14 +29,10 @@ const MessageList: React.FC<MessageListProps> = ({
   onReply,
   messagesEndRef
 }) => {
-  // Get messages for the active conversation
-  const activeContactId = Object.keys(messages)[0] || '';
-  const messageList = activeContactId ? messages[activeContactId] || [] : [];
-  
   // Group messages by date
   const groupedMessages: { [date: string]: Message[] } = {};
   
-  messageList.forEach(message => {
+  messages.forEach(message => {
     const date = format(new Date(message.timestamp), 'yyyy-MM-dd');
     if (!groupedMessages[date]) {
       groupedMessages[date] = [];
@@ -99,7 +84,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <div className="mt-2 flex items-center p-2 bg-gray-100 rounded-md">
           <div className="flex items-center space-x-2 w-full">
             <button className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
-              <Play className="h-4 w-4" />
+              <play className="h-4 w-4" />
             </button>
             <div className="flex-1">
               <div className="h-1 w-full bg-gray-300 rounded-full">
@@ -235,6 +220,19 @@ const MessageList: React.FC<MessageListProps> = ({
                         ))}
                       </div>
                     )}
+                    
+                    {/* Message actions */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        className="p-1 hover:bg-gray-200 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReply(message);
+                        }}
+                      >
+                        <Reply className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -259,7 +257,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <div ref={messagesEndRef} />
         
         {/* When no messages */}
-        {messageList.length === 0 && (
+        {messages.length === 0 && (
           <div className="text-center text-muted-foreground p-6">
             <p className="mb-2">No messages yet</p>
             <p className="text-sm">Start the conversation now</p>

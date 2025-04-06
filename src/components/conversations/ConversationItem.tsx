@@ -13,40 +13,11 @@ interface ConversationItemProps {
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isActive, onClick }) => {
-  // Helper function to safely get lastMessage content
-  const getLastMessageContent = (lastMessage: LastMessage | string): string => {
-    if (typeof lastMessage === 'string') {
-      return lastMessage;
-    }
-    return lastMessage.content;
-  };
+  const { lastMessage } = conversation;
   
-  // Helper function to safely get lastMessage timestamp
-  const getLastMessageTimestamp = (lastMessage: LastMessage | string): string => {
-    if (typeof lastMessage === 'string') {
-      return conversation.lastMessageTimestamp || '';
-    }
-    return lastMessage.timestamp;
-  };
-  
-  // Helper function to safely get lastMessage isOutbound
-  const isLastMessageOutbound = (lastMessage: LastMessage | string): boolean => {
-    if (typeof lastMessage === 'string') {
-      return false; // Default value if unknown
-    }
-    return lastMessage.isOutbound;
-  };
-  
-  // Helper function to safely get lastMessage isRead
-  const isLastMessageRead = (lastMessage: LastMessage | string): boolean => {
-    if (typeof lastMessage === 'string') {
-      return true; // Default value if unknown
-    }
-    return lastMessage.isRead;
-  };
-
-  const timestamp = getLastMessageTimestamp(conversation.lastMessage);
-  const formattedTimestamp = timestamp ? format(new Date(timestamp), 'h:mm a') : '';
+  const formattedTimestamp = lastMessage.timestamp 
+    ? format(new Date(lastMessage.timestamp), 'h:mm a') 
+    : '';
   
   return (
     <div 
@@ -72,8 +43,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isAct
           
           <div className="flex justify-between items-center mt-1">
             <div className="text-sm text-muted-foreground truncate">
-              {isLastMessageOutbound(conversation.lastMessage) && 'You: '}
-              {getLastMessageContent(conversation.lastMessage)}
+              {lastMessage.isOutbound && 'You: '}
+              {lastMessage.content}
             </div>
             
             {conversation.unreadCount ? (
@@ -81,9 +52,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isAct
                 {conversation.unreadCount}
               </Badge>
             ) : (
-              isLastMessageOutbound(conversation.lastMessage) && (
+              lastMessage.isOutbound && (
                 <span className="text-xs text-muted-foreground">
-                  {isLastMessageRead(conversation.lastMessage) ? '✓✓' : '✓'}
+                  {lastMessage.isRead ? '✓✓' : '✓'}
                 </span>
               )
             )}

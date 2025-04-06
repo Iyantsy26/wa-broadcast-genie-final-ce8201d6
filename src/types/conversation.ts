@@ -77,7 +77,7 @@ export interface LastMessage {
 export interface Conversation {
   id: string;
   contact: Contact;
-  lastMessage: LastMessage; // Make this consistent - always an object
+  lastMessage: LastMessage; 
   lastMessageTimestamp?: string;
   unreadCount?: number;
   isTyping?: boolean;
@@ -90,7 +90,7 @@ export interface Conversation {
   assignedTo?: string;
   status?: string;
   settings?: ConversationSettings;
-  chatType: ChatType; // Make this required
+  chatType: ChatType;
 }
 
 export interface Lead {

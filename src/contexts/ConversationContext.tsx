@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { 
   Conversation, 
@@ -100,20 +99,15 @@ interface ConversationContextType {
 // Create context with initial values
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
-// Provider component
-interface ConversationProviderProps {
-  children: ReactNode;
-}
-
-export const ConversationProvider: React.FC<ConversationProviderProps> = ({ children }) => {
-  // State
-  const [contacts, setContacts] = useState<Contact[]>([]);
+const useConversationState = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [wallpaper, setWallpaper] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [contactFilter, setContactFilter] = useState<ChatType | 'all'>('all');
@@ -121,27 +115,81 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   const [selectedDevice, setSelectedDevice] = useState<string>("1"); // Default to first device
   const [aiAssistantActive, setAiAssistantActive] = useState<boolean>(false);
   const [isAssistantActive, setIsAssistantActive] = useState<boolean>(false);
-  
-  // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Define setActiveConversation at the top to avoid the reference error
-  const setActiveConversation = useCallback((conversation: Conversation | null) => {
-    if (conversation) {
-      setSelectedContactId(conversation.contact.id);
-    } else {
-      setSelectedContactId(null);
-    }
-  }, []);
-  
-  // Canned replies
-  const cannedReplies = [
-    { id: '1', title: 'Greeting', content: 'Hello! How can I help you today?' },
-    { id: '2', title: 'Thank You', content: 'Thank you for reaching out. We appreciate your interest!' },
-    { id: '3', title: 'Follow Up', content: "Just following up on our conversation. Do you have any questions I can help with?" },
-  ];
-  
-  // Use custom hooks for filtering and actions
+  return {
+    conversations,
+    setConversations,
+    activeConversation,
+    setActiveConversation,
+    loading,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    contacts,
+    setContacts,
+    messages,
+    setMessages,
+    selectedContactId,
+    setSelectedContactId,
+    isTyping,
+    setIsTyping,
+    wallpaper,
+    setWallpaper,
+    replyTo,
+    setReplyTo,
+    contactFilter,
+    setContactFilter,
+    searchTerm,
+    setSearchTerm,
+    selectedDevice,
+    setSelectedDevice,
+    aiAssistantActive,
+    setAiAssistantActive,
+    isAssistantActive,
+    setIsAssistantActive,
+    messagesEndRef
+  };
+};
+
+// Provider component
+interface ConversationProviderProps {
+  children: ReactNode;
+}
+
+export const ConversationProvider: React.FC<ConversationProviderProps> = ({ children }) => {
+  const {
+    conversations,
+    setConversations,
+    activeConversation,
+    setActiveConversation,
+    loading,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    contacts,
+    setContacts,
+    messages,
+    setMessages,
+    selectedContactId,
+    setSelectedContactId,
+    isTyping,
+    setIsTyping,
+    wallpaper,
+    setWallpaper,
+    replyTo,
+    setReplyTo,
+    contactFilter,
+    setContactFilter,
+    searchTerm,
+    setSearchTerm,
+    selectedDevice,
+    setSelectedDevice,
+    aiAssistantActive,
+    setAiAssistantActive,
+    isAssistantActive,
+    setIsAssistantActive,
+    messagesEndRef
+  } = useConversationState();
+
   const {
     filteredConversations,
     groupedConversations,
@@ -156,16 +204,18 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     resetAllFilters
   } = useConversationFilters(conversations);
   
-  const activeConversation = selectedContactId 
-    ? conversations.find(c => c.contact.id === selectedContactId) || null
-    : null;
-    
-  // Load contacts and conversations on mount
+  const activeMessages = selectedContactId && messages[selectedContactId] ? messages[selectedContactId] : [];
+
+  const cannedReplies = [
+    { id: '1', title: 'Greeting', content: 'Hello! How can I help you today?' },
+    { id: '2', title: 'Thank You', content: 'Thank you for reaching out. We appreciate your interest!' },
+    { id: '3', title: 'Follow Up', content: "Just following up on our conversation. Do you have any questions I can help with?" },
+  ];
+  
   useEffect(() => {
     loadContacts();
   }, []);
   
-  // Load messages when contact changes
   useEffect(() => {
     if (selectedContactId) {
       const conversation = conversations.find(c => c.contact.id === selectedContactId);
@@ -175,20 +225,16 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     }
   }, [selectedContactId, conversations]);
   
-  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, selectedContactId]);
   
-  // Load contacts from Supabase
   const loadContacts = async () => {
     setLoading(true);
     try {
-      // Fetch conversations which will include contact information
       const fetchedConversations = await getConversations();
       
       if (fetchedConversations.length > 0) {
-        // Extract unique contacts from conversations
         const uniqueContacts = fetchedConversations.map(conv => ({
           ...conv.contact,
           tags: conv.contact.tags || []
@@ -197,11 +243,9 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         setContacts(uniqueContacts);
         setConversations(fetchedConversations);
         
-        // Select first contact
         if (!selectedContactId && fetchedConversations.length > 0) {
           setSelectedContactId(fetchedConversations[0].contact.id);
           
-          // Load messages for the selected contact
           await loadAllMessages();
         }
       }
@@ -217,7 +261,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     }
   };
 
-  // Load messages for all contacts
   const loadAllMessages = async () => {
     try {
       const allMessages: Record<string, Message[]> = {};
@@ -235,7 +278,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         }
         
         if (messageData) {
-          // Transform database messages to our Message type
           const transformedMessages: Message[] = messageData.map(msg => ({
             id: msg.id,
             content: msg.content,
@@ -246,7 +288,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
             type: msg.message_type as MessageType,
             media: msg.media_url ? {
               url: msg.media_url,
-              type: msg.media_type as 'image' | 'video' | 'document' | 'voice',
+              type: (msg.media_type as 'image' | 'video' | 'document' | 'voice'),
               filename: msg.media_filename,
               duration: msg.media_duration,
             } : undefined,
@@ -273,7 +315,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     }
   };
   
-  // Load messages for a specific contact
   const loadMessages = async (contactId: string) => {
     try {
       const conversation = conversations.find(c => c.contact.id === contactId);
@@ -284,7 +325,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       
       const conversationMessages = await getMessages(conversation.id);
       
-      // Update messages state
       setMessages(prev => ({
         ...prev,
         [contactId]: conversationMessages
@@ -300,30 +340,25 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     }
   };
   
-  // Scroll to bottom of message list
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
   
-  // Select a contact
   const selectContact = (contactId: string) => {
     setSelectedContactId(contactId);
     setIsSidebarOpen(false);
   };
   
-  // Toggle sidebar
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
   
-  // Toggle assistant
   const toggleAssistant = () => {
     setIsAssistantActive(prev => !prev);
   };
   
-  // Send a message
   const sendMessageHandler = async (contactId: string, content: string) => {
     if (!content.trim()) return;
     
@@ -334,7 +369,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       return;
     }
     
-    // Create a temporary message to show in the UI
     const tempMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
@@ -345,17 +379,14 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       type: 'text'
     };
     
-    // Add the temp message to the UI
     setMessages(prev => ({
       ...prev,
       [contactId]: [...(prev[contactId] || []), tempMessage]
     }));
     
-    // Scroll to bottom
     scrollToBottom();
     
     try {
-      // Send the message to the server
       const sentMessage = await sendMessage(
         conversation.id,
         content,
@@ -363,7 +394,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         'You'
       );
       
-      // Update the message with the server response
       setMessages(prev => ({
         ...prev,
         [contactId]: prev[contactId].map(msg => 
@@ -371,30 +401,29 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         )
       }));
       
-      // Update conversation last message
+      const newLastMessage: LastMessage = {
+        content,
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: false
+      };
+
       setConversations(prev => 
         prev.map(conv => 
           conv.id === conversation.id 
             ? { 
                 ...conv, 
-                lastMessage: {
-                  content,
-                  timestamp: new Date().toISOString(),
-                  isOutbound: true,
-                  isRead: false
-                }
+                lastMessage: newLastMessage
               }
             : conv
         )
       );
       
-      // Clear reply to
       setReplyTo(null);
       
     } catch (error) {
       console.error("Error sending message:", error);
       
-      // Update message status to error
       setMessages(prev => ({
         ...prev,
         [contactId]: prev[contactId].map(msg => 
@@ -412,7 +441,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     }
   };
   
-  // Send a voice message
   const sendVoiceMessage = async (contactId: string, durationInSeconds: number) => {
     const conversation = conversations.find(c => c.contact.id === contactId);
     
@@ -421,7 +449,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       return;
     }
     
-    // Create a temporary voice message
     const tempMessage: Message = {
       id: `temp-${Date.now()}`,
       content: 'Voice message',
@@ -437,18 +464,14 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       }
     };
     
-    // Add to UI
     setMessages(prev => ({
       ...prev,
       [contactId]: [...(prev[contactId] || []), tempMessage]
     }));
     
-    // Scroll to bottom
     scrollToBottom();
     
     try {
-      // Mock sending voice message
-      // In reality, this would upload the voice file to storage
       setTimeout(() => {
         setMessages(prev => ({
           ...prev,
@@ -459,18 +482,19 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
           )
         }));
         
-        // Update conversation last message
+        const newLastMessage: LastMessage = {
+          content: 'Voice message',
+          timestamp: new Date().toISOString(),
+          isOutbound: true,
+          isRead: false
+        };
+
         setConversations(prev => 
           prev.map(conv => 
             conv.id === conversation.id 
               ? { 
                   ...conv, 
-                  lastMessage: {
-                    content: 'Voice message',
-                    timestamp: new Date().toISOString(),
-                    isOutbound: true,
-                    isRead: false
-                  }
+                  lastMessage: newLastMessage
                 }
               : conv
           )
@@ -497,7 +521,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     }
   };
   
-  // Toggle star status for a contact
   const toggleContactStar = (contactId: string) => {
     setContacts(prev => 
       prev.map(contact => 
@@ -508,7 +531,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     );
   };
   
-  // Mute/unmute a contact
   const muteContact = (contactId: string, mute: boolean) => {
     setContacts(prev => 
       prev.map(contact => 
@@ -524,7 +546,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Archive/unarchive a contact
   const archiveContact = (contactId: string, archive: boolean) => {
     setContacts(prev => 
       prev.map(contact => 
@@ -540,7 +561,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Block/unblock a contact
   const blockContact = (contactId: string, block: boolean) => {
     setContacts(prev => 
       prev.map(contact => 
@@ -559,7 +579,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Report a contact
   const reportContact = (contactId: string) => {
     toast({
       title: "Contact reported",
@@ -567,7 +586,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Clear chat history
   const clearChat = (contactId: string) => {
     setMessages(prev => ({
       ...prev,
@@ -580,7 +598,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Use conversation actions hook
   const {
     handleDeleteConversation,
     handleArchiveConversation,
@@ -594,7 +611,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setIsSidebarOpen
   );
   
-  // Add a reaction to a message
   const addReaction = (messageId: string, emoji: string) => {
     if (!selectedContactId) return;
     
@@ -606,14 +622,11 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         const message = contactMessages[messageIndex];
         const reactions = message.reactions || [];
         
-        // Check if user already reacted with this emoji
         const existingReaction = reactions.findIndex(r => r.userId === 'current-user' && r.emoji === emoji);
         
         if (existingReaction !== -1) {
-          // Remove the reaction
           reactions.splice(existingReaction, 1);
         } else {
-          // Add the reaction
           reactions.push({
             emoji,
             userId: 'current-user',
@@ -622,7 +635,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
           });
         }
         
-        // Update the message
         contactMessages[messageIndex] = {
           ...message,
           reactions
@@ -636,7 +648,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Delete a message
   const deleteMessage = (messageId: string) => {
     if (!selectedContactId) return;
     
@@ -654,31 +665,26 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Reply to a message
   const handleReplyToMessage = (message: Message) => {
     setReplyTo(message);
   };
   
-  // Cancel reply
   const handleCancelReply = () => {
     setReplyTo(null);
   };
   
-  // Use a canned reply
   const handleUseCannedReply = (replyContent: string) => {
     if (selectedContactId) {
       sendMessageHandler(selectedContactId, replyContent);
     }
   };
   
-  // Request AI assistance
   const handleRequestAIAssistance = async (prompt: string): Promise<string> => {
     toast({
       title: "AI Assistant",
       description: "Generating response...",
     });
     
-    // Mock AI response - in a real app this would call an AI service
     return new Promise((resolve) => {
       setTimeout(() => {
         const aiResponse = `Here's a suggestion in response to "${prompt}": Thank you for your inquiry. I'd be happy to help you with that. Could you please provide more details so I can assist you better?`;
@@ -693,9 +699,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Add a new contact
   const handleAddContact = (contactData: Partial<Contact>) => {
-    // In a real app, this would create a contact in the database
     const newContact: Contact = {
       id: `new-${Date.now()}`,
       name: contactData.name || 'New Contact',
@@ -706,27 +710,25 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       tags: contactData.tags || [],
     };
     
-    // Add to contacts list
     setContacts(prev => [...prev, newContact]);
     
-    // Create a new conversation
+    const newLastMessage: LastMessage = {
+      content: 'New conversation',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      isRead: true
+    };
+
     const newConversation: Conversation = {
       id: `conv-${Date.now()}`,
       contact: newContact,
-      lastMessage: {
-        content: 'New conversation',
-        timestamp: new Date().toISOString(),
-        isOutbound: true,
-        isRead: true
-      },
+      lastMessage: newLastMessage,
       chatType: newContact.type,
       tags: [],
     };
     
-    // Add to conversations list
     setConversations(prev => [...prev, newConversation]);
     
-    // Select the new contact
     setSelectedContactId(newContact.id);
     
     toast({
@@ -735,24 +737,19 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
-  // Handler for send message from other components
   const handleSendMessage = async (content: string, file: File | null, replyToMessageId?: string): Promise<void> => {
     if (!selectedContactId) return;
     
-    // For now, ignore file and replyToMessageId
     await sendMessageHandler(selectedContactId, content);
   };
 
-  // Handler for voice message sent from other components
   const handleVoiceMessageSent = async (durationInSeconds: number): Promise<void> => {
     if (!selectedContactId) return;
     
     await sendVoiceMessage(selectedContactId, durationInSeconds);
   };
 
-  // Context value
   const contextValue: ConversationContextType = {
-    // State
     contacts,
     messages,
     selectedContactId,
@@ -764,19 +761,13 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     contactFilter,
     searchTerm,
     selectedDevice,
-    
-    // UI State
     chatTypeFilter,
     dateRange,
     assigneeFilter,
     tagFilter,
-    
-    // Derived state
     filteredConversations,
     groupedConversations,
     activeConversation,
-    
-    // Methods
     selectContact,
     toggleSidebar,
     setWallpaper,
@@ -792,26 +783,18 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     reportContact,
     clearChat,
     setSelectedDevice,
-    
-    // Filter methods
     setChatTypeFilter,
     setDateRange,
     setAssigneeFilter,
     setTagFilter,
     resetAllFilters,
-    
-    // Action methods
     handleSendMessage,
     handleVoiceMessageSent,
     handleDeleteConversation,
     handleArchiveConversation,
     handleAddTag,
     handleAssignConversation,
-    
-    // Refs
     messagesEndRef,
-    
-    // Additional features
     isReplying: !!replyTo,
     replyToMessage: replyTo,
     cannedReplies,
@@ -838,7 +821,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   );
 };
 
-// Custom hook to use the context
 export const useConversation = (): ConversationContextType => {
   const context = useContext(ConversationContext);
   

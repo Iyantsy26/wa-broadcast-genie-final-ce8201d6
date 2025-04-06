@@ -12,7 +12,6 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
-import { ChatType } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
@@ -33,6 +32,7 @@ const ConversationPage = () => {
     assigneeFilter,
     tagFilter,
     messagesEndRef,
+    selectedContactId,
     setActiveConversation,
     setIsSidebarOpen,
     setSelectedDevice,
@@ -51,9 +51,12 @@ const ConversationPage = () => {
     handleReplyToMessage,
     handleCancelReply,
     handleUseCannedReply,
-    handleRequestAIAssistance,
-    handleAddContact
+    handleAddContact,
+    handleRequestAIAssistance
   } = useConversation();
+
+  // Get messages for active conversation
+  const activeMessages = selectedContactId && messages[selectedContactId] ? messages[selectedContactId] : [];
 
   // Define dummy pinConversation function to satisfy the interface
   const pinConversation = (conversationId: string) => {
@@ -116,7 +119,7 @@ const ConversationPage = () => {
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
-                messages={messages} 
+                messages={activeMessages} 
                 contactName={activeConversation.contact.name}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}

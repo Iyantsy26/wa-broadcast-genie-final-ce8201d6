@@ -60,7 +60,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
       const contactInfo = isClient ? clients[contactId] : leads[contactId];
       const chatType = isClient ? 'client' as ChatType : 'lead' as ChatType;
       
-      // Create consistent lastMessage object
+      // Create consistent LastMessage object
       let lastMessage: LastMessage;
       if (typeof conv.last_message === 'string') {
         lastMessage = {

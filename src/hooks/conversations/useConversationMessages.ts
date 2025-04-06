@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Message, Conversation } from '@/types/conversation';
+import { Message, Conversation, LastMessage } from '@/types/conversation';
 import { getMessages, sendMessage } from '@/services/conversations';
 
 export const useConversationMessages = (
@@ -8,7 +8,7 @@ export const useConversationMessages = (
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>,
   setActiveConversation: React.Dispatch<React.SetStateAction<Conversation | null>>
 ) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -16,7 +16,7 @@ export const useConversationMessages = (
     if (activeConversation) {
       loadMessages(activeConversation.id);
     } else {
-      setMessages([]);
+      // Do not reset messages when no active conversation
     }
   }, [activeConversation]);
 
@@ -28,7 +28,14 @@ export const useConversationMessages = (
     setIsLoading(true);
     try {
       const fetchedMessages = await getMessages(conversationId);
-      setMessages(fetchedMessages);
+      
+      // If the conversation has a contact, store messages by contact ID
+      if (activeConversation?.contact.id) {
+        setMessages(prev => ({
+          ...prev,
+          [activeConversation.contact.id]: fetchedMessages
+        }));
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
@@ -57,7 +64,16 @@ export const useConversationMessages = (
     };
 
     // Add to UI immediately
-    setMessages(prev => [...prev, tempMessage]);
+    if (activeConversation.contact.id) {
+      setMessages(prev => ({
+        ...prev,
+        [activeConversation.contact.id]: [
+          ...(prev[activeConversation.contact.id] || []),
+          tempMessage
+        ]
+      }));
+    }
+    
     scrollToBottom();
 
     try {
@@ -86,44 +102,56 @@ export const useConversationMessages = (
         replyToMessageId
       );
 
-      if (sentMessage) {
+      if (sentMessage && activeConversation.contact.id) {
         // Replace temp message with actual message
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempMessage.id ? sentMessage : msg
-        ));
+        setMessages(prev => ({
+          ...prev,
+          [activeConversation.contact.id]: (prev[activeConversation.contact.id] || []).map(msg => 
+            msg.id === tempMessage.id ? sentMessage : msg
+          )
+        }));
 
         // Update conversations list with new last message
+        const newLastMessage: LastMessage = {
+          content,
+          timestamp: new Date().toISOString(),
+          isOutbound: true,
+          isRead: false
+        };
+
         setConversations(prev => prev.map(conv => 
           conv.id === activeConversation.id 
             ? { 
                 ...conv, 
-                lastMessage: content,
+                lastMessage: newLastMessage,
                 lastMessageTimestamp: new Date().toISOString() 
               } 
             : conv
         ));
 
         // Update active conversation
-        setActiveConversation(prev => {
-          if (prev && prev.id === activeConversation.id) {
-            return {
-              ...prev,
-              lastMessage: content,
-              lastMessageTimestamp: new Date().toISOString()
-            };
-          }
-          return prev;
-        });
+        if (activeConversation) {
+          setActiveConversation({
+            ...activeConversation,
+            lastMessage: newLastMessage,
+            lastMessageTimestamp: new Date().toISOString()
+          });
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
       
       // Update the temp message to show error status
-      setMessages(prev => prev.map(msg => 
-        msg.id === tempMessage.id 
-          ? { ...msg, status: 'error' } 
-          : msg
-      ));
+      if (activeConversation.contact.id) {
+        setMessages(prev => ({
+          ...prev,
+          [activeConversation.contact.id]: (prev[activeConversation.contact.id] || []).map(msg => 
+            msg.id === tempMessage.id 
+              ? { ...msg, status: 'error' } 
+              : msg
+          )
+        }));
+      }
     }
   };
 
@@ -148,7 +176,16 @@ export const useConversationMessages = (
     };
 
     // Add to UI immediately
-    setMessages(prev => [...prev, voiceMessage]);
+    if (activeConversation.contact.id) {
+      setMessages(prev => ({
+        ...prev,
+        [activeConversation.contact.id]: [
+          ...(prev[activeConversation.contact.id] || []),
+          voiceMessage
+        ]
+      }));
+    }
+    
     scrollToBottom();
 
     try {
@@ -160,32 +197,56 @@ export const useConversationMessages = (
         'You'
       );
 
-      if (sentMessage) {
+      if (sentMessage && activeConversation.contact.id) {
         // Replace temp message with actual message
-        setMessages(prev => prev.map(msg => 
-          msg.id === voiceMessage.id ? sentMessage : msg
-        ));
+        setMessages(prev => ({
+          ...prev,
+          [activeConversation.contact.id]: (prev[activeConversation.contact.id] || []).map(msg => 
+            msg.id === voiceMessage.id ? sentMessage : msg
+          )
+        }));
 
         // Update conversations list with new last message
+        const newLastMessage: LastMessage = {
+          content: 'Voice message',
+          timestamp: new Date().toISOString(),
+          isOutbound: true,
+          isRead: false
+        };
+
         setConversations(prev => prev.map(conv => 
           conv.id === activeConversation.id 
             ? { 
                 ...conv, 
-                lastMessage: 'Voice message',
+                lastMessage: newLastMessage,
                 lastMessageTimestamp: new Date().toISOString() 
               } 
             : conv
         ));
+        
+        // Update active conversation
+        if (activeConversation) {
+          setActiveConversation({
+            ...activeConversation,
+            lastMessage: newLastMessage,
+            lastMessageTimestamp: new Date().toISOString()
+          });
+        }
       }
     } catch (error) {
       console.error('Error sending voice message:', error);
       
       // Update the temp message to show error status
-      setMessages(prev => prev.map(msg => 
-        msg.id === voiceMessage.id 
-          ? { ...msg, status: 'error' } 
-          : msg
-      ));
+      if (activeConversation.contact.id) {
+        setMessages(prev => ({
+          ...prev,
+          [activeConversation.contact.id]: (prev[activeConversation.contact.id] || []).map(msg => 
+            msg.id === voiceMessage.id 
+              ? { ...msg, status: 'error' } 
+              : msg
+          )
+        }));
+      }
     }
   };
 
