@@ -66,3 +66,55 @@ export interface ConversationSettings {
   language: string;
   fontSize: 'small' | 'medium' | 'large';
 }
+
+// Add the missing Conversation interface
+export interface Conversation {
+  id: string;
+  contact: Contact;
+  lastMessage: {
+    content: string;
+    timestamp: string;
+    isOutbound: boolean;
+    isRead: boolean;
+  };
+  status: string;
+  chatType: ChatType;
+  tags?: string[];
+  assignedTo?: string;
+  isEncrypted?: boolean;
+}
+
+// Add Client interface
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  avatar_url?: string;
+  address?: string;
+  tags?: string[];
+  notes?: string;
+  plan_details?: string;
+  join_date: string;
+  renewal_date?: string;
+  referred_by?: string;
+}
+
+// Add Lead interface
+export interface Lead {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  avatar_url?: string;
+  address?: string;
+  status: string;
+  source?: string;
+  notes?: string;
+  created_at: string;
+  last_contact?: string;
+  next_followup?: string;
+  referrer_name?: string;
+}
