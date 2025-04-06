@@ -119,12 +119,12 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
     const loadContacts = async () => {
       try {
         // Fetch team members (agents)
-        const { data: agents, error: agentsError } = await supabase
-          .from('agents')
+        const { data: teamMembers, error: teamError } = await supabase
+          .from('team_members')
           .select('*')
           .eq('status', 'active');
         
-        if (agentsError) throw agentsError;
+        if (teamError) throw teamError;
         
         // Fetch clients
         const { data: clients, error: clientsError } = await supabase
@@ -141,15 +141,15 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
         if (leadsError) throw leadsError;
         
         // Transform data to our Contact type
-        const teamContacts = agents?.map(agent => ({
-          id: agent.id,
-          name: agent.name,
-          avatar: agent.avatar_url,
-          phone: agent.phone || '',
+        const teamContacts = teamMembers?.map(member => ({
+          id: member.id,
+          name: member.name,
+          avatar: member.avatar || '',
+          phone: member.phone || '',
           type: 'team' as ChatType,
           isOnline: Math.random() > 0.5, // Mock online status
           lastSeen: new Date().toISOString(),
-          role: agent.role || '',
+          role: member.role || '',
           isStarred: false,
           isMuted: false,
           isArchived: false,
@@ -160,7 +160,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
         const clientContacts = clients?.map(client => ({
           id: client.id,
           name: client.name,
-          avatar: client.avatar_url,
+          avatar: client.avatar_url || '',
           phone: client.phone || '',
           type: 'client' as ChatType,
           isOnline: Math.random() > 0.7, // Mock online status
@@ -170,13 +170,13 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
           isMuted: false,
           isArchived: false,
           isBlocked: false,
-          tags: ['active'],
+          tags: client.tags || ['active'],
         })) || [];
         
         const leadContacts = leads?.map(lead => ({
           id: lead.id,
           name: lead.name,
-          avatar: lead.avatar_url,
+          avatar: lead.avatar_url || '',
           phone: lead.phone || '',
           type: 'lead' as ChatType,
           isOnline: Math.random() > 0.8, // Mock online status
@@ -186,7 +186,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
           isMuted: false,
           isArchived: false,
           isBlocked: false,
-          tags: [lead.status || 'new'],
+          tags: lead.status ? [lead.status] : ['new'],
         })) || [];
         
         const allContacts = [...teamContacts, ...clientContacts, ...leadContacts];
@@ -229,24 +229,24 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
           if (data && data.length > 0) {
             messagesByContact[contact.id] = data.map(msg => ({
               id: msg.id,
-              content: msg.content,
+              content: msg.content || '',
               timestamp: msg.timestamp,
-              type: msg.type as MessageType,
+              type: (msg.message_type || 'text') as MessageType,
               status: msg.status as MessageStatus,
-              sender: msg.sender_id === contact.id ? contact.name : 'You',
-              isOutbound: msg.sender_id !== contact.id,
+              sender: msg.sender || (msg.sender_id === contact.id ? contact.name : 'You'),
+              isOutbound: msg.is_outbound || false,
               media: msg.media_url ? {
                 url: msg.media_url,
-                type: msg.type as 'image' | 'video' | 'document' | 'voice',
-                filename: msg.filename,
-                duration: msg.duration,
-                size: msg.size
+                type: (msg.media_type || 'image') as 'image' | 'video' | 'document' | 'voice',
+                filename: msg.media_filename,
+                duration: msg.media_duration,
+                size: msg.media_duration
               } : undefined,
               replyTo: msg.reply_to_id ? {
                 id: msg.reply_to_id,
                 content: msg.reply_to_content || '',
                 sender: msg.reply_to_sender || '',
-                type: msg.reply_to_type as MessageType || 'text',
+                type: (msg.reply_to_type || 'text') as MessageType,
                 status: 'sent',
                 isOutbound: msg.reply_to_is_outbound || false,
                 timestamp: msg.reply_to_timestamp || new Date().toISOString(),
@@ -463,7 +463,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
     };
     
     loadContacts();
-  }, []);
+  }, [selectedContactId]);
   
   // Scroll to bottom when messages change
   useEffect(() => {

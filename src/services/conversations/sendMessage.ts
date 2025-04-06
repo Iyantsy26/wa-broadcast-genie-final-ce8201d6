@@ -1,39 +1,36 @@
 
-import { Message, MessageStatus, MessageType } from '@/types/conversation';
+import { Message, MessageType } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
-export const sendMessage = async (conversationId: string, messageData: Omit<Message, 'id'>): Promise<Message> => {
+export const sendMessage = async (
+  conversationId: string,
+  content: string,
+  type: MessageType = 'text',
+  senderId: string,
+  recipientId: string,
+  mediaUrl?: string,
+  replyToId?: string
+): Promise<Message | null> => {
   try {
-    // First, update the conversation's last message and timestamp
-    const { error: updateError } = await supabase
-      .from('conversations')
-      .update({
-        last_message: messageData.content || 'Attachment',
-        last_message_timestamp: messageData.timestamp,
-        status: 'active' // Set conversation to active when sending a message
-      })
-      .eq('id', conversationId);
-
-    if (updateError) {
-      console.error('Error updating conversation:', updateError);
-      throw updateError;
-    }
-
-    // Then, insert the new message
+    const timestamp = new Date().toISOString();
+    const messageId = uuidv4();
+    
     const { data, error } = await supabase
       .from('messages')
       .insert({
+        id: messageId,
         conversation_id: conversationId,
-        content: messageData.content,
-        timestamp: messageData.timestamp,
-        is_outbound: messageData.isOutbound,
-        status: messageData.status,
-        sender: messageData.sender,
-        message_type: messageData.type,
-        media_url: messageData.media?.url,
-        media_type: messageData.media?.type,
-        media_filename: messageData.media?.filename,
-        media_duration: messageData.media?.duration
+        content,
+        message_type: type,
+        timestamp,
+        sender_id: senderId,
+        recipient_id: recipientId,
+        is_outbound: true,
+        status: 'sent',
+        media_url: mediaUrl,
+        media_type: mediaUrl ? type : undefined,
+        reply_to_id: replyToId
       })
       .select()
       .single();
@@ -43,23 +40,38 @@ export const sendMessage = async (conversationId: string, messageData: Omit<Mess
       throw error;
     }
 
+    // Update the conversation's last message
+    const { error: updateError } = await supabase
+      .from('conversations')
+      .update({
+        last_message: content,
+        last_message_timestamp: timestamp,
+        updated_at: timestamp
+      })
+      .eq('id', conversationId);
+
+    if (updateError) {
+      console.error('Error updating conversation:', updateError);
+    }
+
+    // Return formatted message
     return {
-      id: data.id,
-      content: data.content || '',
-      timestamp: data.timestamp,
-      isOutbound: data.is_outbound || false,
-      status: data.status as MessageStatus || 'sent',
-      sender: data.sender,
-      type: data.message_type as MessageType || 'text',
-      media: data.media_url ? {
-        url: data.media_url,
-        type: data.media_type as 'image' | 'video' | 'document' | 'voice',
-        filename: data.media_filename,
-        duration: data.media_duration
-      } : undefined
+      id: messageId,
+      content,
+      timestamp,
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type,
+      media: mediaUrl ? {
+        url: mediaUrl,
+        type: type as any,
+        filename: mediaUrl.split('/').pop() || 'file'
+      } : undefined,
+      reactions: []
     };
   } catch (error) {
     console.error('Error in sendMessage:', error);
-    throw error;
+    return null;
   }
 };

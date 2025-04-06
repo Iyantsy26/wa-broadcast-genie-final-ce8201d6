@@ -1,5 +1,5 @@
 
-import { Message, MessageStatus, MessageType } from '@/types/conversation';
+import { Message } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 
 export const getMessages = async (conversationId: string): Promise<Message[]> => {
@@ -15,21 +15,24 @@ export const getMessages = async (conversationId: string): Promise<Message[]> =>
       throw error;
     }
 
+    // Map database messages to our Message type
     return (data || []).map(msg => ({
       id: msg.id,
       content: msg.content || '',
       timestamp: msg.timestamp,
       isOutbound: msg.is_outbound || false,
-      status: (msg.status || 'sent') as MessageStatus,
-      sender: msg.sender,
-      type: (msg.message_type || 'text') as MessageType,
+      status: msg.status as any,
+      sender: msg.sender || '',
+      type: (msg.message_type || 'text') as any,
       media: msg.media_url ? {
         url: msg.media_url,
-        type: msg.media_type as 'image' | 'video' | 'document' | 'voice',
+        type: (msg.media_type || 'image') as any,
         filename: msg.media_filename,
         duration: msg.media_duration,
-        size: 0 // Default value since it's not in the database
-      } : undefined
+        size: msg.media_duration
+      } : undefined,
+      replyTo: undefined, // You can expand this if needed
+      reactions: [] // You can expand this if needed
     }));
   } catch (error) {
     console.error('Error in getMessages:', error);
