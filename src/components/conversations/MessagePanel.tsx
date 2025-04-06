@@ -1,82 +1,62 @@
 
-import React, { useState } from 'react';
-import { Message, MessageType, Conversation } from '@/types/conversation';
+import React, { useRef, useEffect } from 'react';
+import { useConversation } from '@/contexts/ConversationContext';
+import { Contact } from '@/types/conversation';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import MessageInputBar from './MessageInputBar';
 
 interface MessagePanelProps {
-  messages: Message[];
-  contactName: string;
-  isTyping: boolean;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
-  onSendMessage: (content: string, file: File | null, replyToMessageId?: string) => Promise<void>;
-  onVoiceMessageSent: (durationSeconds: number) => Promise<void>;
-  onReaction?: (messageId: string, emoji: string) => void;
-  onReply?: (message: Message) => void;
-  onOpenContactInfo: () => void;
-  conversation: Conversation;
+  contact: Contact;
 }
 
-const MessagePanel: React.FC<MessagePanelProps> = ({
-  messages,
-  contactName,
-  isTyping,
-  messagesEndRef,
-  onSendMessage,
-  onVoiceMessageSent,
-  onReaction,
-  onReply,
-  onOpenContactInfo,
-  conversation
-}) => {
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
+const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
+  const {
+    messages,
+    isTyping,
+    replyTo,
+    wallpaper,
+    messagesEndRef,
+    toggleSidebar,
+    sendMessage,
+    sendVoiceMessage,
+    setReplyTo,
+  } = useConversation();
   
-  const handleSendMessage = async (content: string, type?: MessageType, mediaUrl?: string): Promise<void> => {
-    // In a real app, we would handle type and mediaUrl correctly
-    // For now, we'll just pass the content along
-    await onSendMessage(content, null);
-  };
+  const contactMessages = messages[contact.id] || [];
   
-  const handleVoiceMessage = async (durationSeconds: number): Promise<void> => {
-    await onVoiceMessageSent(durationSeconds);
-  };
-  
-  const handleReply = (message: Message) => {
-    setReplyTo(message);
-    if (onReply) {
-      onReply(message);
-    }
-  };
-  
-  const handleCancelReply = () => {
-    setReplyTo(null);
-  };
+  // Set background style if wallpaper is set
+  const backgroundStyle = wallpaper
+    ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : {};
   
   return (
-    <div className="flex flex-col h-full">
-      {/* Header with contact info */}
+    <div className="flex-1 flex flex-col h-full">
+      {/* Conversation header */}
       <ConversationHeader 
-        conversation={conversation} 
-        onOpenContactInfo={onOpenContactInfo} 
+        contact={contact} 
+        onInfoClick={toggleSidebar}
       />
       
-      {/* Message list area */}
-      <MessageList 
-        messages={messages}
-        contact={conversation.contact}
-        messagesEndRef={messagesEndRef}
-        isTyping={isTyping}
-        onReaction={onReaction}
-        onReply={handleReply}
-      />
+      {/* Message list */}
+      <div 
+        className="flex-1 overflow-y-auto bg-slate-50" 
+        style={backgroundStyle}
+      >
+        <MessageList 
+          messages={contactMessages}
+          contact={contact}
+          isTyping={isTyping}
+          messagesEndRef={messagesEndRef}
+        />
+      </div>
       
-      {/* Message input area */}
-      <MessageInputBar 
+      {/* Message input */}
+      <MessageInputBar
         replyTo={replyTo}
-        onCancelReply={handleCancelReply}
-        onSendMessage={handleSendMessage}
-        onSendVoiceMessage={handleVoiceMessage}
+        onCancelReply={() => setReplyTo(null)}
+        onSendMessage={sendMessage}
+        onSendVoiceMessage={sendVoiceMessage}
       />
     </div>
   );

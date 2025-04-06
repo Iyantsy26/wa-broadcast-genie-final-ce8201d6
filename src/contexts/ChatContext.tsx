@@ -1,868 +1,725 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
-import { 
-  Conversation, 
-  Contact, 
-  Message, 
-  ChatType, 
-  MessageType, 
-  MessageStatus,
-  LastMessage
-} from '@/types/conversation';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { getConversations, getMessages, sendMessage } from '@/services/conversationService';
-import { useConversationFilters } from '@/hooks/conversations/useConversationFilters';
-import { useConversationActions } from '@/hooks/conversations/useConversationActions';
-import { DateRange } from 'react-day-picker';
+import React, { createContext, useContext, useRef, ReactNode } from 'react';
+import { Contact, Conversation, Message, MessageType, ChatType } from '@/types/conversation';
+import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
-// Mock data with tags property for all contacts
-const mockContacts = [
-  {
-    id: '1',
-    name: 'John Smith',
-    avatar: '/avatars/john-smith.png',
-    phone: '+1234567890',
-    type: 'client' as ChatType,
-    isOnline: true,
-    lastSeen: new Date().toISOString(),
-    tags: ['VIP', 'Paid']
-  },
-  {
-    id: '2',
-    name: 'Jane Doe',
-    avatar: '/avatars/jane-doe.png',
-    phone: '+0987654321',
-    type: 'client' as ChatType,
-    isOnline: false,
-    lastSeen: new Date().toISOString(),
-    tags: ['VIP']
-  },
-  {
-    id: '3',
-    name: 'Alice Johnson',
-    avatar: '/avatars/alice-johnson.png',
-    phone: '+1122334455',
-    type: 'client' as ChatType,
-    isOnline: true,
-    lastSeen: new Date().toISOString(),
-    tags: []
-  }
-];
-
-// Context type definition
-interface ConversationContextType {
-  // State
-  contacts: Contact[];
-  messages: Record<string, Message[]>;
-  selectedContactId: string | null;
-  loading: boolean;
-  isTyping: boolean;
+interface ChatContextType {
+  conversations: Conversation[];
+  activeChat: Conversation | null;
+  chatMessages: Message[];
   isSidebarOpen: boolean;
-  wallpaper: string | null;
-  replyTo: Message | null;
-  contactFilter: ChatType | 'all';
+  isContactModalOpen: boolean;
+  isGroupChatModalOpen: boolean;
+  isSettingsModalOpen: boolean;
+  isProfileModalOpen: boolean;
+  isSearchOpen: boolean;
   searchTerm: string;
-  selectedDevice: string;
-  
-  // UI State
-  chatTypeFilter: ChatType | 'all';
-  dateRange?: DateRange;
-  assigneeFilter: string;
-  tagFilter: string;
-  
-  // Derived state
-  filteredConversations: Conversation[];
-  groupedConversations: { [key: string]: Conversation[] };
-  activeConversation: Conversation | null;
-  
-  // Methods
-  selectContact: (contactId: string) => void;
-  toggleSidebar: () => void;
-  setWallpaper: (url: string | null) => void;
-  setReplyTo: (message: Message | null) => void;
-  sendMessage: (contactId: string, content: string) => void;
-  sendVoiceMessage: (contactId: string, durationInSeconds: number) => void;
-  setContactFilter: (filter: ChatType | 'all') => void;
+  chatType: ChatType;
   setSearchTerm: (term: string) => void;
-  toggleContactStar: (contactId: string) => void;
-  muteContact: (contactId: string, mute: boolean) => void;
-  archiveContact: (contactId: string, archive: boolean) => void;
-  blockContact: (contactId: string, block: boolean) => void;
-  reportContact: (contactId: string) => void;
-  clearChat: (contactId: string) => void;
-  setSelectedDevice: (deviceId: string) => void;
-  
-  // Filter methods
-  setChatTypeFilter: (filter: ChatType | 'all') => void;
-  setDateRange: (range: DateRange | undefined) => void;
-  setAssigneeFilter: (assignee: string) => void;
-  setTagFilter: (tag: string) => void;
-  resetAllFilters: () => void;
-  
-  // Action methods
-  handleSendMessage: (content: string, file: File | null, replyToMessageId?: string) => Promise<void>;
-  handleVoiceMessageSent: (durationInSeconds: number) => Promise<void>;
-  handleDeleteConversation: (conversationId: string) => Promise<void>;
-  handleArchiveConversation: (conversationId: string, isArchived?: boolean) => Promise<void>;
-  handleAddTag: (conversationId: string, tag: string) => Promise<void>;
-  handleAssignConversation: (conversationId: string, assignee: string) => Promise<void>;
-  
-  // Refs
-  messagesEndRef: React.RefObject<HTMLDivElement>;
-  
-  // Additional features for extended components
-  isReplying: boolean;
-  replyToMessage: Message | null;
-  cannedReplies: { id: string; title: string; content: string }[];
-  aiAssistantActive: boolean;
-  isAssistantActive: boolean;
-  setAiAssistantActive: (active: boolean) => void;
-  handleAddReaction: (messageId: string, emoji: string) => void;
-  handleReplyToMessage: (message: Message) => void;
-  handleCancelReply: () => void;
-  handleUseCannedReply: (replyContent: string) => void;
-  handleRequestAIAssistance: (prompt: string) => Promise<string>;
-  handleAddContact: (contactData: Partial<Contact>) => void;
-  setIsSidebarOpen: (open: boolean) => void;
-  setActiveConversation: (conversation: Conversation | null) => void;
-  deleteMessage: (messageId: string) => void;
-  addReaction: (messageId: string, emoji: string) => void;
-  toggleAssistant: () => void;
+  setChatType: (type: ChatType) => void;
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
+  setActiveChat: (chat: Conversation | null) => void;
+  setChatMessages: (messages: Message[]) => void;
+  setIsSidebarOpen: (isOpen: boolean) => void;
+  setIsContactModalOpen: (isOpen: boolean) => void;
+  setIsGroupChatModalOpen: (isOpen: boolean) => void;
+  setIsSettingsModalOpen: (isOpen: boolean) => void;
+  setIsProfileModalOpen: (isOpen: boolean) => void;
+  setIsSearchOpen: (isOpen: boolean) => void;
+  sendMessage: (content: string, type?: MessageType) => void;
+  sendImageMessage: (imageUrl: string, caption?: string) => void;
+  sendDocumentMessage: (documentUrl: string, filename: string) => void;
+  sendVoiceMessage: (audioUrl: string, durationSeconds: number) => void;
+  startNewConversation: (contact: Contact, initialMessage?: string) => void;
+  archiveChat: (chatId: string) => void;
+  deleteChat: (chatId: string) => void;
+  pinChat: (chatId: string) => void;
+  muteChat: (chatId: string) => void;
+  addContact: (contact: Contact) => void;
+  removeContact: (contactId: string) => void;
+  createGroupChat: (name: string, participants: Contact[], avatar?: string) => void;
+  leaveGroupChat: (chatId: string) => void;
+  sendTemplateMock: (templateId: string, leadId: string) => void;
+  handleFileUpload: (file: File) => void;
+  addReactionToMessage: (messageId: string, emoji: string) => void;
 }
 
-// Create context with initial values
-const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
+export const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Provider component
-interface ConversationProviderProps {
-  children: ReactNode;
-}
-
-const useConversationState = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [wallpaper, setWallpaper] = useState<string | null>(null);
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [contactFilter, setContactFilter] = useState<ChatType | 'all'>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedDevice, setSelectedDevice] = useState<string>("1"); // Default to first device
-  const [aiAssistantActive, setAiAssistantActive] = useState<boolean>(false);
-  const [isAssistantActive, setIsAssistantActive] = useState<boolean>(false);
-  
-  return {
-    conversations,
-    setConversations,
-    activeConversation,
-    setActiveConversation,
-    loading,
-    isSidebarOpen,
-    setIsSidebarOpen,
-    contacts,
-    setContacts,
-    messages,
-    setMessages,
-    selectedContactId,
-    setSelectedContactId,
-    isTyping,
-    setIsTyping,
-    wallpaper,
-    setWallpaper,
-    replyTo,
-    setReplyTo,
-    contactFilter,
-    setContactFilter,
-    searchTerm,
-    setSearchTerm,
-    selectedDevice,
-    setSelectedDevice,
-    aiAssistantActive,
-    setAiAssistantActive,
-    isAssistantActive,
-    setIsAssistantActive
-  };
-};
-
-export const ConversationProvider: React.FC<ConversationProviderProps> = ({ children }) => {
-  const {
-    conversations,
-    setConversations,
-    activeConversation,
-    setActiveConversation,
-    loading,
-    isSidebarOpen,
-    setIsSidebarOpen,
-    contacts,
-    setContacts,
-    messages,
-    setMessages,
-    selectedContactId,
-    setSelectedContactId,
-    isTyping,
-    setIsTyping,
-    wallpaper,
-    setWallpaper,
-    replyTo,
-    setReplyTo,
-    contactFilter,
-    setContactFilter,
-    searchTerm,
-    setSearchTerm,
-    selectedDevice,
-    setSelectedDevice,
-    aiAssistantActive,
-    setAiAssistantActive,
-    isAssistantActive,
-    setIsAssistantActive
-  } = useConversationState();
-
-  const {
-    filteredConversations,
-    groupedConversations,
-    chatTypeFilter,
-    dateRange,
-    assigneeFilter,
-    tagFilter,
-    setChatTypeFilter,
-    setDateRange,
-    setAssigneeFilter,
-    setTagFilter,
-    resetAllFilters
-  } = useConversationFilters(conversations);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const cannedReplies = [
-    { id: '1', title: 'Greeting', content: 'Hello! How can I help you today?' },
-    { id: '2', title: 'Thank You', content: 'Thank you for reaching out. We appreciate your interest!' },
-    { id: '3', title: 'Follow Up', content: "Just following up on our conversation. Do you have any questions I can help with?" },
-  ];
-  
-  useEffect(() => {
-    loadContacts();
-  }, []);
-  
-  useEffect(() => {
-    if (selectedContactId) {
-      const conversation = conversations.find(c => c.contact.id === selectedContactId);
-      if (conversation && !messages[selectedContactId]) {
-        loadMessages(selectedContactId);
-      }
-    }
-  }, [selectedContactId, conversations]);
-  
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, selectedContactId]);
-  
-  const loadContacts = async () => {
-    setLoading(true);
-    try {
-      const fetchedConversations = await getConversations();
-      
-      if (fetchedConversations.length > 0) {
-        const uniqueContacts = fetchedConversations.map(conv => ({
-          ...conv.contact,
-          tags: conv.contact.tags || []
-        }));
-        
-        setContacts(uniqueContacts);
-        setConversations(fetchedConversations);
-        
-        if (!selectedContactId && fetchedConversations.length > 0) {
-          setSelectedContactId(fetchedConversations[0].contact.id);
-          
-          await loadAllMessages();
-        }
-      }
-    } catch (error) {
-      console.error("Error loading contacts:", error);
-      toast({
-        title: "Error loading contacts",
-        description: "Please refresh the page or try again later",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAllMessages = async () => {
-    try {
-      const allMessages: Record<string, Message[]> = {};
-      
-      for (const conversation of conversations) {
-        const contactId = conversation.contact.id;
-        const { data: messageData, error } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conversation.id)
-          .order('timestamp', { ascending: true });
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (messageData) {
-          const transformedMessages = transformMessages(messageData);
-          
-          allMessages[contactId] = transformedMessages;
-        }
-      }
-      
-      setMessages(allMessages);
-      
-    } catch (error) {
-      console.error("Error loading messages:", error);
-    }
-  };
-  
-  const loadMessages = async (contactId: string) => {
-    try {
-      const conversation = conversations.find(c => c.contact.id === contactId);
-      
-      if (!conversation) {
-        throw new Error(`No conversation found for contact ${contactId}`);
-      }
-      
-      const conversationMessages = await getMessages(conversation.id);
-      
-      setMessages(prev => ({
-        ...prev,
-        [contactId]: conversationMessages
-      }));
-      
-    } catch (error) {
-      console.error(`Error loading messages for contact ${contactId}:`, error);
-      toast({
-        title: "Error loading messages",
-        description: "Please refresh the page or try again later",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-  
-  const selectContact = (contactId: string) => {
-    setSelectedContactId(contactId);
-    setIsSidebarOpen(false);
-  };
-  
-  const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
-  };
-  
-  const toggleAssistant = () => {
-    setIsAssistantActive(prev => !prev);
-  };
-  
-  const sendMessageHandler = async (contactId: string, content: string) => {
-    if (!content.trim()) return;
-    
-    const conversation = conversations.find(c => c.contact.id === contactId);
-    
-    if (!conversation) {
-      console.error("No conversation found for contact", contactId);
-      return;
-    }
-    
-    const tempMessage: Message = {
-      id: `temp-${Date.now()}`,
-      content,
-      timestamp: new Date().toISOString(),
-      isOutbound: true,
-      status: 'sending',
-      sender: 'You',
-      type: 'text'
-    };
-    
-    setMessages(prev => ({
-      ...prev,
-      [contactId]: [...(prev[contactId] || []), tempMessage]
-    }));
-    
-    scrollToBottom();
-    
-    try {
-      const sentMessage = await sendMessage(
-        conversation.id,
-        content,
-        'text',
-        'You'
-      );
-      
-      setMessages(prev => ({
-        ...prev,
-        [contactId]: prev[contactId].map(msg => 
-          msg.id === tempMessage.id ? sentMessage : msg
-        )
-      }));
-      
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === conversation.id 
-            ? { 
-                ...conv, 
-                lastMessage: {
-                  content,
-                  timestamp: new Date().toISOString(),
-                  isOutbound: true,
-                  isRead: false
-                }
-              }
-            : conv
-        )
-      );
-      
-      setReplyTo(null);
-      
-    } catch (error) {
-      console.error("Error sending message:", error);
-      
-      setMessages(prev => ({
-        ...prev,
-        [contactId]: prev[contactId].map(msg => 
-          msg.id === tempMessage.id 
-            ? { ...msg, status: 'error' as MessageStatus } 
-            : msg
-        )
-      }));
-      
-      toast({
-        title: "Failed to send message",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const sendVoiceMessage = async (contactId: string, durationInSeconds: number) => {
-    const conversation = conversations.find(c => c.contact.id === contactId);
-    
-    if (!conversation) {
-      console.error("No conversation found for contact", contactId);
-      return;
-    }
-    
-    const tempMessage: Message = {
-      id: `temp-${Date.now()}`,
-      content: 'Voice message',
-      timestamp: new Date().toISOString(),
-      isOutbound: true,
-      status: 'sending',
-      sender: 'You',
-      type: 'voice',
-      media: {
-        url: 'placeholder-url',
-        type: 'voice',
-        duration: durationInSeconds,
-      }
-    };
-    
-    setMessages(prev => ({
-      ...prev,
-      [contactId]: [...(prev[contactId] || []), tempMessage]
-    }));
-    
-    scrollToBottom();
-    
-    try {
-      setTimeout(() => {
-        setMessages(prev => ({
-          ...prev,
-          [contactId]: prev[contactId].map(msg => 
-            msg.id === tempMessage.id 
-              ? { ...msg, status: 'delivered' as MessageStatus } 
-              : msg
-          )
-        }));
-        
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === conversation.id 
-              ? { 
-                  ...conv, 
-                  lastMessage: {
-                    content: 'Voice message',
-                    timestamp: new Date().toISOString(),
-                    isOutbound: true,
-                    isRead: false
-                  }
-                }
-              : conv
-          )
-        );
-      }, 1500);
-      
-    } catch (error) {
-      console.error("Error sending voice message:", error);
-      
-      setMessages(prev => ({
-        ...prev,
-        [contactId]: prev[contactId].map(msg => 
-          msg.id === tempMessage.id 
-            ? { ...msg, status: 'error' as MessageStatus } 
-            : msg
-        )
-      }));
-      
-      toast({
-        title: "Failed to send voice message",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const toggleContactStar = (contactId: string) => {
-    setContacts(prev => 
-      prev.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, isStarred: !contact.isStarred } 
-          : contact
-      )
-    );
-  };
-  
-  const muteContact = (contactId: string, mute: boolean) => {
-    setContacts(prev => 
-      prev.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, isMuted: mute } 
-          : contact
-      )
-    );
-    
-    toast({
-      title: mute ? "Contact muted" : "Contact unmuted",
-      description: `Notifications ${mute ? 'disabled' : 'enabled'} for this contact`,
-    });
-  };
-  
-  const archiveContact = (contactId: string, archive: boolean) => {
-    setContacts(prev => 
-      prev.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, isArchived: archive } 
-          : contact
-      )
-    );
-    
-    toast({
-      title: archive ? "Conversation archived" : "Conversation unarchived",
-      description: `Conversation has been ${archive ? 'moved to archive' : 'restored'}`,
-    });
-  };
-  
-  const blockContact = (contactId: string, block: boolean) => {
-    setContacts(prev => 
-      prev.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, isBlocked: block } 
-          : contact
-      )
-    );
-    
-    toast({
-      title: block ? "Contact blocked" : "Contact unblocked",
-      description: block 
-        ? "You will no longer receive messages from this contact" 
-        : "You can now receive messages from this contact",
-      variant: block ? "destructive" : "default",
-    });
-  };
-  
-  const reportContact = (contactId: string) => {
-    toast({
-      title: "Contact reported",
-      description: "Thank you for your report. We will review it shortly.",
-    });
-  };
-  
-  const clearChat = (contactId: string) => {
-    setMessages(prev => ({
-      ...prev,
-      [contactId]: []
-    }));
-    
-    toast({
-      title: "Chat cleared",
-      description: "All messages have been removed from this conversation",
-    });
-  };
-  
-  const handleAddReaction = (messageId: string, emoji: string) => {
-    if (!selectedContactId) return;
-    
-    setMessages(prev => {
-      const contactMessages = [...prev[selectedContactId]];
-      const messageIndex = contactMessages.findIndex(m => m.id === messageId);
-      
-      if (messageIndex !== -1) {
-        const message = contactMessages[messageIndex];
-        const reactions = message.reactions || [];
-        
-        const existingReaction = reactions.findIndex(r => r.userId === 'current-user' && r.emoji === emoji);
-        
-        if (existingReaction !== -1) {
-          reactions.splice(existingReaction, 1);
-        } else {
-          reactions.push({
-            emoji,
-            userId: 'current-user',
-            userName: 'You',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        contactMessages[messageIndex] = {
-          ...message,
-          reactions
-        };
-      }
-      
-      return {
-        ...prev,
-        [selectedContactId]: contactMessages
-      };
-    });
-  };
-  
-  const deleteMessage = (messageId: string) => {
-    if (!selectedContactId) return;
-    
-    setMessages(prev => {
-      const contactMessages = prev[selectedContactId].filter(m => m.id !== messageId);
-      return {
-        ...prev,
-        [selectedContactId]: contactMessages
-      };
-    });
-    
-    toast({
-      title: "Message deleted",
-      description: "The message has been removed from this conversation",
-    });
-  };
-  
-  const handleReplyToMessage = (message: Message) => {
-    setReplyTo(message);
-  };
-  
-  const handleCancelReply = () => {
-    setReplyTo(null);
-  };
-  
-  const handleUseCannedReply = (replyContent: string) => {
-    if (selectedContactId) {
-      sendMessageHandler(selectedContactId, replyContent);
-    }
-  };
-  
-  const handleRequestAIAssistance = async (prompt: string): Promise<string> => {
-    toast({
-      title: "AI Assistant",
-      description: "Generating response...",
-    });
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const aiResponse = `Here's a suggestion in response to "${prompt}": Thank you for your inquiry. I'd be happy to help you with that. Could you please provide more details so I can assist you better?`;
-        
-        toast({
-          title: "AI Suggestion Ready",
-          description: "AI has generated a response for you",
-        });
-        
-        resolve(aiResponse);
-      }, 1500);
-    });
-  };
-  
-  const handleAddContact = (contactData: Partial<Contact>) => {
-    const newContact: Contact = {
-      id: `new-${Date.now()}`,
-      name: contactData.name || 'New Contact',
-      avatar: contactData.avatar,
-      phone: contactData.phone || '',
-      type: contactData.type || 'lead',
-      isOnline: false,
-      tags: contactData.tags || [],
-    };
-    
-    setContacts(prev => [...prev, newContact]);
-    
-    const newConversation: Conversation = {
-      id: `conv-${Date.now()}`,
-      contact: newContact,
+export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [conversations, setConversations] = React.useState<Conversation[]>([
+    {
+      id: '1',
+      contact: {
+        id: '1',
+        name: 'John Doe',
+        avatar: 'https://i.pravatar.cc/150?img=5',
+        phone: '+1 (555) 123-4567',
+        type: 'client',
+        isOnline: true,
+        lastSeen: 'Online'
+      },
       lastMessage: {
-        content: 'New conversation',
+        content: 'Hey there! How can I help you today?',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      status: 'active',
+      chatType: 'client',
+      isPinned: true,
+      isArchived: false,
+      unreadCount: 0,
+      tags: ['vip', 'urgent'],
+      assignedTo: 'Jane'
+    },
+    {
+      id: '2',
+      contact: {
+        id: '2',
+        name: 'Alice Smith',
+        avatar: 'https://i.pravatar.cc/150?img=7',
+        phone: '+1 (555) 987-6543',
+        type: 'lead',
+        isOnline: false,
+        lastSeen: '5 minutes ago'
+      },
+      lastMessage: {
+        content: 'I\'m interested in your services. Can we schedule a call?',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: false
+      },
+      status: 'new',
+      chatType: 'lead',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 2,
+      tags: ['high-priority'],
+      assignedTo: 'Mike'
+    },
+    {
+      id: '3',
+      contact: {
+        id: '3',
+        name: 'Bob Johnson',
+        avatar: 'https://i.pravatar.cc/150?img=11',
+        phone: '+1 (555) 246-1357',
+        type: 'client',
+        isOnline: true,
+        lastSeen: 'Online'
+      },
+      lastMessage: {
+        content: 'Just confirming our meeting for tomorrow.',
         timestamp: new Date().toISOString(),
         isOutbound: true,
         isRead: true
       },
-      chatType: newContact.type,
+      status: 'active',
+      chatType: 'client',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 0,
       tags: [],
+      assignedTo: 'Jane'
+    },
+    {
+      id: '4',
+      contact: {
+        id: '4',
+        name: 'Eva Williams',
+        avatar: 'https://i.pravatar.cc/150?img=12',
+        phone: '+1 (555) 369-8024',
+        type: 'lead',
+        isOnline: false,
+        lastSeen: '30 minutes ago'
+      },
+      lastMessage: {
+        content: 'Could you send me more details about the product?',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      status: 'pending',
+      chatType: 'lead',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 1,
+      tags: ['follow-up'],
+      assignedTo: 'Mike'
+    },
+    {
+      id: '5',
+      contact: {
+        id: '5',
+        name: 'Charlie Brown',
+        avatar: 'https://i.pravatar.cc/150?img=10',
+        phone: '+1 (555) 159-7531',
+        type: 'client',
+        isOnline: false,
+        lastSeen: '1 hour ago'
+      },
+      lastMessage: {
+        content: 'Everything is working great, thanks!',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: true
+      },
+      status: 'resolved',
+      chatType: 'client',
+      isPinned: false,
+      isArchived: true,
+      unreadCount: 0,
+      tags: [],
+      assignedTo: 'Jane'
+    },
+  ]);
+  const [activeChat, setActiveChat] = React.useState<Conversation | null>(conversations[0] || null);
+  const [chatMessages, setChatMessages] = React.useState<Message[]>([
+    {
+      id: '1',
+      content: 'Hey there! How can I help you today?',
+      timestamp: new Date().toISOString(),
+      isOutbound: false,
+      status: 'delivered',
+      sender: 'John',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '2',
+      content: 'I\'m interested in your services. Can we schedule a call?',
+      timestamp: new Date().toISOString(),
+      isOutbound: false,
+      status: 'delivered',
+      sender: 'John',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '3',
+      content: 'Just confirming our meeting for tomorrow.',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '4',
+      content: 'Could you send me more details about the product?',
+      timestamp: new Date().toISOString(),
+      isOutbound: false,
+      status: 'delivered',
+      sender: 'John',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '5',
+      content: 'Everything is working great, thanks!',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'text',
+      viaWhatsApp: true
+    },
+  ]);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState<boolean>(false);
+  const [isContactModalOpen, setIsContactModalOpen] = React.useState<boolean>(false);
+  const [isGroupChatModalOpen, setIsGroupChatModalOpen] = React.useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = React.useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = React.useState<string>('');
+  const [chatType, setChatType] = React.useState<ChatType>('client');
+  const { toast } = useToast();
+
+  const sendMessage = (content: string, type: MessageType = 'text') => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
+      content: content.trim(),
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type,
+      viaWhatsApp: true
     };
+
+    setChatMessages((prev) => [...prev, newMessage]);
     
-    setConversations(prev => [...prev, newConversation]);
-    
-    setSelectedContactId(newContact.id);
-    
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === activeChat.id
+          ? {
+              ...convo,
+              lastMessage: {
+                content: content.trim(),
+                timestamp: new Date().toISOString(),
+                isOutbound: true,
+                isRead: false
+              }
+            }
+          : convo
+      )
+    );
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: `Response to: ${content}`,
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1000);
+  };
+
+  const sendImageMessage = (imageUrl: string, caption: string = '') => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
+      content: caption,
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'image',
+      media: {
+        url: imageUrl,
+        type: 'image',
+      },
+      viaWhatsApp: true
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'Thanks for the image!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1500);
+  };
+
+  const sendDocumentMessage = (documentUrl: string, filename: string) => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
+      content: '',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'document',
+      media: {
+        url: documentUrl,
+        type: 'document',
+        filename: filename
+      },
+      viaWhatsApp: true
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'I received your document!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1500);
+  };
+
+  const sendVoiceMessage = (audioUrl: string, durationSeconds: number) => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
+      content: '',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'voice',
+      media: {
+        url: audioUrl,
+        type: 'voice',
+        duration: durationSeconds
+      },
+      viaWhatsApp: true
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'I listened to your voice message!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 2000);
+  };
+
+  const startNewConversation = (contact: Contact, initialMessage?: string) => {
+    const newConversation: Conversation = {
+      id: uuidv4(),
+      contact: contact,
+      lastMessage: {
+        content: initialMessage || 'New conversation started',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: false
+      },
+      status: 'new',
+      chatType: contact.type === 'client' ? 'client' : 'lead',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 0
+    };
+
+    setConversations((prev) => [newConversation, ...prev]);
+    setActiveChat(newConversation);
+    setChatMessages([]);
+
+    if (initialMessage) {
+      sendMessage(initialMessage);
+    }
+  };
+
+  const archiveChat = (chatId: string) => {
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === chatId ? { ...convo, isArchived: true } : convo
+      )
+    );
+
+    if (activeChat?.id === chatId) {
+      setActiveChat(null);
+      setChatMessages([]);
+    }
+  };
+
+  const deleteChat = (chatId: string) => {
+    setConversations((prev) => prev.filter((convo) => convo.id !== chatId));
+
+    if (activeChat?.id === chatId) {
+      setActiveChat(null);
+      setChatMessages([]);
+    }
+  };
+
+  const pinChat = (chatId: string) => {
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === chatId ? { ...convo, isPinned: !convo.isPinned } : convo
+      )
+    );
+  };
+
+  const muteChat = (chatId: string) => {
     toast({
-      title: "Contact added",
-      description: `${newContact.name} has been added to your contacts`,
+      title: "Mute Chat",
+      description: "Chat muted successfully.",
     });
   };
-  
-  const handleSendMessage = async (content: string, file: File | null, replyToMessageId?: string): Promise<void> => {
-    if (!selectedContactId) return;
-    
-    await sendMessageHandler(selectedContactId, content);
+
+  const addContact = (contact: Contact) => {
+    toast({
+      title: "Add Contact",
+      description: `${contact.name} added to contacts.`,
+    });
   };
 
-  const handleVoiceMessageSent = async (durationInSeconds: number): Promise<void> => {
-    if (!selectedContactId) return;
-    
-    await sendVoiceMessage(selectedContactId, durationInSeconds);
+  const removeContact = (contactId: string) => {
+    toast({
+      title: "Remove Contact",
+      description: "Contact removed successfully.",
+    });
   };
 
-  const {
-    handleDeleteConversation,
-    handleArchiveConversation,
-    handleAddTag,
-    handleAssignConversation
-  } = useConversationActions(
-    conversations,
-    setConversations,
-    activeConversation,
-    setActiveConversation,
-    setIsSidebarOpen
-  );
+  const createGroupChat = (name: string, participants: Contact[], avatar?: string) => {
+    const newGroupChat: Conversation = {
+      id: uuidv4(),
+      contact: {
+        id: uuidv4(),
+        name: name,
+        avatar: avatar || 'https://i.pravatar.cc/150?img=50',
+        type: 'team'
+      },
+      lastMessage: {
+        content: 'Group chat created',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: false
+      },
+      status: 'active',
+      chatType: 'team',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 0
+    };
 
-  const contextValue: ConversationContextType = {
-    contacts,
-    messages,
-    selectedContactId,
-    loading,
-    isTyping,
-    isSidebarOpen,
-    wallpaper,
-    replyTo,
-    contactFilter,
-    searchTerm,
-    selectedDevice,
-    chatTypeFilter,
-    dateRange,
-    assigneeFilter,
-    tagFilter,
-    filteredConversations,
-    groupedConversations,
-    activeConversation,
-    selectContact,
-    toggleSidebar,
-    setWallpaper,
-    setReplyTo,
-    sendMessage: sendMessageHandler,
-    sendVoiceMessage,
-    setContactFilter,
-    setSearchTerm,
-    toggleContactStar,
-    muteContact,
-    archiveContact,
-    blockContact,
-    reportContact,
-    clearChat,
-    setSelectedDevice,
-    setChatTypeFilter,
-    setDateRange,
-    setAssigneeFilter,
-    setTagFilter,
-    resetAllFilters,
-    handleSendMessage,
-    handleVoiceMessageSent,
-    handleDeleteConversation,
-    handleArchiveConversation,
-    handleAddTag,
-    handleAssignConversation,
-    messagesEndRef,
-    isReplying: !!replyTo,
-    replyToMessage: replyTo,
-    cannedReplies,
-    aiAssistantActive,
-    isAssistantActive,
-    setAiAssistantActive,
-    handleAddReaction,
-    handleReplyToMessage,
-    handleCancelReply,
-    handleUseCannedReply,
-    handleRequestAIAssistance,
-    handleAddContact,
-    setIsSidebarOpen,
-    setActiveConversation,
-    deleteMessage,
-    addReaction: handleAddReaction,
-    toggleAssistant
+    setConversations((prev) => [newGroupChat, ...prev]);
+    setActiveChat(newGroupChat);
+    setChatMessages([]);
+
+    toast({
+      title: "Group Chat Created",
+      description: `${name} group chat created successfully.`,
+    });
+  };
+
+  const leaveGroupChat = (chatId: string) => {
+    toast({
+      title: "Leave Group Chat",
+      description: "You have left the group chat.",
+    });
+  };
+
+  const sendTemplateMock = (templateId: string, leadId: string) => {
+    const templateText = `Hi [Lead Name], thanks for your interest in our product! Here's a special offer just for you.`;
+
+    const mockTemplateMessage: Message = {
+      id: uuidv4(),
+      content: templateText,
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'text'
+    };
+
+    setChatMessages((prev) => [...prev, mockTemplateMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'Great offer, thanks!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1500);
+  };
+
+  const handleFileUpload = (file: File) => {
+    const fileType = file.type.split('/')[0];
+
+    if (!['image', 'voice', 'video'].includes(fileType) && file.type !== 'application/pdf') {
+      toast({
+        title: "Error",
+        description: "Unsupported file type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (fileType === 'image') {
+      const imageMessage: Message = {
+        id: uuidv4(),
+        content: '',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        status: 'sending',
+        sender: 'You',
+        type: 'image',
+        media: {
+          url: URL.createObjectURL(file),
+          type: 'image',
+          filename: file.name,
+          size: file.size
+        }
+      };
+
+      setChatMessages((prev) => [...prev, imageMessage]);
+
+      setTimeout(() => {
+        const response: Message = {
+          id: uuidv4(),
+          content: 'Nice image!',
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          status: 'delivered',
+          sender: 'John',
+          type: 'text'
+        };
+
+        setChatMessages((prev) => [...prev, response]);
+      }, 1500);
+    } else if (fileType === 'voice' || fileType === 'video') {
+      const mediaType: 'voice' | 'video' = fileType === 'voice' ? 'voice' : 'video';
+      const mediaMessage: Message = {
+        id: uuidv4(),
+        content: '',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        status: 'sending',
+        sender: 'You',
+        type: mediaType,
+        media: {
+          url: URL.createObjectURL(file),
+          type: mediaType,
+          filename: file.name,
+          size: file.size
+        }
+      };
+
+      setChatMessages((prev) => [...prev, mediaMessage]);
+
+      setTimeout(() => {
+        const response: Message = {
+          id: uuidv4(),
+          content: `Received your ${fileType}!`,
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          status: 'delivered',
+          sender: 'John',
+          type: 'text'
+        };
+
+        setChatMessages((prev) => [...prev, response]);
+      }, 2000);
+    } else {
+      const documentMessage: Message = {
+        id: uuidv4(),
+        content: '',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        status: 'sending',
+        sender: 'You',
+        type: 'document',
+        media: {
+          url: URL.createObjectURL(file),
+          type: 'document',
+          filename: file.name,
+          size: file.size
+        }
+      };
+
+      setChatMessages((prev) => [...prev, documentMessage]);
+
+      setTimeout(() => {
+        const response: Message = {
+          id: uuidv4(),
+          content: 'Received your document!',
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          status: 'delivered',
+          sender: 'John',
+          type: 'text'
+        };
+
+        setChatMessages((prev) => [...prev, response]);
+      }, 2000);
+    }
+  };
+
+  const addReactionToMessage = (messageId: string, emoji: string) => {
+    setChatMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              reactions: [
+                ...(message.reactions || []),
+                {
+                  emoji: emoji,
+                  userId: 'user-1',
+                  userName: 'You',
+                  timestamp: new Date().toISOString()
+                }
+              ]
+            }
+          : message
+      )
+    );
   };
 
   return (
-    <ConversationContext.Provider value={contextValue}>
+    <ChatContext.Provider value={{
+      conversations,
+      activeChat,
+      chatMessages,
+      isSidebarOpen,
+      isContactModalOpen,
+      isGroupChatModalOpen,
+      isSettingsModalOpen,
+      isProfileModalOpen,
+      isSearchOpen,
+      searchTerm,
+      chatType,
+      setSearchTerm,
+      setChatType,
+      setConversations,
+      setActiveChat,
+      setChatMessages,
+      setIsSidebarOpen,
+      setIsContactModalOpen,
+      setIsGroupChatModalOpen,
+      setIsSettingsModalOpen,
+      setIsProfileModalOpen,
+      setIsSearchOpen,
+      sendMessage,
+      sendImageMessage,
+      sendDocumentMessage,
+      sendVoiceMessage,
+      startNewConversation,
+      archiveChat,
+      deleteChat,
+      pinChat,
+      muteChat,
+      addContact,
+      removeContact,
+      createGroupChat,
+      leaveGroupChat,
+      sendTemplateMock,
+      handleFileUpload,
+      addReactionToMessage
+    }}>
       {children}
-    </ConversationContext.Provider>
+    </ChatContext.Provider>
   );
 };
 
-export const useConversation = (): ConversationContextType => {
-  const context = useContext(ConversationContext);
-  
+export const useChat = () => {
+  const context = useContext(ChatContext);
   if (context === undefined) {
-    throw new Error('useConversation must be used within a ConversationProvider');
+    throw new Error('useChat must be used within a ChatProvider');
   }
-  
   return context;
-};
-
-const transformMessages = (messageData: any[]): Message[] => {
-  return messageData.map(msg => {
-    const message: Message = {
-      id: msg.id,
-      content: msg.content,
-      timestamp: msg.timestamp,
-      isOutbound: msg.is_outbound,
-      status: msg.status as MessageStatus,
-      sender: msg.sender,
-      type: msg.message_type as MessageType,
-      media: msg.media_url ? {
-        url: msg.media_url,
-        type: (msg.media_type as 'image' | 'video' | 'document' | 'voice'),
-        filename: msg.media_filename,
-        duration: msg.media_duration,
-      } : undefined,
-      reactions: []
-    };
-    
-    if (msg.reply_to_id) {
-      message.replyTo = {
-        id: msg.reply_to_id,
-        content: msg.reply_to_content || "Original message",
-        sender: msg.reply_to_sender || "Sender",
-        type: (msg.reply_to_type as MessageType) || "text",
-        status: "sent",
-        isOutbound: msg.reply_to_is_outbound || false,
-        timestamp: msg.reply_to_timestamp || msg.timestamp
-      };
-    }
-    
-    return message;
-  });
 };

@@ -1,17 +1,27 @@
 
-import React from 'react';
-import { format } from 'date-fns';
-import { Message } from '@/types/conversation';
+import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { format } from 'date-fns';
+import { 
   CheckCircle, 
   Clock, 
-  Reply,
+  MoreVertical, 
+  Play, 
+  Reply, 
+  SmilePlus,
+  Forward,
+  Trash2,
   Globe,
-  Play,
+  Lock,
 } from 'lucide-react';
+import { Message } from '@/types/conversation';
 
 interface MessageListProps {
   messages: Message[];
@@ -223,16 +233,55 @@ const MessageList: React.FC<MessageListProps> = ({
                     )}
                     
                     {/* Message actions */}
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        className="p-1 hover:bg-gray-200 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onReply(message);
-                        }}
+                    <div className={`
+                      absolute top-2 ${message.isOutbound ? 'left-0' : 'right-0'}
+                      translate-x-${message.isOutbound ? '-100%' : '100%'} px-1
+                      opacity-0 group-hover:opacity-100 transition-opacity
+                      flex items-center gap-0.5
+                    `}>
+                      <Popover>
+                        <PopoverTrigger className="h-6 w-6 bg-white rounded-full flex items-center justify-center shadow">
+                          <SmilePlus className="h-3.5 w-3.5 text-muted-foreground" />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-1" side={message.isOutbound ? "left" : "right"}>
+                          <div className="flex gap-1">
+                            {commonEmojis.map(emoji => (
+                              <button
+                                key={emoji}
+                                className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded"
+                                onClick={() => onReaction(message.id, emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      
+                      <button 
+                        className="h-6 w-6 bg-white rounded-full flex items-center justify-center shadow"
+                        onClick={() => onReply(message)}
                       >
-                        <Reply className="h-3 w-3" />
+                        <Reply className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
+                      
+                      <Popover>
+                        <PopoverTrigger className="h-6 w-6 bg-white rounded-full flex items-center justify-center shadow">
+                          <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-32 p-1" side={message.isOutbound ? "left" : "right"}>
+                          <div className="space-y-1 text-xs">
+                            <button className="flex items-center gap-2 w-full px-2 py-1.5 hover:bg-muted rounded">
+                              <Forward className="h-3.5 w-3.5" />
+                              Forward
+                            </button>
+                            <button className="flex items-center gap-2 w-full px-2 py-1.5 hover:bg-muted rounded">
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 </div>
@@ -243,27 +292,26 @@ const MessageList: React.FC<MessageListProps> = ({
         
         {/* Typing indicator */}
         {isTyping && (
-          <div className="flex ml-12 mb-3">
-            <div className="bg-white p-3 rounded-tr-2xl rounded-tl-2xl rounded-br-2xl shadow-sm animate-pulse">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300"></div>
+          <div className="flex justify-start">
+            <div className="bg-white border rounded-lg p-3 shadow-sm max-w-[75%]">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-5 w-5">
+                  <AvatarFallback className="text-[10px]">
+                    {contactName.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-medium">{contactName}</span>
+              </div>
+              <div className="flex gap-1 mt-1 ml-1">
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.2s]"></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0.4s]"></div>
               </div>
             </div>
           </div>
         )}
         
-        {/* Anchor element for scrolling to bottom */}
         <div ref={messagesEndRef} />
-        
-        {/* When no messages */}
-        {messages.length === 0 && (
-          <div className="text-center text-muted-foreground p-6">
-            <p className="mb-2">No messages yet</p>
-            <p className="text-sm">Start the conversation now</p>
-          </div>
-        )}
       </div>
     </ScrollArea>
   );

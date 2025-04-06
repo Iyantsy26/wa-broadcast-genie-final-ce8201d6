@@ -1,115 +1,108 @@
 
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
+import React from 'react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ChatType } from '@/types/conversation';
-import { Plus } from "lucide-react";
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface AddContactButtonProps {
-  onAddContact: (name: string, phone: string, type: ChatType) => void;
+  onAddContact: (name: string, phone: string, type: 'client' | 'lead' | 'team') => void;
 }
 
 const AddContactButton: React.FC<AddContactButtonProps> = ({ onAddContact }) => {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [type, setType] = useState<ChatType>('lead');
+  const [open, setOpen] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [contactType, setContactType] = React.useState<'client' | 'lead' | 'team'>('client');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAddContact(name, phone, type);
-    setOpen(false);
-    resetForm();
-  };
-  
-  const resetForm = () => {
-    setName('');
-    setPhone('');
-    setType('lead');
+    if (name && phone) {
+      onAddContact(name, phone, contactType);
+      setName('');
+      setPhone('');
+      setContactType('client');
+      setOpen(false);
+    }
   };
   
   return (
-    <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4 mr-2" />
-        Add Contact
-      </Button>
-      
-      <Dialog open={open} onOpenChange={(value) => {
-        setOpen(value);
-        if (!value) resetForm();
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Contact</DialogTitle>
-            <DialogDescription>
-              Create a new contact to start a conversation
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="h-8 w-8 rounded-full p-0">
+          <Plus className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Contact</DialogTitle>
+          <DialogDescription>
+            Create a new contact to start a conversation.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-3">
+          <div className="space-y-2">
+            <Label htmlFor="contactType">Contact Type</Label>
+            <Select 
+              value={contactType} 
+              onValueChange={(value) => setContactType(value as 'client' | 'lead' | 'team')}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select contact type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client">Client</SelectItem>
+                <SelectItem value="lead">Lead</SelectItem>
+                <SelectItem value="team">Team</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Contact name"
-                  required
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1234567890"
-                  required
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label>Contact Type</Label>
-                <RadioGroup value={type} onValueChange={(value) => setType(value as ChatType)}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="lead" id="lead" />
-                    <Label htmlFor="lead" className="cursor-pointer">Lead</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="client" id="client" />
-                    <Label htmlFor="client" className="cursor-pointer">Client</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="team" id="team" />
-                    <Label htmlFor="team" className="cursor-pointer">Team Member</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Add Contact</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter contact name"
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+1234567890"
+              type="tel"
+              required
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button type="submit">Add Contact</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

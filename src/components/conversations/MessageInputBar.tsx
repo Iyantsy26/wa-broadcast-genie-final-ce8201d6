@@ -1,5 +1,6 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useConversation } from '@/contexts/ConversationContext';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -20,8 +21,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Message, MessageType } from '@/types/conversation';
-
-// Removed dependency on @emoji-mart/data and @emoji-mart/react
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 
 interface MessageInputBarProps {
   replyTo: Message | null;
@@ -48,6 +49,13 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Focus input when replying to a message
+  useEffect(() => {
+    if (replyTo && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [replyTo]);
   
   // Auto resize textarea
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -96,9 +104,9 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
     e.target.value = '';
   };
   
-  // Handle emoji selection - simplified to just insert common emojis
-  const handleEmojiSelect = (emoji: string) => {
-    setMessageText(prev => prev + emoji);
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji: any) => {
+    setMessageText(prev => prev + emoji.native);
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -211,21 +219,6 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
       </div>
     );
   };
-  
-  // Simple emoji picker for a few common emojis
-  const simpleEmojiPicker = (
-    <div className="p-2 grid grid-cols-6 gap-1">
-      {['😊', '👍', '❤️', '😂', '🎉', '👏', '🙏', '💯', '🔥', '😍', '🤔', '👌'].map(emoji => (
-        <button
-          key={emoji}
-          className="text-lg hover:bg-muted rounded p-1"
-          onClick={() => handleEmojiSelect(emoji)}
-        >
-          {emoji}
-        </button>
-      ))}
-    </div>
-  );
   
   return (
     <div className="bg-card border-t p-3 space-y-2">
@@ -359,7 +352,7 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
             onChange={handleFileChange}
           />
           
-          {/* Simple emoji picker */}
+          {/* Emoji picker */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-10 w-10">
@@ -367,7 +360,13 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent side="top" className="w-auto p-0 border-0">
-              {simpleEmojiPicker}
+              <Picker 
+                data={data} 
+                onEmojiSelect={handleEmojiSelect}
+                theme="light"
+                previewPosition="none"
+                skinTonePosition="none"
+              />
             </PopoverContent>
           </Popover>
           

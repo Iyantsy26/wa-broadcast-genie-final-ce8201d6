@@ -12,7 +12,7 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
-import { Contact, ChatType } from '@/types/conversation';
+import { ChatType } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
@@ -33,7 +33,6 @@ const ConversationPage = () => {
     assigneeFilter,
     tagFilter,
     messagesEndRef,
-    selectedContactId,
     setActiveConversation,
     setIsSidebarOpen,
     setSelectedDevice,
@@ -52,24 +51,13 @@ const ConversationPage = () => {
     handleReplyToMessage,
     handleCancelReply,
     handleUseCannedReply,
-    handleAddContact,
-    handleRequestAIAssistance
+    handleRequestAIAssistance,
+    handleAddContact
   } = useConversation();
 
-  const activeMessages = selectedContactId && messages[selectedContactId] ? messages[selectedContactId] : [];
-
-  const handleAddNewContact = (name: string, phone: string, type: ChatType) => {
-    handleAddContact({
-      name,
-      phone,
-      type
-    });
-  };
-  
-  // Simple function to handle pinning conversations
-  const handlePinConversation = (conversationId: string) => {
-    // This would be implemented in a real app
-    console.log('Pinning conversation:', conversationId);
+  // Define dummy pinConversation function to satisfy the interface
+  const pinConversation = (conversationId: string) => {
+    console.log('Pin conversation not implemented:', conversationId);
   };
 
   return (
@@ -82,7 +70,7 @@ const ConversationPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AddContactButton onAddContact={handleAddNewContact} />
+          <AddContactButton onAddContact={handleAddContact} />
           <Button 
             variant="outline" 
             onClick={() => setAiAssistantActive(!aiAssistantActive)}
@@ -116,7 +104,7 @@ const ConversationPage = () => {
           tagFilter={tagFilter}
           setTagFilter={setTagFilter}
           resetAllFilters={resetAllFilters}
-          pinConversation={handlePinConversation}
+          pinConversation={pinConversation}
           archiveConversation={handleArchiveConversation}
         />
         
@@ -128,8 +116,8 @@ const ConversationPage = () => {
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
-                messages={activeMessages}
-                contact={activeConversation.contact}
+                messages={messages} 
+                contactName={activeConversation.contact.name}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}
                 onReaction={handleAddReaction}

@@ -11,24 +11,13 @@ const ConversationLayout = () => {
   const {
     selectedContactId,
     contacts,
-    messages,
     isSidebarOpen,
-    isAssistantActive,
-    handleRequestAIAssistance,
-    handleSendMessage,
-    handleVoiceMessageSent,
-    handleAddReaction,
-    isTyping,
-    messagesEndRef,
-    setIsSidebarOpen
+    isAssistantActive
   } = useConversation();
   
   const selectedContact = selectedContactId 
     ? contacts.find(c => c.id === selectedContactId) 
     : null;
-  
-  // Get messages for selected contact
-  const selectedContactMessages = selectedContactId ? messages[selectedContactId] || [] : [];
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -46,22 +35,7 @@ const ConversationLayout = () => {
         {/* Main content area */}
         <div className="flex-1 flex rounded-lg overflow-hidden bg-card shadow-sm">
           {selectedContact ? (
-            <MessagePanel 
-              messages={selectedContactMessages} 
-              contactName={selectedContact.name}
-              isTyping={isTyping}
-              messagesEndRef={messagesEndRef}
-              onSendMessage={handleSendMessage}
-              onVoiceMessageSent={handleVoiceMessageSent}
-              onReaction={handleAddReaction}
-              onOpenContactInfo={() => setIsSidebarOpen(true)}
-              conversation={{
-                id: selectedContactId || '',
-                contact: selectedContact,
-                lastMessage: { content: '', timestamp: '', isOutbound: false, isRead: false },
-                chatType: selectedContact.type
-              }}
-            />
+            <MessagePanel contact={selectedContact} />
           ) : (
             <EmptyConversation />
           )}
@@ -74,10 +48,7 @@ const ConversationLayout = () => {
         
         {/* AI Assistant panel (when active) */}
         {isAssistantActive && (
-          <AIAssistantPanel 
-            onRequestAIAssistance={handleRequestAIAssistance} 
-            onClose={() => {}} 
-          />
+          <AIAssistantPanel />
         )}
       </div>
     </div>

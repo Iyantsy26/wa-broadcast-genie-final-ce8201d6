@@ -28,6 +28,7 @@ import {
   XCircle,
   Mail,
   Phone,
+  MessageSquare,
   Building,
   MapPin,
   Briefcase,
@@ -120,6 +121,41 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
       }
     } catch (error) {
       console.error("Error loading WhatsApp accounts:", error);
+    }
+  };
+  
+  const handleSendEmail = () => {
+    if (member?.email) {
+      window.location.href = `mailto:${member.email}`;
+      toast({
+        title: "Opening email client",
+        description: `Creating email to ${member.email}`
+      });
+    }
+  };
+  
+  const handleCallPhone = () => {
+    if (member?.phone) {
+      window.location.href = `tel:${member.phone}`;
+      toast({
+        title: "Making call",
+        description: `Calling ${member.phone}`
+      });
+    } else {
+      toast({
+        title: "No phone number available",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleSendMessage = () => {
+    if (member) {
+      toast({
+        title: "Starting conversation",
+        description: `Opening chat with ${member.name}`
+      });
+      // This would typically navigate to a chat with this team member
     }
   };
   
@@ -305,6 +341,24 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
                     </div>
                   </div>
                 )}
+              </div>
+
+              <Separator className="my-6" />
+
+              <div className="flex justify-center space-x-2">
+                <Button size="sm" variant="outline" onClick={handleSendEmail}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCallPhone} 
+                  disabled={!member.phone}>
+                  <Phone className="mr-2 h-4 w-4" />
+                  Call
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleSendMessage}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Message
+                </Button>
               </div>
             </div>
 
