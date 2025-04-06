@@ -47,7 +47,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   isSequential,
   isLast
 }) => {
-  const { addReaction, deleteMessage, setReplyTo } = useConversation();
+  const { handleAddReaction: addReaction, deleteMessage, setReplyTo } = useConversation();
   const [showActions, setShowActions] = useState(false);
   
   const commonEmojis = ['👍', '❤️', '😊', '🙏', '👏', '🎉', '😂', '🔥'];

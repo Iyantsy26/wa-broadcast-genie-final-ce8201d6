@@ -174,6 +174,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       assignedTo: 'Jane'
     },
   ]);
+
   const [activeChat, setActiveChat] = React.useState<Conversation | null>(conversations[0] || null);
   const [chatMessages, setChatMessages] = React.useState<Message[]>([
     {
@@ -227,6 +228,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       viaWhatsApp: true
     },
   ]);
+
   const [isSidebarOpen, setIsSidebarOpen] = React.useState<boolean>(false);
   const [isContactModalOpen, setIsContactModalOpen] = React.useState<boolean>(false);
   const [isGroupChatModalOpen, setIsGroupChatModalOpen] = React.useState<boolean>(false);
@@ -236,6 +238,139 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [searchTerm, setSearchTerm] = React.useState<string>('');
   const [chatType, setChatType] = React.useState<ChatType>('client');
   const { toast } = useToast();
+
+  const mockChats: Conversation[] = [
+    {
+      id: '1',
+      contact: {
+        id: 'contact1',
+        name: 'John Smith',
+        avatar: '/avatars/john-smith.jpg',
+        phone: '+1234567890',
+        type: 'client',
+        isOnline: true,
+        lastSeen: new Date().toISOString(),
+        tags: []
+      },
+      lastMessage: {
+        content: 'Hello, I need some help with my account',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      unreadCount: 0,
+      isTyping: false,
+      chatType: 'client',
+    },
+    {
+      id: '2',
+      contact: {
+        id: 'contact2',
+        name: 'Sarah Johnson',
+        avatar: '/avatars/sarah-johnson.jpg',
+        phone: '+9876543210',
+        type: 'lead',
+        isOnline: false,
+        lastSeen: new Date(Date.now() - 3600000).toISOString(),
+        tags: []
+      },
+      lastMessage: {
+        content: 'Can you tell me more about your services?',
+        timestamp: new Date(Date.now() - 120000).toISOString(),
+        isOutbound: false,
+        isRead: false
+      },
+      unreadCount: 2,
+      isTyping: false,
+      chatType: 'lead',
+    },
+    {
+      id: '3',
+      contact: {
+        id: 'contact3',
+        name: 'Robert Brown',
+        avatar: '/avatars/robert-brown.jpg',
+        phone: '+1122334455',
+        type: 'client',
+        isOnline: true,
+        lastSeen: new Date().toISOString(),
+        tags: []
+      },
+      lastMessage: {
+        content: 'Thanks for your quick response!',
+        timestamp: new Date(Date.now() - 10800000).toISOString(),
+        isOutbound: true,
+        isRead: true
+      },
+      unreadCount: 0,
+      isTyping: false,
+      chatType: 'client',
+    },
+    {
+      id: '4',
+      contact: {
+        id: 'contact4',
+        name: 'Emma Wilson',
+        avatar: '/avatars/emma-wilson.jpg',
+        phone: '+2233445566',
+        type: 'lead',
+        isOnline: false,
+        lastSeen: new Date(Date.now() - 86400000).toISOString(),
+        tags: []
+      },
+      lastMessage: {
+        content: 'I would like to schedule a demo',
+        timestamp: new Date(Date.now() - 43200000).toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      unreadCount: 0,
+      isTyping: false,
+      chatType: 'lead',
+    },
+    {
+      id: '5',
+      contact: {
+        id: 'contact5',
+        name: 'David Miller',
+        avatar: '/avatars/david-miller.jpg',
+        phone: '+3344556677',
+        type: 'client',
+        isOnline: false,
+        lastSeen: new Date(Date.now() - 172800000).toISOString(),
+        tags: []
+      },
+      lastMessage: {
+        content: 'Invoice received, thank you',
+        timestamp: new Date(Date.now() - 172800000).toISOString(),
+        isOutbound: true,
+        isRead: true
+      },
+      unreadCount: 0,
+      isTyping: false,
+      chatType: 'client',
+    },
+  ];
+
+  const handleNewMessage = (chatId: string, message: Message) => {
+    setConversations(prev => 
+      prev.map(chat => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            lastMessage: {
+              content: message.content,
+              timestamp: message.timestamp,
+              isOutbound: message.isOutbound,
+              isRead: false
+            },
+            unreadCount: !message.isOutbound ? (chat.unreadCount || 0) + 1 : chat.unreadCount,
+          };
+        }
+        return chat;
+      })
+    );
+  };
 
   const sendMessage = (content: string, type: MessageType = 'text') => {
     if (!activeChat) return;
@@ -670,6 +805,38 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
+  const handleAddContact = () => {
+    const newContact: Contact = {
+      id: `contact-${Date.now()}`,
+      name: 'New Team Member',
+      avatar: '/avatars/default.png',
+      type: 'team',
+      tags: []
+    };
+
+    const newConversation: Conversation = {
+      id: `chat-${Date.now()}`,
+      contact: newContact,
+      lastMessage: {
+        content: 'New team member added',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: false
+      },
+      unreadCount: 0,
+      chatType: 'team',
+    };
+
+    setConversations((prev) => [newConversation, ...prev]);
+    setActiveChat(newConversation);
+    setChatMessages([]);
+
+    toast({
+      title: "Add Team Member",
+      description: "New team member added successfully.",
+    });
+  };
+
   return (
     <ChatContext.Provider value={{
       conversations,
@@ -709,7 +876,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       leaveGroupChat,
       sendTemplateMock,
       handleFileUpload,
-      addReactionToMessage
+      addReactionToMessage,
+      handleNewMessage,
+      handleAddContact
     }}>
       {children}
     </ChatContext.Provider>

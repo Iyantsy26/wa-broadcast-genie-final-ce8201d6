@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Conversation, ChatType } from '@/types/conversation';
+import { Conversation, ChatType, LastMessage } from '@/types/conversation';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
@@ -144,6 +144,35 @@ const ConversationList: React.FC<ConversationListProps> = ({
     dateRange !== undefined || 
     assigneeFilter !== '' || 
     tagFilter !== '';
+    
+  // Helper function to safely access lastMessage
+  const getLastMessageContent = (lastMessage: LastMessage | string): string => {
+    if (typeof lastMessage === 'string') {
+      return lastMessage;
+    }
+    return lastMessage.content;
+  };
+  
+  const getLastMessageTimestamp = (conversation: Conversation): string => {
+    if (typeof conversation.lastMessage === 'string') {
+      return conversation.lastMessageTimestamp || '';
+    }
+    return conversation.lastMessage.timestamp;
+  };
+  
+  const isLastMessageOutbound = (conversation: Conversation): boolean => {
+    if (typeof conversation.lastMessage === 'string') {
+      return false; // Default if we don't know
+    }
+    return conversation.lastMessage.isOutbound;
+  };
+  
+  const isLastMessageRead = (conversation: Conversation): boolean => {
+    if (typeof conversation.lastMessage === 'string') {
+      return true; // Default if we don't know
+    }
+    return conversation.lastMessage.isRead;
+  };
 
   return (
     <div className="w-80 flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden">
@@ -367,8 +396,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
               const { displayTags, remaining } = getFilteredTags(conversation);
               const isActive = activeConversation?.id === conversation.id;
               
-              // Format timestamp
-              const timestamp = new Date(conversation.lastMessage.timestamp);
+              // Format timestamp using our helper function
+              const timestamp = new Date(getLastMessageTimestamp(conversation));
               const now = new Date();
               const isToday = timestamp.toDateString() === now.toDateString();
               const displayTime = isToday 
@@ -426,9 +455,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
                             {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
                           </span>
                         ) : (
-                          conversation.lastMessage.isOutbound && (
+                          isLastMessageOutbound(conversation) && (
                             <span className="text-xs text-primary">
-                              {conversation.lastMessage.isRead ? 'Read' : 'Sent'}
+                              {isLastMessageRead(conversation) ? 'Read' : 'Sent'}
                             </span>
                           )
                         )}
@@ -438,7 +467,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   
                   <div className="ml-12 -mt-1">
                     <div className="text-xs truncate text-muted-foreground">
-                      {conversation.lastMessage.isOutbound && 'You: '}{conversation.lastMessage.content}
+                      {isLastMessageOutbound(conversation) && 'You: '}{getLastMessageContent(conversation.lastMessage)}
                     </div>
                     
                     {(displayTags.length > 0 || conversation.assignedTo) && (

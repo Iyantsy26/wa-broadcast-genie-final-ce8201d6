@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval, parseISO } from 'date-fns';
-import { Conversation, ChatType } from '@/types/conversation';
+import { Conversation, ChatType, LastMessage } from '@/types/conversation';
 
 export const useConversationFilters = (conversations: Conversation[]) => {
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
@@ -13,6 +13,22 @@ export const useConversationFilters = (conversations: Conversation[]) => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [assigneeFilter, setAssigneeFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
+
+  // Helper function to safely get lastMessage content
+  const getLastMessageContent = (lastMessage: LastMessage | string): string => {
+    if (typeof lastMessage === 'string') {
+      return lastMessage;
+    }
+    return lastMessage.content;
+  };
+  
+  // Helper function to safely get lastMessage timestamp
+  const getLastMessageTimestamp = (conversation: Conversation): string => {
+    if (typeof conversation.lastMessage === 'string') {
+      return conversation.lastMessageTimestamp || '';
+    }
+    return conversation.lastMessage.timestamp;
+  };
 
   useEffect(() => {
     let filtered = [...conversations];
@@ -30,13 +46,13 @@ export const useConversationFilters = (conversations: Conversation[]) => {
       filtered = filtered.filter(convo => 
         convo.contact.name.toLowerCase().includes(term) || 
         (convo.contact.phone && convo.contact.phone.includes(term)) ||
-        convo.lastMessage.content.toLowerCase().includes(term)
+        getLastMessageContent(convo.lastMessage).toLowerCase().includes(term)
       );
     }
     
     if (dateRange?.from) {
       filtered = filtered.filter(convo => {
-        const messageDate = parseISO(convo.lastMessage.timestamp);
+        const messageDate = parseISO(getLastMessageTimestamp(convo));
         
         if (dateRange.to) {
           return isWithinInterval(messageDate, {

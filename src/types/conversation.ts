@@ -67,15 +67,17 @@ export interface ConversationSettings {
   fontSize: 'small' | 'medium' | 'large';
 }
 
+export interface LastMessage {
+  content: string;
+  timestamp: string;
+  isOutbound: boolean;
+  isRead: boolean;
+}
+
 export interface Conversation {
   id: string;
   contact: Contact;
-  lastMessage?: string | {
-    content: string;
-    timestamp: string;
-    isOutbound: boolean;
-    isRead: boolean;
-  };
+  lastMessage: LastMessage; // Make this consistent - always an object
   lastMessageTimestamp?: string;
   unreadCount?: number;
   isTyping?: boolean;
@@ -88,7 +90,7 @@ export interface Conversation {
   assignedTo?: string;
   status?: string;
   settings?: ConversationSettings;
-  chatType?: ChatType; // Added this property
+  chatType: ChatType; // Make this required
 }
 
 export interface Lead {

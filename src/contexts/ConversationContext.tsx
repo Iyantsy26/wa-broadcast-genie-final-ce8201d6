@@ -6,7 +6,8 @@ import {
   Message, 
   ChatType, 
   MessageType, 
-  MessageStatus 
+  MessageStatus,
+  LastMessage
 } from '@/types/conversation';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -66,8 +67,8 @@ interface ConversationContextType {
   resetAllFilters: () => void;
   
   // Action methods
-  handleSendMessage: (content: string, file: File | null, replyToMessageId?: string) => void;
-  handleVoiceMessageSent: (durationInSeconds: number) => void;
+  handleSendMessage: (content: string, file: File | null, replyToMessageId?: string) => Promise<void>;
+  handleVoiceMessageSent: (durationInSeconds: number) => Promise<void>;
   handleDeleteConversation: (conversationId: string) => Promise<void>;
   handleArchiveConversation: (conversationId: string, isArchived?: boolean) => Promise<void>;
   handleAddTag: (conversationId: string, tag: string) => Promise<void>;
@@ -81,15 +82,19 @@ interface ConversationContextType {
   replyToMessage: Message | null;
   cannedReplies: { id: string; title: string; content: string }[];
   aiAssistantActive: boolean;
+  isAssistantActive: boolean;
   setAiAssistantActive: (active: boolean) => void;
   handleAddReaction: (messageId: string, emoji: string) => void;
   handleReplyToMessage: (message: Message) => void;
   handleCancelReply: () => void;
   handleUseCannedReply: (replyContent: string) => void;
-  handleRequestAIAssistance: (prompt: string) => void;
+  handleRequestAIAssistance: (prompt: string) => Promise<string>;
   handleAddContact: (contactData: Partial<Contact>) => void;
   setIsSidebarOpen: (open: boolean) => void;
   setActiveConversation: (conversation: Conversation | null) => void;
+  deleteMessage: (messageId: string) => void;
+  addReaction: (messageId: string, emoji: string) => void;
+  toggleAssistant: () => void;
 }
 
 // Create context with initial values
@@ -115,9 +120,19 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedDevice, setSelectedDevice] = useState<string>("1"); // Default to first device
   const [aiAssistantActive, setAiAssistantActive] = useState<boolean>(false);
+  const [isAssistantActive, setIsAssistantActive] = useState<boolean>(false);
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Define setActiveConversation at the top to avoid the reference error
+  const setActiveConversation = useCallback((conversation: Conversation | null) => {
+    if (conversation) {
+      setSelectedContactId(conversation.contact.id);
+    } else {
+      setSelectedContactId(null);
+    }
+  }, []);
   
   // Canned replies
   const cannedReplies = [
@@ -180,10 +195,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         }));
         
         setContacts(uniqueContacts);
-        setConversations(fetchedConversations.map(conv => ({
-          ...conv,
-          chatType: conv.contact.type // Ensure chatType property exists
-        })));
+        setConversations(fetchedConversations);
         
         // Select first contact
         if (!selectedContactId && fetchedConversations.length > 0) {
@@ -238,14 +250,14 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
               filename: msg.media_filename,
               duration: msg.media_duration,
             } : undefined,
-            replyTo: msg.sender ? {
-              id: msg.sender,
-              content: "Reply content",
-              sender: "Reply sender",
-              type: "text",
+            replyTo: msg.reply_to_id ? {
+              id: msg.reply_to_id,
+              content: msg.reply_to_content || "Original message",
+              sender: msg.reply_to_sender || "Sender",
+              type: (msg.reply_to_type as MessageType) || "text",
               status: "sent",
-              isOutbound: false,
-              timestamp: msg.timestamp
+              isOutbound: msg.reply_to_is_outbound || false,
+              timestamp: msg.reply_to_timestamp || msg.timestamp
             } : undefined,
             reactions: []
           }));
@@ -304,6 +316,11 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   // Toggle sidebar
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
+  };
+  
+  // Toggle assistant
+  const toggleAssistant = () => {
+    setIsAssistantActive(prev => !prev);
   };
   
   // Send a message
@@ -578,7 +595,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   );
   
   // Add a reaction to a message
-  const handleAddReaction = (messageId: string, emoji: string) => {
+  const addReaction = (messageId: string, emoji: string) => {
     if (!selectedContactId) return;
     
     setMessages(prev => {
@@ -619,6 +636,24 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
   
+  // Delete a message
+  const deleteMessage = (messageId: string) => {
+    if (!selectedContactId) return;
+    
+    setMessages(prev => {
+      const contactMessages = prev[selectedContactId].filter(m => m.id !== messageId);
+      return {
+        ...prev,
+        [selectedContactId]: contactMessages
+      };
+    });
+    
+    toast({
+      title: "Message deleted",
+      description: "The message has been removed from this conversation",
+    });
+  };
+  
   // Reply to a message
   const handleReplyToMessage = (message: Message) => {
     setReplyTo(message);
@@ -637,32 +672,25 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   };
   
   // Request AI assistance
-  const handleRequestAIAssistance = (prompt: string) => {
+  const handleRequestAIAssistance = async (prompt: string): Promise<string> => {
     toast({
       title: "AI Assistant",
       description: "Generating response...",
     });
     
-    // Mock AI response
-    setTimeout(() => {
-      if (selectedContactId) {
+    // Mock AI response - in a real app this would call an AI service
+    return new Promise((resolve) => {
+      setTimeout(() => {
         const aiResponse = `Here's a suggestion in response to "${prompt}": Thank you for your inquiry. I'd be happy to help you with that. Could you please provide more details so I can assist you better?`;
         
-        // Don't send automatically, just show as a suggestion
         toast({
           title: "AI Suggestion Ready",
-          description: "Click to use the suggested response",
-          action: (
-            <button
-              onClick={() => sendMessageHandler(selectedContactId, aiResponse)}
-              className="bg-primary text-primary-foreground rounded px-2 py-1 text-xs"
-            >
-              Use Suggestion
-            </button>
-          ),
+          description: "AI has generated a response for you",
         });
-      }
-    }, 1500);
+        
+        resolve(aiResponse);
+      }, 1500);
+    });
   };
   
   // Add a new contact
@@ -708,28 +736,19 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   };
   
   // Handler for send message from other components
-  const handleSendMessage = (content: string, file: File | null, replyToMessageId?: string) => {
+  const handleSendMessage = async (content: string, file: File | null, replyToMessageId?: string): Promise<void> => {
     if (!selectedContactId) return;
     
     // For now, ignore file and replyToMessageId
-    sendMessageHandler(selectedContactId, content);
+    await sendMessageHandler(selectedContactId, content);
   };
 
   // Handler for voice message sent from other components
-  const handleVoiceMessageSent = (durationInSeconds: number) => {
+  const handleVoiceMessageSent = async (durationInSeconds: number): Promise<void> => {
     if (!selectedContactId) return;
     
-    sendVoiceMessage(selectedContactId, durationInSeconds);
+    await sendVoiceMessage(selectedContactId, durationInSeconds);
   };
-  
-  // Set active conversation
-  const setActiveConversation = useCallback((conversation: Conversation | null) => {
-    if (conversation) {
-      setSelectedContactId(conversation.contact.id);
-    } else {
-      setSelectedContactId(null);
-    }
-  }, []);
 
   // Context value
   const contextValue: ConversationContextType = {
@@ -797,8 +816,9 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     replyToMessage: replyTo,
     cannedReplies,
     aiAssistantActive,
+    isAssistantActive,
     setAiAssistantActive,
-    handleAddReaction,
+    handleAddReaction: addReaction,
     handleReplyToMessage,
     handleCancelReply,
     handleUseCannedReply,
@@ -806,6 +826,9 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     handleAddContact,
     setIsSidebarOpen,
     setActiveConversation,
+    deleteMessage,
+    addReaction,
+    toggleAssistant
   };
 
   return (

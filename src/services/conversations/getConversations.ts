@@ -1,5 +1,5 @@
 
-import { Conversation, ChatType } from '@/types/conversation';
+import { Conversation, ChatType, LastMessage } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 
 export const getConversations = async (): Promise<Conversation[]> => {
@@ -58,7 +58,20 @@ export const getConversations = async (): Promise<Conversation[]> => {
       const isClient = !!conv.client_id;
       const contactId = isClient ? conv.client_id : conv.lead_id;
       const contactInfo = isClient ? clients[contactId] : leads[contactId];
-      const chatType = isClient ? 'client' : 'lead';
+      const chatType = isClient ? 'client' as ChatType : 'lead' as ChatType;
+      
+      // Create consistent lastMessage object
+      let lastMessage: LastMessage;
+      if (typeof conv.last_message === 'string') {
+        lastMessage = {
+          content: conv.last_message,
+          timestamp: conv.last_message_timestamp || conv.created_at,
+          isOutbound: false, // Default value
+          isRead: true // Default value
+        };
+      } else {
+        lastMessage = conv.last_message as LastMessage;
+      }
       
       return {
         id: conv.id,
@@ -67,10 +80,10 @@ export const getConversations = async (): Promise<Conversation[]> => {
           name: contactInfo?.name || 'Unknown Contact',
           avatar: contactInfo?.avatar_url,
           phone: isClient ? '' : (contactInfo?.phone || ''),
-          type: isClient ? 'client' : 'lead',
-          tags: [] // Added empty tags array to satisfy the Contact type
+          type: chatType,
+          tags: [] // Empty array to satisfy the Contact type
         },
-        lastMessage: conv.last_message || '',
+        lastMessage: lastMessage,
         lastMessageTimestamp: conv.last_message_timestamp || conv.created_at,
         status: conv.status || 'new',
         chatType: chatType,

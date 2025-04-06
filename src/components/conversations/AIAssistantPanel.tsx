@@ -2,137 +2,116 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  X,
-  Bot,
-  SendHorizonal,
-  Copy
-} from 'lucide-react';
-import { useConversation } from '@/contexts/ConversationContext';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bot, X } from 'lucide-react';
 
-const AIAssistantPanel = () => {
-  const { toggleAssistant } = useConversation();
+interface AIAssistantPanelProps {
+  onRequestAIAssistance: (prompt: string) => Promise<string>;
+  onClose: () => void;
+}
+
+const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ 
+  onRequestAIAssistance,
+  onClose 
+}) => {
   const [prompt, setPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [responses, setResponses] = useState<Array<{
-    prompt: string;
-    response: string;
-    timestamp: string;
-  }>>([
-    {
-      prompt: "Help me draft a message to follow up with a client who hasn't responded in 2 weeks",
-      response: "Subject: Following Up on Our Previous Conversation\n\nDear [Client Name],\n\nI hope this message finds you well. I wanted to check in on our previous discussion from two weeks ago regarding [specific topic/project]. I understand schedules can get busy, and I'm reaching out to see if you have any updates or if there's anything I can assist you with at this point.\n\nIf you need more information or would like to schedule a call to discuss further, please let me know.\n\nLooking forward to hearing from you soon.\n\nBest regards,\n[Your Name]",
-      timestamp: new Date().toISOString()
-    }
-  ]);
-  
-  const generateResponse = () => {
+  const [response, setResponse] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!prompt.trim()) return;
-    
-    setIsGenerating(true);
-    
-    // Simulate AI response generation
-    setTimeout(() => {
-      const demoResponses = [
-        "I've drafted a response for you:\n\nThank you for reaching out. I appreciate your interest in our services. Based on what you've shared, I believe our [Product/Service] would be an excellent fit for your needs. I'd be happy to schedule a call to discuss the details further and answer any questions you might have.\n\nWould you be available for a 30-minute conversation this week? If so, please let me know what times work best for you.\n\nLooking forward to connecting soon.",
-        
-        "Here's a professional response you can use:\n\nI wanted to follow up regarding the proposal we discussed last week. I've taken your feedback into account and have made the adjustments we talked about. The updated version is attached to this message for your review.\n\nI believe these changes address your concerns about [specific concern]. Please take a look when you have a moment, and let me know if you'd like to proceed or if you need any further modifications.\n\nThank you for your continued interest in working with us.",
-        
-        "For your situation, I recommend:\n\nI understand your frustration regarding [issue]. We take matters like this very seriously, and I want to assure you that we're working diligently to resolve it.\n\nI've escalated this to our technical team, who are investigating the root cause. We expect to have a solution in place within the next 24-48 hours. In the meantime, a temporary workaround is to [suggestion].\n\nI'll personally follow up with you tomorrow with an update. Thank you for your patience and understanding."
-      ];
-      
-      const randomResponse = demoResponses[Math.floor(Math.random() * demoResponses.length)];
-      
-      setResponses(prev => [
-        {
-          prompt: prompt,
-          response: randomResponse,
-          timestamp: new Date().toISOString()
-        },
-        ...prev
-      ]);
-      
-      setPrompt('');
-      setIsGenerating(false);
-    }, 2000);
+
+    setIsLoading(true);
+    try {
+      const aiResponse = await onRequestAIAssistance(prompt);
+      setResponse(aiResponse);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      setResponse("Sorry, there was an error generating a response. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-  
+
   return (
-    <div className="w-72 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="flex justify-between items-center p-3 border-b">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold">AI Assistant</h3>
+    <Card className="w-80 h-full flex flex-col">
+      <CardHeader className="bg-muted/50 border-b">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg flex items-center">
+            <Bot className="mr-2 h-5 w-5" />
+            AI Assistant
+          </CardTitle>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={toggleAssistant}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+      </CardHeader>
       
-      {/* Input area */}
-      <div className="p-3 border-b">
-        <Textarea
-          placeholder="What would you like help with?"
-          className="min-h-[80px] mb-2"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
-        <Button 
-          className="w-full"
-          onClick={generateResponse}
-          disabled={!prompt.trim() || isGenerating}
-        >
-          {isGenerating ? (
-            <span className="flex items-center">
-              <span className="mr-2">Generating</span>
-              <span className="flex gap-1">
-                <span className="animate-bounce">.</span>
-                <span className="animate-bounce delay-150">.</span>
-                <span className="animate-bounce delay-300">.</span>
-              </span>
-            </span>
-          ) : (
-            <span className="flex items-center">
-              <SendHorizonal className="mr-2 h-4 w-4" />
-              Generate Response
-            </span>
-          )}
-        </Button>
-      </div>
-      
-      {/* Response history */}
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-4">
-          {responses.map((item, index) => (
-            <div key={index} className="bg-muted/40 rounded-md p-3">
-              <div className="text-xs text-muted-foreground mb-1">
-                <span className="font-medium">Prompt:</span> {item.prompt}
-              </div>
-              <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-xs font-medium">Response:</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6" 
-                    onClick={() => copyToClipboard(item.response)}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
-                <div className="text-xs whitespace-pre-wrap">{item.response}</div>
-              </div>
+      <CardContent className="p-4 flex-1 overflow-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="prompt" className="block text-sm font-medium mb-2">
+              What would you like help with?
+            </label>
+            <Textarea
+              id="prompt"
+              placeholder="e.g., Draft a follow-up email for a client who hasn't responded in a week"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="h-24"
+            />
+          </div>
+          
+          <Button type="submit" className="w-full" disabled={isLoading || !prompt.trim()}>
+            {isLoading ? "Generating..." : "Get AI Assistance"}
+          </Button>
+        </form>
+
+        {response && (
+          <div className="mt-6">
+            <h3 className="font-medium mb-2 text-sm">AI Response:</h3>
+            <div className="bg-muted/30 p-3 rounded text-sm whitespace-pre-wrap border">
+              {response}
             </div>
-          ))}
+            <div className="flex justify-end mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigator.clipboard.writeText(response)}
+              >
+                Copy to Clipboard
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        <div className="mt-6">
+          <h3 className="font-medium mb-3 text-sm">Suggested Prompts:</h3>
+          <div className="space-y-2">
+            {[
+              "Draft a polite reminder for an overdue invoice",
+              "Write a welcome message for a new client",
+              "Create a response for a pricing inquiry",
+              "Generate a meeting follow-up message"
+            ].map((suggestedPrompt, index) => (
+              <Button 
+                key={index}
+                variant="outline" 
+                className="w-full justify-start h-auto py-2 px-3 text-left text-sm font-normal"
+                onClick={() => setPrompt(suggestedPrompt)}
+              >
+                {suggestedPrompt}
+              </Button>
+            ))}
+          </div>
         </div>
-      </ScrollArea>
-    </div>
+      </CardContent>
+      
+      <CardFooter className="border-t p-3 text-xs text-muted-foreground">
+        <p>AI responses are suggestions and may require editing before sending.</p>
+      </CardFooter>
+    </Card>
   );
 };
 
