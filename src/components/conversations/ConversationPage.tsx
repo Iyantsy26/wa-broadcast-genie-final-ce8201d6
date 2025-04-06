@@ -2,7 +2,7 @@
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
-// import ConversationHeader from './ConversationHeader'; // Removed due to prop mismatch
+import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import NoConversation from './NoConversation';
@@ -12,31 +12,7 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
-
-// Create a simple Header component that matches the expected props
-const ConversationHeader: React.FC<{
-  contact: any;
-  onInfoClick: () => void;
-}> = ({ contact, onInfoClick }) => {
-  return (
-    <div className="p-3 border-b bg-card flex justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-          {contact.name.charAt(0)}
-        </div>
-        <div>
-          <div className="font-medium">{contact.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {contact.isOnline ? 'Online' : 'Offline'}
-          </div>
-        </div>
-      </div>
-      <Button variant="ghost" size="sm" onClick={onInfoClick}>
-        Info
-      </Button>
-    </div>
-  );
-};
+import { ChatType } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
@@ -50,7 +26,7 @@ const ConversationPage = () => {
     replyToMessage,
     cannedReplies,
     selectedDevice,
-    isAssistantActive,
+    aiAssistantActive,
     chatTypeFilter,
     searchTerm,
     dateRange,
@@ -79,43 +55,9 @@ const ConversationPage = () => {
     handleAddContact
   } = useConversation();
 
-  // Adapter function to bridge the interface between what MessageInput expects
-  // and what our ConversationContext provides
-  const sendMessageAdapter = (content: string, file: File | null) => {
-    if (handleSendMessage) {
-      // If file is provided, determine message type
-      if (file) {
-        const fileType = file.type.split('/')[0];
-        const mediaType = fileType === 'image' ? 'image' : 
-                          fileType === 'video' ? 'video' : 'document';
-        
-        // For files, we need to convert them to URLs or handle upload
-        const mediaUrl = URL.createObjectURL(file);
-        
-        return handleSendMessage(content, mediaType, mediaUrl);
-      }
-      
-      // For text messages
-      return handleSendMessage(content);
-    }
-    return Promise.resolve();
-  };
-
   // Define dummy pinConversation function to satisfy the interface
   const pinConversation = (conversationId: string) => {
     console.log('Pin conversation not implemented:', conversationId);
-  };
-
-  // Adapter function for AddContactButton
-  const addContactAdapter = (name: string, phone: string, type: 'team' | 'client' | 'lead') => {
-    if (handleAddContact) {
-      return handleAddContact({
-        name,
-        phone,
-        type,
-        tags: []
-      });
-    }
   };
 
   return (
@@ -128,12 +70,12 @@ const ConversationPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AddContactButton onAddContact={addContactAdapter} />
+          <AddContactButton onAddContact={handleAddContact} />
           <Button 
             variant="outline" 
-            onClick={() => setAiAssistantActive(!isAssistantActive)}
+            onClick={() => setAiAssistantActive(!aiAssistantActive)}
           >
-            {isAssistantActive ? 'Hide AI Assistant' : 'Show AI Assistant'}
+            {aiAssistantActive ? 'Hide AI Assistant' : 'Show AI Assistant'}
           </Button>
         </div>
       </div>
@@ -170,14 +112,16 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ConversationHeader 
-                contact={activeConversation.contact}
-                onInfoClick={() => setIsSidebarOpen(true)}
+                conversation={activeConversation}
+                onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
-                messages={messages || []} 
-                contact={activeConversation.contact}
+                messages={messages} 
+                contactName={activeConversation.contact.name}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}
+                onReaction={handleAddReaction}
+                onReply={handleReplyToMessage}
               />
               <div className="flex-shrink-0">
                 {isReplying && replyToMessage && (
@@ -192,18 +136,15 @@ const ConversationPage = () => {
                   </div>
                 )}
                 <CannedResponseSelector 
-                  cannedReplies={[
-                    { id: "1", title: "Greeting", content: "Hello there!" },
-                    { id: "2", title: "Thank you", content: "Thank you for your message." },
-                    { id: "3", title: "Follow up", content: "I'll get back to you shortly." }
-                  ]}
+                  cannedReplies={cannedReplies}
                   onSelectReply={handleUseCannedReply}
                 />
                 <MessageInput 
-                  onSendMessage={sendMessageAdapter}
+                  onSendMessage={handleSendMessage}
                   onVoiceMessageSent={handleVoiceMessageSent}
                   replyTo={replyToMessage}
                   onCancelReply={handleCancelReply}
+                  onRequestAIAssistance={handleRequestAIAssistance}
                 />
               </div>
             </>
@@ -221,8 +162,11 @@ const ConversationPage = () => {
           />
         )}
         
-        {isAssistantActive && (
-          <AIAssistantPanel />
+        {aiAssistantActive && (
+          <AIAssistantPanel 
+            onRequestAIAssistance={handleRequestAIAssistance}
+            onClose={() => setAiAssistantActive(false)}
+          />
         )}
       </div>
     </div>

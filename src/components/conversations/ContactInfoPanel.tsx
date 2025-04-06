@@ -30,17 +30,13 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 }) => {
   const {
     messages,
-    setIsSidebarOpen,
+    toggleSidebar,
     toggleContactStar,
     muteContact,
     clearChat
   } = useConversation();
-
-  // Create a map-like structure for messages
-  const messagesByContactId: Record<string, any[]> = {};
-  messagesByContactId[contact.id] = messages || [];
   
-  const contactMessages = messagesByContactId[contact.id] || [];
+  const contactMessages = messages[contact.id] || [];
   
   // Count media items
   const mediaCount = {
@@ -61,11 +57,6 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  };
-  
-  // Implement a simplified toggleSidebar
-  const toggleSidebar = () => {
-    setIsSidebarOpen(false);
   };
   
   return (

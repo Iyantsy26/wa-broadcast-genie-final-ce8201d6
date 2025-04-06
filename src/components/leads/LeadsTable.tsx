@@ -1,230 +1,315 @@
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Lead } from '@/types/conversation';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from 'date-fns';
-import DeleteConfirmDialog from '@/components/shared/DeleteConfirmDialog';
+import { MessageSquare, Mail, Phone, Edit } from 'lucide-react';
+import { Lead } from '@/types/conversation';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from '@/hooks/use-toast';
+import { createConversation } from '@/services/conversationService';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import LeadForm from '@/components/leads/LeadForm';
 
-export interface LeadsTableProps {
+interface LeadsTableProps {
   leads: Lead[];
-  loading?: boolean;
-  onDelete?: (id: string) => void;
-  onEdit?: (lead: Lead) => void;
-  onView?: (lead: Lead) => void;
-  searchTerm?: string;
-  statusFilter?: string;
+  loading: boolean;
+  searchTerm: string;
+  statusFilter: string;
 }
 
-const LeadsTable: React.FC<LeadsTableProps> = ({ leads, loading, onDelete, onEdit, onView, searchTerm, statusFilter }) => {
-  const navigate = useNavigate();
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
+const LeadsTable: React.FC<LeadsTableProps> = ({
+  leads,
+  loading,
+  searchTerm,
+  statusFilter
+}) => {
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const handleEdit = (lead: Lead) => {
-    setEditingLead(lead);
-  };
+  const filteredLeads = leads.filter((lead) => {
+    // Filter by search term
+    const matchesSearch = 
+      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.phone?.includes(searchTerm) ||
+      lead.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filter by status
+    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleDelete = async (id: string) => {
-    setLeadToDelete(id);
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDelete = async () => {
-    if (leadToDelete) {
-      try {
-        await onDelete(leadToDelete);
-        toast({
-          title: "Lead deleted",
-          description: "The lead has been successfully deleted",
-        });
-        setShowDeleteDialog(false);
-        setLeadToDelete(null);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete the lead",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'new':
-        return 'bg-blue-100 text-blue-800';
-      case 'contacted':
-        return 'bg-purple-100 text-purple-800';
-      case 'qualified':
-        return 'bg-green-100 text-green-800';
-      case 'proposal':
-        return 'bg-amber-100 text-amber-800';
-      case 'negotiation':
-        return 'bg-orange-100 text-orange-800';
-      case 'won':
-        return 'bg-emerald-100 text-emerald-800';
-      case 'lost':
-        return 'bg-red-100 text-red-800';
-      case 'nurturing':
-        return 'bg-cyan-100 text-cyan-800';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'New':
+        return 'bg-blue-50 text-blue-700';
+      case 'Contacted':
+        return 'bg-yellow-50 text-yellow-700';
+      case 'Qualified':
+        return 'bg-purple-50 text-purple-700';
+      case 'Proposal':
+        return 'bg-indigo-50 text-indigo-700';
+      case 'Converted':
+        return 'bg-green-50 text-green-700';
+      case 'Lost':
+        return 'bg-gray-50 text-gray-700';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-50 text-gray-700';
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase();
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    return format(new Date(dateString), 'MMM dd, yyyy');
   };
+
+  const handleMessage = async (lead: Lead) => {
+    try {
+      await createConversation(lead.id, 'lead', `Initial contact with ${lead.name}`);
+      toast({
+        title: "Action not available",
+        description: "The conversation feature is currently being redesigned.",
+      });
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEmail = (lead: Lead) => {
+    window.location.href = `mailto:${lead.email}`;
+  };
+
+  const handleCall = (lead: Lead) => {
+    window.location.href = `tel:${lead.phone}`;
+  };
+
+  const handleLeadClick = (lead: Lead) => {
+    setSelectedLead(lead);
+    setIsDetailsOpen(true);
+  };
+
+  const handleEditClick = () => {
+    setIsDetailsOpen(false);
+    setIsEditOpen(true);
+  };
+
+  const handleEditComplete = () => {
+    setIsEditOpen(false);
+  };
+
+  if (loading) {
+    return <div className="py-10 text-center">Loading leads...</div>;
+  }
+
+  if (filteredLeads.length === 0) {
+    return (
+      <div className="py-10 text-center">
+        {searchTerm || statusFilter !== 'all' 
+          ? 'No leads match your search or filters.' 
+          : 'No leads available. Add your first lead!'}
+      </div>
+    );
+  }
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Next Follow-up</TableHead>
-            <TableHead className="w-[80px]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {leads.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-8">
-                <div className="flex flex-col items-center justify-center">
-                  <User className="h-8 w-8 text-gray-400 mb-2" />
-                  <h3 className="text-lg font-medium">No leads found</h3>
-                  <p className="text-sm text-muted-foreground mt-1 mb-4">
-                    Get started by creating a new lead
-                  </p>
-                  <Button onClick={() => navigate('/leads/new')}>
-                    Add New Lead
-                  </Button>
-                </div>
-              </TableCell>
+      <div className="bg-white rounded-lg border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50">
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Name</TableHead>
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Contact</TableHead>
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Company</TableHead>
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Address</TableHead>
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Last Contact</TableHead>
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Next Follow-up</TableHead>
+              <TableHead className="text-right py-3 px-4"></TableHead>
             </TableRow>
-          ) : (
-            leads.map(lead => (
-              <TableRow key={lead.id} className="hover:bg-muted/50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={lead.avatar_url || ''} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                        {getInitials(lead.name)}
-                      </AvatarFallback>
+          </TableHeader>
+          <TableBody>
+            {filteredLeads.map((lead) => (
+              <TableRow key={lead.id} className="border-b hover:bg-gray-50">
+                <TableCell className="py-4 px-4">
+                  <div className="flex items-center">
+                    <Avatar className="w-8 h-8 mr-3">
+                      {lead.avatar_url ? (
+                        <AvatarImage src={lead.avatar_url} alt={lead.name} />
+                      ) : (
+                        <AvatarFallback>{lead.initials}</AvatarFallback>
+                      )}
                     </Avatar>
                     <div>
-                      <div className="font-medium">{lead.name}</div>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        {lead.email && (
-                          <a 
-                            href={`mailto:${lead.email}`}
-                            className="flex items-center hover:text-primary"
-                          >
-                            <Mail className="h-3 w-3 mr-1" />
-                            {lead.email}
-                          </a>
-                        )}
-                        {lead.phone && (
-                          <a 
-                            href={`tel:${lead.phone}`}
-                            className="flex items-center hover:text-primary"
-                          >
-                            <Phone className="h-3 w-3 mr-1" />
-                            {lead.phone}
-                          </a>
-                        )}
-                      </div>
+                      <span 
+                        className="font-semibold cursor-pointer hover:text-blue-600"
+                        onClick={() => handleLeadClick(lead)}
+                      >
+                        {lead.name}
+                      </span>
+                      {lead.status && (
+                        <div className="mt-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
+                            {lead.status}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Badge className={`${getStatusBadgeColor(lead.status)}`}>
-                    {lead.status}
-                  </Badge>
+                <TableCell className="py-4 px-4">
+                  <div className="flex flex-col space-y-1">
+                    <div>{lead.email || '-'}</div>
+                    <div>{lead.phone || '-'}</div>
+                  </div>
                 </TableCell>
-                <TableCell>{lead.company || '-'}</TableCell>
-                <TableCell>{lead.source || '-'}</TableCell>
-                <TableCell>
-                  {lead.created_at ? format(new Date(lead.created_at), 'MMM d, yyyy') : '-'}
-                </TableCell>
-                <TableCell>
-                  {lead.next_followup ? (
-                    <div className="flex items-center">
-                      <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      {format(new Date(lead.next_followup), 'MMM d, yyyy')}
-                    </div>
-                  ) : '-'}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(lead)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(lead.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="py-4 px-4">{lead.company || '-'}</TableCell>
+                <TableCell className="py-4 px-4">{lead.address || '-'}</TableCell>
+                <TableCell className="py-4 px-4">{formatDate(lead.last_contact)}</TableCell>
+                <TableCell className="py-4 px-4">{formatDate(lead.next_followup)}</TableCell>
+                <TableCell className="py-4 px-4">
+                  <div className="flex justify-end space-x-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-full text-blue-600"
+                      onClick={() => handleMessage(lead)}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-full text-blue-600"
+                      onClick={() => handleEmail(lead)}
+                      disabled={!lead.email}
+                    >
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-full text-blue-600"
+                      onClick={() => handleCall(lead)}
+                      disabled={!lead.phone}
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-      {editingLead && (
-        <Dialog open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)}>
+      {/* Lead Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Lead Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedLead && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center mb-4">
+                <Avatar className="w-12 h-12 mr-4">
+                  {selectedLead.avatar_url ? (
+                    <AvatarImage src={selectedLead.avatar_url} alt={selectedLead.name} />
+                  ) : (
+                    <AvatarFallback>{selectedLead.initials}</AvatarFallback>
+                  )}
+                </Avatar>
+                <div>
+                  <h3 className="text-xl font-semibold">{selectedLead.name}</h3>
+                  {selectedLead.status && (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedLead.status)}`}>
+                      {selectedLead.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{selectedLead.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium">{selectedLead.phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Company</p>
+                  <p className="font-medium">{selectedLead.company || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="font-medium">{selectedLead.address || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Source</p>
+                  <p className="font-medium">{selectedLead.source || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Referrer</p>
+                  <p className="font-medium">{selectedLead.referrer_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Last Contact</p>
+                  <p className="font-medium">{formatDate(selectedLead.last_contact)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Next Follow-up</p>
+                  <p className="font-medium">{formatDate(selectedLead.next_followup)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created At</p>
+                  <p className="font-medium">{selectedLead.created_at ? formatDate(selectedLead.created_at) : '-'}</p>
+                </div>
+              </div>
+
+              {selectedLead.notes && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500">Notes</p>
+                  <p className="font-medium">{selectedLead.notes}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <Button onClick={handleEditClick} className="flex items-center">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Lead
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Lead Dialog */}
+      {selectedLead && (
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Edit Lead</DialogTitle>
-              <DialogDescription>
-                Update lead information. Click save when you're done.
-              </DialogDescription>
             </DialogHeader>
-            <LeadForm 
-              lead={editingLead} 
-              onComplete={() => {
-                setEditingLead(null);
-                onEdit && onEdit(editingLead);
-              }} 
-            />
+            <LeadForm lead={selectedLead} onComplete={handleEditComplete} />
           </DialogContent>
         </Dialog>
       )}
-
-      <DeleteConfirmDialog 
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        onConfirm={confirmDelete}
-        title="Delete Lead"
-        description="Are you sure you want to delete this lead? This action cannot be undone."
-      />
     </>
   );
 };

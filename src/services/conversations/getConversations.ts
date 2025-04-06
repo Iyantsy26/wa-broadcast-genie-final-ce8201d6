@@ -25,16 +25,16 @@ export const getConversations = async (): Promise<Conversation[]> => {
       throw error;
     }
 
-    let clients: Record<string, any> = {};
-    let leads: Record<string, any> = {};
+    let clients = {};
+    let leads = {};
 
     if (conversations?.some(c => c.client_id)) {
       const { data: clientsData } = await supabase
         .from('clients')
-        .select('id, name, avatar_url, phone, tags');
+        .select('id, name, avatar_url');
       
       if (clientsData) {
-        clients = clientsData.reduce((acc: Record<string, any>, client: any) => {
+        clients = clientsData.reduce((acc, client) => {
           acc[client.id] = client;
           return acc;
         }, {});
@@ -47,7 +47,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         .select('id, name, avatar_url, phone');
       
       if (leadsData) {
-        leads = leadsData.reduce((acc: Record<string, any>, lead: any) => {
+        leads = leadsData.reduce((acc, lead) => {
           acc[lead.id] = lead;
           return acc;
         }, {});
@@ -65,9 +65,8 @@ export const getConversations = async (): Promise<Conversation[]> => {
           id: contactId,
           name: contactInfo?.name || 'Unknown Contact',
           avatar: contactInfo?.avatar_url,
-          phone: contactInfo?.phone || '',
-          type: isClient ? 'client' : 'lead',
-          tags: contactInfo?.tags || []
+          phone: isClient ? '' : (contactInfo?.phone || ''),
+          type: isClient ? 'client' : 'lead'
         },
         lastMessage: {
           content: conv.last_message || '',
@@ -78,10 +77,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         status: conv.status || 'new',
         chatType: isClient ? 'client' : 'lead',
         tags: conv.tags || [],
-        assignedTo: conv.assigned_to,
-        isPinned: false,
-        isArchived: false,
-        unreadCount: 0
+        assignedTo: conv.assigned_to
       };
     });
   } catch (error) {

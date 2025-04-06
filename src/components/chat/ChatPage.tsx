@@ -34,28 +34,6 @@ const ChatPage = () => {
     messagesEndRef
   } = useConversation();
 
-  // Adapter function to bridge the interface between what MessagePanel expects
-  // and what our ConversationContext provides
-  const sendMessageAdapter = (content: string, file: File | null, replyToMessageId?: string) => {
-    if (handleSendMessage) {
-      // If file is provided, determine message type
-      if (file) {
-        const fileType = file.type.split('/')[0];
-        const mediaType = fileType === 'image' ? 'image' : 
-                          fileType === 'video' ? 'video' : 'document';
-        
-        // For files, we need to convert them to URLs or handle upload
-        const mediaUrl = URL.createObjectURL(file);
-        
-        return handleSendMessage(content, mediaType, mediaUrl);
-      }
-      
-      // For text messages
-      return handleSendMessage(content);
-    }
-    return Promise.resolve();
-  };
-
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
@@ -93,7 +71,7 @@ const ChatPage = () => {
             conversation={activeConversation}
             messages={messages}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
-            onSendMessage={sendMessageAdapter}
+            onSendMessage={handleSendMessage}
             onVoiceMessageSent={handleVoiceMessageSent}
             messagesEndRef={messagesEndRef}
             isTyping={false}

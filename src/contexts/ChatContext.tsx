@@ -1,276 +1,365 @@
-
-import React, { createContext, useContext, useState } from 'react';
-import { Conversation, Message, Contact } from '@/types/conversation';
-
-// Mock conversations data
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    contact: {
-      id: '101',
-      name: 'John Smith',
-      avatar: '/avatars/john-smith.png',
-      phone: '+1 (555) 123-4567',
-      type: 'client',
-      isOnline: true,
-      lastSeen: new Date().toISOString(),
-      tags: ['premium', 'active']
-    },
-    lastMessage: {
-      content: 'I need help with my account',
-      timestamp: '2023-10-02T14:30:00Z',
-      isOutbound: false,
-      isRead: true
-    },
-    status: 'active',
-    chatType: 'client',
-    tags: ['urgent', 'support'],
-    assignedTo: 'Sarah',
-    isPinned: false,
-    isArchived: false,
-    unreadCount: 0
-  },
-  {
-    id: '2',
-    contact: {
-      id: '102',
-      name: 'Jane Doe',
-      avatar: '/avatars/jane-doe.png',
-      phone: '+1 (555) 987-6543',
-      type: 'lead',
-      isOnline: false,
-      lastSeen: '2023-10-01T18:45:00Z',
-      tags: ['new', 'interested']
-    },
-    lastMessage: {
-      content: 'Can you send me pricing information?',
-      timestamp: '2023-10-01T18:45:00Z',
-      isOutbound: false,
-      isRead: false
-    },
-    status: 'new',
-    chatType: 'lead',
-    tags: ['sales', 'pricing'],
-    unreadCount: 1,
-    isPinned: true,
-    isArchived: false
-  },
-  {
-    id: '3',
-    contact: {
-      id: '103',
-      name: 'Acme Corporation',
-      avatar: '/avatars/acme-corp.png',
-      phone: '+1 (555) 333-2222',
-      type: 'client',
-      isOnline: true,
-      lastSeen: new Date().toISOString(),
-      tags: ['enterprise', 'active']
-    },
-    lastMessage: {
-      content: 'Thanks for the quick response',
-      timestamp: '2023-10-02T10:15:00Z',
-      isOutbound: true,
-      isRead: true
-    },
-    status: 'active',
-    chatType: 'client',
-    assignedTo: 'Mike',
-    unreadCount: 0,
-    isPinned: false,
-    isArchived: false
-  },
-  {
-    id: '4',
-    contact: {
-      id: '104',
-      name: 'Alex Johnson',
-      avatar: '/avatars/alex-johnson.png',
-      phone: '+1 (555) 777-8888',
-      type: 'lead',
-      isOnline: false,
-      lastSeen: '2023-09-30T09:20:00Z',
-      tags: ['referral']
-    },
-    lastMessage: {
-      content: 'I saw your product online and I\'m interested in learning more',
-      timestamp: '2023-09-30T09:20:00Z',
-      isOutbound: false,
-      isRead: true
-    },
-    status: 'contacted',
-    chatType: 'lead',
-    tags: ['website-lead'],
-    unreadCount: 0,
-    isPinned: false,
-    isArchived: false
-  },
-  {
-    id: '5',
-    contact: {
-      id: '105',
-      name: 'Global Partners Inc',
-      avatar: '/avatars/global-partners.png',
-      phone: '+1 (555) 444-5555',
-      type: 'client',
-      isOnline: false,
-      lastSeen: '2023-10-01T15:10:00Z',
-      tags: ['enterprise']
-    },
-    lastMessage: {
-      content: 'We need to schedule the quarterly review call',
-      timestamp: '2023-10-01T15:10:00Z',
-      isOutbound: false,
-      isRead: true
-    },
-    status: 'active',
-    chatType: 'client',
-    assignedTo: 'Sarah',
-    unreadCount: 0,
-    isPinned: false,
-    isArchived: true
-  }
-];
-
-// Mock messages data
-const mockMessages: Record<string, Message[]> = {
-  '1': [
-    {
-      id: '101',
-      content: 'Hello, I need help with my account',
-      timestamp: '2023-10-02T14:30:00Z',
-      isOutbound: false,
-      status: 'read',
-      sender: 'John Smith',
-      type: 'text'
-    },
-    {
-      id: '102',
-      content: 'Hi John, I\'d be happy to help. What seems to be the issue?',
-      timestamp: '2023-10-02T14:32:00Z',
-      isOutbound: true,
-      status: 'read',
-      sender: 'You',
-      type: 'text'
-    },
-    {
-      id: '103',
-      content: 'I can\'t access my dashboard after the recent update',
-      timestamp: '2023-10-02T14:35:00Z',
-      isOutbound: false,
-      status: 'read',
-      sender: 'John Smith',
-      type: 'text'
-    }
-  ],
-  '2': [
-    {
-      id: '201',
-      content: 'Hi, I\'m interested in your services',
-      timestamp: '2023-10-01T18:40:00Z',
-      isOutbound: false,
-      status: 'read',
-      sender: 'Jane Doe',
-      type: 'text'
-    },
-    {
-      id: '202',
-      content: 'Can you send me pricing information?',
-      timestamp: '2023-10-01T18:45:00Z',
-      isOutbound: false,
-      status: 'delivered',
-      sender: 'Jane Doe',
-      type: 'text'
-    }
-  ]
-};
+import React, { createContext, useContext, useRef, ReactNode } from 'react';
+import { Contact, Conversation, Message, MessageType, ChatType } from '@/types/conversation';
+import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatContextType {
   conversations: Conversation[];
-  activeConversation: Conversation | null;
-  messages: Message[];
-  setActiveConversation: (conversation: Conversation) => void;
-  sendMessage: (content: string, file: File | null, replyToMessageId?: string) => Promise<void>;
-  sendVoiceMessage: (durationInSeconds: number) => void;
+  activeChat: Conversation | null;
+  chatMessages: Message[];
+  isSidebarOpen: boolean;
+  isContactModalOpen: boolean;
+  isGroupChatModalOpen: boolean;
+  isSettingsModalOpen: boolean;
+  isProfileModalOpen: boolean;
+  isSearchOpen: boolean;
+  searchTerm: string;
+  chatType: ChatType;
+  setSearchTerm: (term: string) => void;
+  setChatType: (type: ChatType) => void;
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
+  setActiveChat: (chat: Conversation | null) => void;
+  setChatMessages: (messages: Message[]) => void;
+  setIsSidebarOpen: (isOpen: boolean) => void;
+  setIsContactModalOpen: (isOpen: boolean) => void;
+  setIsGroupChatModalOpen: (isOpen: boolean) => void;
+  setIsSettingsModalOpen: (isOpen: boolean) => void;
+  setIsProfileModalOpen: (isOpen: boolean) => void;
+  setIsSearchOpen: (isOpen: boolean) => void;
+  sendMessage: (content: string, type?: MessageType) => void;
+  sendImageMessage: (imageUrl: string, caption?: string) => void;
+  sendDocumentMessage: (documentUrl: string, filename: string) => void;
+  sendVoiceMessage: (audioUrl: string, durationSeconds: number) => void;
+  startNewConversation: (contact: Contact, initialMessage?: string) => void;
+  archiveChat: (chatId: string) => void;
+  deleteChat: (chatId: string) => void;
+  pinChat: (chatId: string) => void;
+  muteChat: (chatId: string) => void;
+  addContact: (contact: Contact) => void;
+  removeContact: (contactId: string) => void;
+  createGroupChat: (name: string, participants: Contact[], avatar?: string) => void;
+  leaveGroupChat: (chatId: string) => void;
+  sendTemplateMock: (templateId: string, leadId: string) => void;
+  handleFileUpload: (file: File) => void;
+  addReactionToMessage: (messageId: string, emoji: string) => void;
 }
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+export const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
-
-  const getMessagesForConversation = (conversationId: string): Message[] => {
-    return mockMessages[conversationId] || [];
-  };
-
-  const sendMessage = async (content: string, file: File | null, replyToMessageId?: string): Promise<void> => {
-    if (!activeConversation) return;
-    
-    // Implementation for sending a message
-    console.log(`Sending message to ${activeConversation.contact.name}: ${content}`);
-    
-    // Here we would normally make an API call to send the message
-    // For now, just update local state
-    const newMessage: Message = {
-      id: `new-${Date.now()}`,
-      content,
+export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [conversations, setConversations] = React.useState<Conversation[]>([
+    {
+      id: '1',
+      contact: {
+        id: '1',
+        name: 'John Doe',
+        avatar: 'https://i.pravatar.cc/150?img=5',
+        phone: '+1 (555) 123-4567',
+        type: 'client',
+        isOnline: true,
+        lastSeen: 'Online'
+      },
+      lastMessage: {
+        content: 'Hey there! How can I help you today?',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      status: 'active',
+      chatType: 'client',
+      isPinned: true,
+      isArchived: false,
+      unreadCount: 0,
+      tags: ['vip', 'urgent'],
+      assignedTo: 'Jane'
+    },
+    {
+      id: '2',
+      contact: {
+        id: '2',
+        name: 'Alice Smith',
+        avatar: 'https://i.pravatar.cc/150?img=7',
+        phone: '+1 (555) 987-6543',
+        type: 'lead',
+        isOnline: false,
+        lastSeen: '5 minutes ago'
+      },
+      lastMessage: {
+        content: 'I\'m interested in your services. Can we schedule a call?',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: false
+      },
+      status: 'new',
+      chatType: 'lead',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 2,
+      tags: ['high-priority'],
+      assignedTo: 'Mike'
+    },
+    {
+      id: '3',
+      contact: {
+        id: '3',
+        name: 'Bob Johnson',
+        avatar: 'https://i.pravatar.cc/150?img=11',
+        phone: '+1 (555) 246-1357',
+        type: 'client',
+        isOnline: true,
+        lastSeen: 'Online'
+      },
+      lastMessage: {
+        content: 'Just confirming our meeting for tomorrow.',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: true
+      },
+      status: 'active',
+      chatType: 'client',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 0,
+      tags: [],
+      assignedTo: 'Jane'
+    },
+    {
+      id: '4',
+      contact: {
+        id: '4',
+        name: 'Eva Williams',
+        avatar: 'https://i.pravatar.cc/150?img=12',
+        phone: '+1 (555) 369-8024',
+        type: 'lead',
+        isOnline: false,
+        lastSeen: '30 minutes ago'
+      },
+      lastMessage: {
+        content: 'Could you send me more details about the product?',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        isRead: true
+      },
+      status: 'pending',
+      chatType: 'lead',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 1,
+      tags: ['follow-up'],
+      assignedTo: 'Mike'
+    },
+    {
+      id: '5',
+      contact: {
+        id: '5',
+        name: 'Charlie Brown',
+        avatar: 'https://i.pravatar.cc/150?img=10',
+        phone: '+1 (555) 159-7531',
+        type: 'client',
+        isOnline: false,
+        lastSeen: '1 hour ago'
+      },
+      lastMessage: {
+        content: 'Everything is working great, thanks!',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: true
+      },
+      status: 'resolved',
+      chatType: 'client',
+      isPinned: false,
+      isArchived: true,
+      unreadCount: 0,
+      tags: [],
+      assignedTo: 'Jane'
+    },
+  ]);
+  const [activeChat, setActiveChat] = React.useState<Conversation | null>(conversations[0] || null);
+  const [chatMessages, setChatMessages] = React.useState<Message[]>([
+    {
+      id: '1',
+      content: 'Hey there! How can I help you today?',
+      timestamp: new Date().toISOString(),
+      isOutbound: false,
+      status: 'delivered',
+      sender: 'John',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '2',
+      content: 'I\'m interested in your services. Can we schedule a call?',
+      timestamp: new Date().toISOString(),
+      isOutbound: false,
+      status: 'delivered',
+      sender: 'John',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '3',
+      content: 'Just confirming our meeting for tomorrow.',
       timestamp: new Date().toISOString(),
       isOutbound: true,
       status: 'sent',
       sender: 'You',
-      type: file ? 
-        (file.type.startsWith('image/') ? 'image' : 
-         file.type.startsWith('video/') ? 'video' : 'document') : 'text',
-      media: file ? {
-        url: URL.createObjectURL(file),
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('video/') ? 'video' : 'document',
-        filename: file.name,
-        size: file.size
-      } : undefined,
-      replyTo: replyToMessageId ? {
-        id: replyToMessageId,
-        content: 'Previous message',
-        sender: 'Someone',
-        type: 'text',
-        status: 'read',
-        isOutbound: false,
-        timestamp: new Date().toISOString()
-      } : undefined
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '4',
+      content: 'Could you send me more details about the product?',
+      timestamp: new Date().toISOString(),
+      isOutbound: false,
+      status: 'delivered',
+      sender: 'John',
+      type: 'text',
+      viaWhatsApp: true
+    },
+    {
+      id: '5',
+      content: 'Everything is working great, thanks!',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'text',
+      viaWhatsApp: true
+    },
+  ]);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState<boolean>(false);
+  const [isContactModalOpen, setIsContactModalOpen] = React.useState<boolean>(false);
+  const [isGroupChatModalOpen, setIsGroupChatModalOpen] = React.useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = React.useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = React.useState<string>('');
+  const [chatType, setChatType] = React.useState<ChatType>('client');
+  const { toast } = useToast();
+
+  const sendMessage = (content: string, type: MessageType = 'text') => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
+      content: content.trim(),
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type,
+      viaWhatsApp: true
     };
+
+    setChatMessages((prev) => [...prev, newMessage]);
     
-    // Update messages
-    mockMessages[activeConversation.id] = [
-      ...(mockMessages[activeConversation.id] || []),
-      newMessage
-    ];
-    
-    // Update conversation last message
-    const updatedConversation: Conversation = {
-      ...activeConversation,
-      lastMessage: {
-        content: content || 'Attachment',
-        timestamp: new Date().toISOString(),
-        isOutbound: true,
-        isRead: false
-      }
-    };
-    
-    setActiveConversation(updatedConversation);
-    setConversations(prev => 
-      prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === activeChat.id
+          ? {
+              ...convo,
+              lastMessage: {
+                content: content.trim(),
+                timestamp: new Date().toISOString(),
+                isOutbound: true,
+                isRead: false
+              }
+            }
+          : convo
+      )
     );
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: `Response to: ${content}`,
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1000);
   };
 
-  const sendVoiceMessage = (durationInSeconds: number): void => {
-    if (!activeConversation) return;
-    
-    console.log(`Sending voice message (${durationInSeconds}s) to ${activeConversation.contact.name}`);
-    
-    // Mock implementation
+  const sendImageMessage = (imageUrl: string, caption: string = '') => {
+    if (!activeChat) return;
+
     const newMessage: Message = {
-      id: `voice-${Date.now()}`,
+      id: uuidv4(),
+      content: caption,
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'image',
+      media: {
+        url: imageUrl,
+        type: 'image',
+      },
+      viaWhatsApp: true
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'Thanks for the image!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1500);
+  };
+
+  const sendDocumentMessage = (documentUrl: string, filename: string) => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
+      content: '',
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'document',
+      media: {
+        url: documentUrl,
+        type: 'document',
+        filename: filename
+      },
+      viaWhatsApp: true
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'I received your document!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1500);
+  };
+
+  const sendVoiceMessage = (audioUrl: string, durationSeconds: number) => {
+    if (!activeChat) return;
+
+    const newMessage: Message = {
+      id: uuidv4(),
       content: '',
       timestamp: new Date().toISOString(),
       isOutbound: true,
@@ -278,54 +367,358 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sender: 'You',
       type: 'voice',
       media: {
-        url: '#',
+        url: audioUrl,
         type: 'voice',
-        duration: durationInSeconds
-      }
+        duration: durationSeconds
+      },
+      viaWhatsApp: true
     };
-    
-    // Update messages
-    mockMessages[activeConversation.id] = [
-      ...(mockMessages[activeConversation.id] || []),
-      newMessage
-    ];
-    
-    // Update conversation last message
-    const updatedConversation = {
-      ...activeConversation,
+
+    setChatMessages((prev) => [...prev, newMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'I listened to your voice message!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 2000);
+  };
+
+  const startNewConversation = (contact: Contact, initialMessage?: string) => {
+    const newConversation: Conversation = {
+      id: uuidv4(),
+      contact: contact,
       lastMessage: {
-        content: 'Voice message',
+        content: initialMessage || 'New conversation started',
         timestamp: new Date().toISOString(),
         isOutbound: true,
         isRead: false
-      }
+      },
+      status: 'new',
+      chatType: contact.type === 'client' ? 'client' : 'lead',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 0
     };
-    
-    setActiveConversation(updatedConversation);
-    setConversations(prev => 
-      prev.map(c => c.id === updatedConversation.id ? updatedConversation : c)
+
+    setConversations((prev) => [newConversation, ...prev]);
+    setActiveChat(newConversation);
+    setChatMessages([]);
+
+    if (initialMessage) {
+      sendMessage(initialMessage);
+    }
+  };
+
+  const archiveChat = (chatId: string) => {
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === chatId ? { ...convo, isArchived: true } : convo
+      )
+    );
+
+    if (activeChat?.id === chatId) {
+      setActiveChat(null);
+      setChatMessages([]);
+    }
+  };
+
+  const deleteChat = (chatId: string) => {
+    setConversations((prev) => prev.filter((convo) => convo.id !== chatId));
+
+    if (activeChat?.id === chatId) {
+      setActiveChat(null);
+      setChatMessages([]);
+    }
+  };
+
+  const pinChat = (chatId: string) => {
+    setConversations((prev) =>
+      prev.map((convo) =>
+        convo.id === chatId ? { ...convo, isPinned: !convo.isPinned } : convo
+      )
     );
   };
 
-  const value: ChatContextType = {
-    conversations,
-    activeConversation,
-    messages: activeConversation ? getMessagesForConversation(activeConversation.id) : [],
-    setActiveConversation,
-    sendMessage,
-    sendVoiceMessage
+  const muteChat = (chatId: string) => {
+    toast({
+      title: "Mute Chat",
+      description: "Chat muted successfully.",
+    });
+  };
+
+  const addContact = (contact: Contact) => {
+    toast({
+      title: "Add Contact",
+      description: `${contact.name} added to contacts.`,
+    });
+  };
+
+  const removeContact = (contactId: string) => {
+    toast({
+      title: "Remove Contact",
+      description: "Contact removed successfully.",
+    });
+  };
+
+  const createGroupChat = (name: string, participants: Contact[], avatar?: string) => {
+    const newGroupChat: Conversation = {
+      id: uuidv4(),
+      contact: {
+        id: uuidv4(),
+        name: name,
+        avatar: avatar || 'https://i.pravatar.cc/150?img=50',
+        type: 'team'
+      },
+      lastMessage: {
+        content: 'Group chat created',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        isRead: false
+      },
+      status: 'active',
+      chatType: 'team',
+      isPinned: false,
+      isArchived: false,
+      unreadCount: 0
+    };
+
+    setConversations((prev) => [newGroupChat, ...prev]);
+    setActiveChat(newGroupChat);
+    setChatMessages([]);
+
+    toast({
+      title: "Group Chat Created",
+      description: `${name} group chat created successfully.`,
+    });
+  };
+
+  const leaveGroupChat = (chatId: string) => {
+    toast({
+      title: "Leave Group Chat",
+      description: "You have left the group chat.",
+    });
+  };
+
+  const sendTemplateMock = (templateId: string, leadId: string) => {
+    const templateText = `Hi [Lead Name], thanks for your interest in our product! Here's a special offer just for you.`;
+
+    const mockTemplateMessage: Message = {
+      id: uuidv4(),
+      content: templateText,
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sent',
+      sender: 'You',
+      type: 'text'
+    };
+
+    setChatMessages((prev) => [...prev, mockTemplateMessage]);
+
+    setTimeout(() => {
+      const response: Message = {
+        id: uuidv4(),
+        content: 'Great offer, thanks!',
+        timestamp: new Date().toISOString(),
+        isOutbound: false,
+        status: 'delivered',
+        sender: 'John',
+        type: 'text'
+      };
+
+      setChatMessages((prev) => [...prev, response]);
+    }, 1500);
+  };
+
+  const handleFileUpload = (file: File) => {
+    const fileType = file.type.split('/')[0];
+
+    if (!['image', 'voice', 'video'].includes(fileType) && file.type !== 'application/pdf') {
+      toast({
+        title: "Error",
+        description: "Unsupported file type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (fileType === 'image') {
+      const imageMessage: Message = {
+        id: uuidv4(),
+        content: '',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        status: 'sending',
+        sender: 'You',
+        type: 'image',
+        media: {
+          url: URL.createObjectURL(file),
+          type: 'image',
+          filename: file.name,
+          size: file.size
+        }
+      };
+
+      setChatMessages((prev) => [...prev, imageMessage]);
+
+      setTimeout(() => {
+        const response: Message = {
+          id: uuidv4(),
+          content: 'Nice image!',
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          status: 'delivered',
+          sender: 'John',
+          type: 'text'
+        };
+
+        setChatMessages((prev) => [...prev, response]);
+      }, 1500);
+    } else if (fileType === 'voice' || fileType === 'video') {
+      const mediaType: 'voice' | 'video' = fileType === 'voice' ? 'voice' : 'video';
+      const mediaMessage: Message = {
+        id: uuidv4(),
+        content: '',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        status: 'sending',
+        sender: 'You',
+        type: mediaType,
+        media: {
+          url: URL.createObjectURL(file),
+          type: mediaType,
+          filename: file.name,
+          size: file.size
+        }
+      };
+
+      setChatMessages((prev) => [...prev, mediaMessage]);
+
+      setTimeout(() => {
+        const response: Message = {
+          id: uuidv4(),
+          content: `Received your ${fileType}!`,
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          status: 'delivered',
+          sender: 'John',
+          type: 'text'
+        };
+
+        setChatMessages((prev) => [...prev, response]);
+      }, 2000);
+    } else {
+      const documentMessage: Message = {
+        id: uuidv4(),
+        content: '',
+        timestamp: new Date().toISOString(),
+        isOutbound: true,
+        status: 'sending',
+        sender: 'You',
+        type: 'document',
+        media: {
+          url: URL.createObjectURL(file),
+          type: 'document',
+          filename: file.name,
+          size: file.size
+        }
+      };
+
+      setChatMessages((prev) => [...prev, documentMessage]);
+
+      setTimeout(() => {
+        const response: Message = {
+          id: uuidv4(),
+          content: 'Received your document!',
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          status: 'delivered',
+          sender: 'John',
+          type: 'text'
+        };
+
+        setChatMessages((prev) => [...prev, response]);
+      }, 2000);
+    }
+  };
+
+  const addReactionToMessage = (messageId: string, emoji: string) => {
+    setChatMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              reactions: [
+                ...(message.reactions || []),
+                {
+                  emoji: emoji,
+                  userId: 'user-1',
+                  userName: 'You',
+                  timestamp: new Date().toISOString()
+                }
+              ]
+            }
+          : message
+      )
+    );
   };
 
   return (
-    <ChatContext.Provider value={value}>
+    <ChatContext.Provider value={{
+      conversations,
+      activeChat,
+      chatMessages,
+      isSidebarOpen,
+      isContactModalOpen,
+      isGroupChatModalOpen,
+      isSettingsModalOpen,
+      isProfileModalOpen,
+      isSearchOpen,
+      searchTerm,
+      chatType,
+      setSearchTerm,
+      setChatType,
+      setConversations,
+      setActiveChat,
+      setChatMessages,
+      setIsSidebarOpen,
+      setIsContactModalOpen,
+      setIsGroupChatModalOpen,
+      setIsSettingsModalOpen,
+      setIsProfileModalOpen,
+      setIsSearchOpen,
+      sendMessage,
+      sendImageMessage,
+      sendDocumentMessage,
+      sendVoiceMessage,
+      startNewConversation,
+      archiveChat,
+      deleteChat,
+      pinChat,
+      muteChat,
+      addContact,
+      removeContact,
+      createGroupChat,
+      leaveGroupChat,
+      sendTemplateMock,
+      handleFileUpload,
+      addReactionToMessage
+    }}>
       {children}
     </ChatContext.Provider>
   );
 };
 
-export const useChat = (): ChatContextType => {
+export const useChat = () => {
   const context = useContext(ChatContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useChat must be used within a ChatProvider');
   }
   return context;

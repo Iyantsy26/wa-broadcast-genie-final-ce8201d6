@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import { Contact } from '@/types/conversation';
 import ConversationHeader from './ConversationHeader';
@@ -17,25 +17,18 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
     replyTo,
     wallpaper,
     messagesEndRef,
-    setIsSidebarOpen,
-    handleSendMessage,
-    handleVoiceMessageSent,
+    toggleSidebar,
+    sendMessage,
+    sendVoiceMessage,
     setReplyTo,
   } = useConversation();
+  
+  const contactMessages = messages[contact.id] || [];
   
   // Set background style if wallpaper is set
   const backgroundStyle = wallpaper
     ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : {};
-  
-  // Implement missing toggleSidebar as a function that calls setIsSidebarOpen
-  const toggleSidebar = () => {
-    setIsSidebarOpen(true);
-  };
-
-  // Aliases for compatibility
-  const sendMessage = handleSendMessage;
-  const sendVoiceMessage = handleVoiceMessageSent;
   
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -51,7 +44,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
         style={backgroundStyle}
       >
         <MessageList 
-          messages={messages || []}
+          messages={contactMessages}
           contact={contact}
           isTyping={isTyping}
           messagesEndRef={messagesEndRef}

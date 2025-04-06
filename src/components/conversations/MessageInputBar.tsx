@@ -21,7 +21,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Message, MessageType } from '@/types/conversation';
-// Import emoji-mart components
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 
@@ -118,9 +117,8 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
     if ((!messageText.trim() && !attachmentPreview) || isRecording) return;
     
     if (attachmentPreview) {
-      const messageType = 
-        attachmentPreview.type === 'image' ? 'image' : 
-        attachmentPreview.type === 'video' ? 'video' : 'document';
+      const messageType = attachmentPreview.type === 'image' ? 'image' : 
+                          attachmentPreview.type === 'video' ? 'video' : 'document';
       
       // In a real app, we would upload the file and get a URL
       // Here we'll just use the preview URL or a dummy URL
