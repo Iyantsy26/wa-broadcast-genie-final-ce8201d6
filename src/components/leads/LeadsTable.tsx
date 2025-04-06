@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { MessageSquare, Mail, Phone, Edit } from 'lucide-react';
 import { Lead } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +31,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   searchTerm,
   statusFilter
 }) => {
+  const navigate = useNavigate();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -72,31 +74,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     return format(new Date(dateString), 'MMM dd, yyyy');
   };
 
-  const handleMessage = async (lead: Lead) => {
-    try {
-      await createConversation(lead.id, 'lead', `Initial contact with ${lead.name}`);
-      toast({
-        title: "Action not available",
-        description: "The conversation feature is currently being redesigned.",
-      });
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create conversation",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEmail = (lead: Lead) => {
-    window.location.href = `mailto:${lead.email}`;
-  };
-
-  const handleCall = (lead: Lead) => {
-    window.location.href = `tel:${lead.phone}`;
-  };
-
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
     setIsDetailsOpen(true);
@@ -137,7 +114,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Address</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Last Contact</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Next Follow-up</TableHead>
-              <TableHead className="text-right py-3 px-4"></TableHead>
+              <TableHead className="text-right py-3 px-4">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -159,13 +136,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                       >
                         {lead.name}
                       </span>
-                      {lead.status && (
-                        <div className="mt-1">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
-                            {lead.status}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -179,35 +149,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <TableCell className="py-4 px-4">{lead.address || '-'}</TableCell>
                 <TableCell className="py-4 px-4">{formatDate(lead.last_contact)}</TableCell>
                 <TableCell className="py-4 px-4">{formatDate(lead.next_followup)}</TableCell>
-                <TableCell className="py-4 px-4">
-                  <div className="flex justify-end space-x-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleMessage(lead)}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleEmail(lead)}
-                      disabled={!lead.email}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleCall(lead)}
-                      disabled={!lead.phone}
-                    >
-                      <Phone className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <TableCell className="py-4 px-4 text-right">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
+                    {lead.status}
+                  </span>
                 </TableCell>
               </TableRow>
             ))}
@@ -290,7 +235,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
 
               <div className="flex justify-end mt-6">
                 <Button onClick={handleEditClick} className="flex items-center">
-                  <Edit className="mr-2 h-4 w-4" />
                   Edit Lead
                 </Button>
               </div>

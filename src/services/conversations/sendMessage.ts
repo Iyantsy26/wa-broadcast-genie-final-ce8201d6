@@ -7,8 +7,8 @@ export const sendMessage = async (
   conversationId: string,
   content: string,
   type: MessageType = 'text',
-  senderId: string,
-  recipientId: string,
+  senderId?: string,
+  recipientId?: string,
   mediaUrl?: string,
   replyToId?: string
 ): Promise<Message | null> => {
@@ -24,12 +24,12 @@ export const sendMessage = async (
         content,
         message_type: type,
         timestamp,
-        sender_id: senderId,
-        recipient_id: recipientId,
+        sender: senderId || 'You',
         is_outbound: true,
         status: 'sent',
         media_url: mediaUrl,
         media_type: mediaUrl ? type : undefined,
+        // Add reply data if provided
         reply_to_id: replyToId
       })
       .select()
@@ -61,7 +61,7 @@ export const sendMessage = async (
       timestamp,
       isOutbound: true,
       status: 'sent',
-      sender: 'You',
+      sender: senderId || 'You',
       type,
       media: mediaUrl ? {
         url: mediaUrl,

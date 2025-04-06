@@ -1,8 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Conversation, Message } from '@/types/conversation';
-import { getMessages, sendMessage } from '@/services/conversationService';
-import { toast } from '@/hooks/use-toast';
+import { Message, Conversation } from '@/types/conversation';
+import { getMessages, sendMessage } from '@/services/conversations';
 
 export const useConversationMessages = (
   activeConversation: Conversation | null,
@@ -10,166 +9,189 @@ export const useConversationMessages = (
   setActiveConversation: React.Dispatch<React.SetStateAction<Conversation | null>>
 ) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeConversation) {
-      fetchMessages(activeConversation.id);
+      loadMessages(activeConversation.id);
+    } else {
+      setMessages([]);
     }
   }, [activeConversation]);
 
-  const fetchMessages = async (conversationId: string) => {
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const loadMessages = async (conversationId: string) => {
+    setIsLoading(true);
     try {
-      const data = await getMessages(conversationId);
-      setMessages(data);
+      const fetchedMessages = await getMessages(conversationId);
+      setMessages(fetchedMessages);
     } catch (error) {
-      console.error("Error fetching messages:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
-      });
+      console.error('Error loading messages:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSendMessage = async (content: string, file: File | null) => {
-    if (!activeConversation) return;
-    
-    const timestamp = new Date().toISOString();
-    
-    let newMessage: Omit<Message, 'id'> = {
-      content: content.trim(),
-      timestamp: timestamp,
-      isOutbound: true,
-      status: 'sent',
-      sender: 'You',
-      type: 'text'
-    };
-    
-    if (file) {
-      const fileType = file.type.split('/')[0];
-      let mediaType: 'image' | 'video' | 'document' | null = null;
-      
-      if (fileType === 'image') mediaType = 'image';
-      else if (fileType === 'video') mediaType = 'video';
-      else mediaType = 'document';
-      
-      newMessage = {
-        ...newMessage,
-        type: mediaType,
-        media: {
-          url: URL.createObjectURL(file),
-          type: mediaType,
-          filename: file.name
-        }
-      };
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-    
+  };
+
+  const handleSendMessage = async (content: string, file: File | null, replyToMessageId?: string) => {
+    if (!activeConversation || (!content.trim() && !file)) return;
+
+    // Create a temporary message to show immediately
+    const tempMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content,
+      timestamp: new Date().toISOString(),
+      isOutbound: true,
+      status: 'sending',
+      type: 'text',
+      sender: 'You'
+    };
+
+    // Add to UI immediately
+    setMessages(prev => [...prev, tempMessage]);
+    scrollToBottom();
+
     try {
-      const tempId = `temp-${Date.now()}`;
-      const tempMessage = { ...newMessage, id: tempId };
-      setMessages(prev => [...prev, tempMessage]);
-      
-      const savedMessage = await sendMessage(activeConversation.id, newMessage);
-      
-      setMessages(prev => 
-        prev.map(m => m.id === tempId ? savedMessage : m)
+      let mediaUrl: string | undefined = undefined;
+      let messageType = 'text';
+
+      // Handle file upload if provided
+      if (file) {
+        // File upload logic would go here
+        // For now, just mock it
+        mediaUrl = 'https://example.com/media/mock-url';
+        messageType = file.type.startsWith('image/') ? 'image' : 
+                      file.type.startsWith('video/') ? 'video' : 
+                      file.type.startsWith('audio/') ? 'voice' : 
+                      'document';
+      }
+
+      // Send the actual message
+      const sentMessage = await sendMessage(
+        activeConversation.id,
+        content,
+        messageType as any,
+        'You',
+        undefined,
+        mediaUrl,
+        replyToMessageId
       );
-      
-      const updatedConvo = {
-        ...activeConversation,
-        lastMessage: {
-          content: newMessage.content || 'Attachment',
-          timestamp: timestamp,
-          isOutbound: true,
-          isRead: false
-        }
-      };
-      setActiveConversation(updatedConvo);
-      
-      setConversations(prev => 
-        prev.map(convo => 
-          convo.id === activeConversation.id ? updatedConvo : convo
-        )
-      );
-      
-      toast({
-        title: "Message sent",
-        description: "Your message has been sent successfully.",
-      });
+
+      if (sentMessage) {
+        // Replace temp message with actual message
+        setMessages(prev => prev.map(msg => 
+          msg.id === tempMessage.id ? sentMessage : msg
+        ));
+
+        // Update conversations list with new last message
+        setConversations(prev => prev.map(conv => 
+          conv.id === activeConversation.id 
+            ? { 
+                ...conv, 
+                lastMessage: content,
+                lastMessageTimestamp: new Date().toISOString() 
+              } 
+            : conv
+        ));
+
+        // Update active conversation
+        setActiveConversation(prev => {
+          if (prev && prev.id === activeConversation.id) {
+            return {
+              ...prev,
+              lastMessage: content,
+              lastMessageTimestamp: new Date().toISOString()
+            };
+          }
+          return prev;
+        });
+      }
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
+      console.error('Error sending message:', error);
+      
+      // Update the temp message to show error status
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempMessage.id 
+          ? { ...msg, status: 'error' } 
+          : msg
+      ));
     }
   };
 
   const handleVoiceMessageSent = async (durationInSeconds: number) => {
     if (!activeConversation) return;
-    
-    const timestamp = new Date().toISOString();
-    
-    const voiceMessage: Omit<Message, 'id'> = {
-      content: '',
-      timestamp: timestamp,
+
+    // Create a voice message
+    const voiceMessage: Message = {
+      id: `voice-${Date.now()}`,
+      content: 'Voice message',
+      timestamp: new Date().toISOString(),
       isOutbound: true,
-      status: 'sent',
-      sender: 'You',
+      status: 'sending',
       type: 'voice',
+      sender: 'You',
       media: {
-        url: '#',
+        url: 'https://example.com/voice/mock-url.mp3',
         type: 'voice',
-        duration: durationInSeconds
+        duration: durationInSeconds,
+        filename: `voice-${Date.now()}.mp3`
       }
     };
-    
+
+    // Add to UI immediately
+    setMessages(prev => [...prev, voiceMessage]);
+    scrollToBottom();
+
     try {
-      const tempId = `temp-voice-${Date.now()}`;
-      const tempMessage = { ...voiceMessage, id: tempId };
-      setMessages(prev => [...prev, tempMessage]);
-      
-      const savedMessage = await sendMessage(activeConversation.id, voiceMessage);
-      
-      setMessages(prev => 
-        prev.map(m => m.id === tempId ? savedMessage : m)
+      // Send the actual message
+      const sentMessage = await sendMessage(
+        activeConversation.id,
+        'Voice message',
+        'voice',
+        'You'
       );
-      
-      const updatedConvo = {
-        ...activeConversation,
-        lastMessage: {
-          content: 'Voice message',
-          timestamp: timestamp,
-          isOutbound: true,
-          isRead: false
-        }
-      };
-      setActiveConversation(updatedConvo);
-      
-      setConversations(prev => 
-        prev.map(convo => 
-          convo.id === activeConversation.id ? updatedConvo : convo
-        )
-      );
-      
-      toast({
-        title: "Voice message sent",
-        description: `Voice message (${durationInSeconds}s) has been sent.`,
-      });
+
+      if (sentMessage) {
+        // Replace temp message with actual message
+        setMessages(prev => prev.map(msg => 
+          msg.id === voiceMessage.id ? sentMessage : msg
+        ));
+
+        // Update conversations list with new last message
+        setConversations(prev => prev.map(conv => 
+          conv.id === activeConversation.id 
+            ? { 
+                ...conv, 
+                lastMessage: 'Voice message',
+                lastMessageTimestamp: new Date().toISOString() 
+              } 
+            : conv
+        ));
+      }
     } catch (error) {
-      console.error("Error sending voice message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send voice message",
-        variant: "destructive",
-      });
+      console.error('Error sending voice message:', error);
+      
+      // Update the temp message to show error status
+      setMessages(prev => prev.map(msg => 
+        msg.id === voiceMessage.id 
+          ? { ...msg, status: 'error' } 
+          : msg
+      ));
     }
   };
 
   return {
     messages,
+    isLoading,
     messagesEndRef,
     handleSendMessage,
     handleVoiceMessageSent

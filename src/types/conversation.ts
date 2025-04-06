@@ -66,3 +66,55 @@ export interface ConversationSettings {
   language: string;
   fontSize: 'small' | 'medium' | 'large';
 }
+
+export interface Conversation {
+  id: string;
+  contact: Contact;
+  lastMessage?: string;
+  lastMessageTimestamp?: string;
+  unreadCount?: number;
+  isTyping?: boolean;
+  isEncrypted?: boolean;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  isGroup?: boolean;
+  participantsCount?: number;
+  tags?: string[];
+  assignedTo?: string;
+  status?: string;
+  settings?: ConversationSettings;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  status: string;
+  source?: string;
+  referrer_name?: string;
+  last_contact?: string;
+  next_followup?: string;
+  notes?: string;
+  avatar_url?: string;
+  created_at?: string;
+  initials?: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  join_date?: string;
+  renewal_date?: string;
+  plan_details?: string;
+  avatar_url?: string;
+  tags?: string[];
+  referred_by?: string;
+  notes?: string;
+}
