@@ -1,11 +1,10 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { MessageSquare, Mail, Phone, Edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { Lead } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from '@/hooks/use-toast';
-import { createConversation } from '@/services/conversationService';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table,
@@ -70,31 +69,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return format(new Date(dateString), 'MMM dd, yyyy');
-  };
-
-  const handleMessage = async (lead: Lead) => {
-    try {
-      await createConversation(lead.id, 'lead', `Initial contact with ${lead.name}`);
-      toast({
-        title: "Action not available",
-        description: "The conversation feature is currently being redesigned.",
-      });
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create conversation",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEmail = (lead: Lead) => {
-    window.location.href = `mailto:${lead.email}`;
-  };
-
-  const handleCall = (lead: Lead) => {
-    window.location.href = `tel:${lead.phone}`;
   };
 
   const handleLeadClick = (lead: Lead) => {
@@ -180,34 +154,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <TableCell className="py-4 px-4">{formatDate(lead.last_contact)}</TableCell>
                 <TableCell className="py-4 px-4">{formatDate(lead.next_followup)}</TableCell>
                 <TableCell className="py-4 px-4">
-                  <div className="flex justify-end space-x-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleMessage(lead)}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleEmail(lead)}
-                      disabled={!lead.email}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 rounded-full text-blue-600"
-                      onClick={() => handleCall(lead)}
-                      disabled={!lead.phone}
-                    >
-                      <Phone className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-600"
+                    onClick={() => handleLeadClick(lead)}
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span className="sr-only">Edit</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

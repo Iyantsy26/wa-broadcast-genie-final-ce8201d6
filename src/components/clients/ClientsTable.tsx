@@ -1,8 +1,6 @@
 
 import React from 'react';
-import { Phone, Mail, MessageCircle, Calendar } from 'lucide-react';
 import { Client } from '@/types/conversation';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -12,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/hooks/use-toast';
+import { Calendar } from 'lucide-react';
 
 interface ClientsTableProps {
   clients: Client[];
@@ -20,7 +18,6 @@ interface ClientsTableProps {
   searchTerm: string;
   statusFilter: string;
   onViewClient: (client: Client) => void;
-  onMessageClient: (client: Client) => void;
   formatDate: (dateString?: string) => string;
 }
 
@@ -30,7 +27,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   searchTerm,
   statusFilter,
   onViewClient,
-  onMessageClient,
   formatDate
 }) => {
   const filteredClients = clients.filter((client) => {
@@ -71,7 +67,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             <TableHead className="py-4 font-semibold text-gray-700">ADDRESS</TableHead>
             <TableHead className="py-4 font-semibold text-gray-700">PLAN DETAILS</TableHead>
             <TableHead className="py-4 font-semibold text-gray-700">LAST CONTACT</TableHead>
-            <TableHead className="py-4 font-semibold text-gray-700"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -108,18 +103,8 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
               </TableCell>
               <TableCell className="py-4">
                 <div className="space-y-1 text-sm">
-                  {client.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-500" />
-                      <span>{client.email}</span>
-                    </div>
-                  )}
-                  {client.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <span>{client.phone}</span>
-                    </div>
-                  )}
+                  {client.email && <div>{client.email}</div>}
+                  {client.phone && <div>{client.phone}</div>}
                 </div>
               </TableCell>
               <TableCell className="py-4">
@@ -135,51 +120,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <span>{formatDate(client.join_date)}</span>
-                </div>
-              </TableCell>
-              <TableCell className="py-4">
-                <div className="flex items-center gap-2">
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-9 w-9 rounded-full text-blue-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMessageClient(client);
-                    }}
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-9 w-9 rounded-full text-blue-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Add email action
-                      toast({
-                        title: "Email action",
-                        description: "Email functionality will be implemented soon",
-                      });
-                    }}
-                  >
-                    <Mail className="h-5 w-5" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-9 w-9 rounded-full text-blue-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Add phone action
-                      toast({
-                        title: "Call action",
-                        description: "Call functionality will be implemented soon",
-                      });
-                    }}
-                  >
-                    <Phone className="h-5 w-5" />
-                  </Button>
                 </div>
               </TableCell>
             </TableRow>

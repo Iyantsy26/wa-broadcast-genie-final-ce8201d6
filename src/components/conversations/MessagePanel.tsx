@@ -8,9 +8,10 @@ import MessageInputBar from './MessageInputBar';
 
 interface MessagePanelProps {
   contact: Contact;
+  deviceId: string;
 }
 
-const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
+const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
   const {
     messages,
     isTyping,
@@ -30,12 +31,21 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
     ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : {};
   
+  const handleSendMessage = (message: string) => {
+    sendMessage(contact.id, message, deviceId);
+  };
+
+  const handleSendVoiceMessage = (durationInSeconds: number) => {
+    sendVoiceMessage(contact.id, durationInSeconds, deviceId);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Conversation header */}
       <ConversationHeader 
         contact={contact} 
         onInfoClick={toggleSidebar}
+        deviceId={deviceId}
       />
       
       {/* Message list */}
@@ -55,8 +65,9 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact }) => {
       <MessageInputBar
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
-        onSendMessage={sendMessage}
-        onSendVoiceMessage={sendVoiceMessage}
+        onSendMessage={handleSendMessage}
+        onSendVoiceMessage={handleSendVoiceMessage}
+        deviceId={deviceId}
       />
     </div>
   );
