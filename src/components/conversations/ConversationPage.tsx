@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
@@ -64,6 +65,12 @@ const ConversationPage = () => {
       type
     });
   };
+  
+  // Simple function to handle pinning conversations
+  const handlePinConversation = (conversationId: string) => {
+    // This would be implemented in a real app
+    console.log('Pinning conversation:', conversationId);
+  };
 
   return (
     <div className="flex flex-col space-y-4 h-full">
@@ -109,7 +116,7 @@ const ConversationPage = () => {
           tagFilter={tagFilter}
           setTagFilter={setTagFilter}
           resetAllFilters={resetAllFilters}
-          pinConversation={pinConversation}
+          pinConversation={handlePinConversation}
           archiveConversation={handleArchiveConversation}
         />
         
@@ -117,11 +124,11 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ConversationHeader 
-                contact={activeConversation.contact}
+                conversation={activeConversation}
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
-                messages={activeMessages} 
+                messages={activeMessages}
                 contact={activeConversation.contact}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}

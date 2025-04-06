@@ -15,8 +15,28 @@ import { useConversationFilters } from '@/hooks/conversations/useConversationFil
 import { useConversationActions } from '@/hooks/conversations/useConversationActions';
 import { DateRange } from 'react-day-picker';
 
+interface MessageFromDB {
+  content: string;
+  conversation_id: string;
+  id: string;
+  is_outbound: boolean;
+  media_duration: number;
+  media_filename: string;
+  media_type: string;
+  media_url: string;
+  message_type: string;
+  sender: string;
+  status: string;
+  timestamp: string;
+  reply_to_id?: string;
+  reply_to_content?: string;
+  reply_to_sender?: string;
+  reply_to_type?: string;
+  reply_to_is_outbound?: boolean;
+  reply_to_timestamp?: string;
+}
+
 interface ConversationContextType {
-  // State
   contacts: Contact[];
   messages: Record<string, Message[]>;
   selectedContactId: string | null;
@@ -29,18 +49,15 @@ interface ConversationContextType {
   searchTerm: string;
   selectedDevice: string;
   
-  // UI State
   chatTypeFilter: ChatType | 'all';
   dateRange?: DateRange;
   assigneeFilter: string;
   tagFilter: string;
   
-  // Derived state
   filteredConversations: Conversation[];
   groupedConversations: { [key: string]: Conversation[] };
   activeConversation: Conversation | null;
   
-  // Methods
   selectContact: (contactId: string) => void;
   toggleSidebar: () => void;
   setWallpaper: (url: string | null) => void;
@@ -57,14 +74,12 @@ interface ConversationContextType {
   clearChat: (contactId: string) => void;
   setSelectedDevice: (deviceId: string) => void;
   
-  // Filter methods
   setChatTypeFilter: (filter: ChatType | 'all') => void;
   setDateRange: (range: DateRange | undefined) => void;
   setAssigneeFilter: (assignee: string) => void;
   setTagFilter: (tag: string) => void;
   resetAllFilters: () => void;
   
-  // Action methods
   handleSendMessage: (content: string, file: File | null, replyToMessageId?: string) => Promise<void>;
   handleVoiceMessageSent: (durationInSeconds: number) => Promise<void>;
   handleDeleteConversation: (conversationId: string) => Promise<void>;
@@ -72,10 +87,8 @@ interface ConversationContextType {
   handleAddTag: (conversationId: string, tag: string) => Promise<void>;
   handleAssignConversation: (conversationId: string, assignee: string) => Promise<void>;
   
-  // Refs
   messagesEndRef: React.RefObject<HTMLDivElement>;
   
-  // Additional features for extended components
   isReplying: boolean;
   replyToMessage: Message | null;
   cannedReplies: { id: string; title: string; content: string }[];
@@ -121,6 +134,7 @@ const useConversationState = () => {
     activeConversation,
     setActiveConversation,
     loading,
+    setLoading,
     isSidebarOpen,
     setIsSidebarOpen,
     contacts,
@@ -160,6 +174,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     activeConversation,
     setActiveConversation,
     loading,
+    setLoading,
     isSidebarOpen,
     setIsSidebarOpen,
     contacts,
@@ -227,7 +242,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   }, [messages, selectedContactId]);
   
   const loadContacts = async () => {
-    const setLoadingValue = true;
+    setLoading(true);
     try {
       const fetchedConversations = await getConversations();
       
@@ -254,7 +269,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         variant: "destructive",
       });
     } finally {
-      const setLoadingValue = false;
+      setLoading(false);
     }
   };
 
@@ -293,15 +308,16 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
               reactions: []
             };
             
-            if (msg.reply_to_id) {
+            const msgWithReply = msg as MessageFromDB;
+            if (msgWithReply.reply_to_id) {
               message.replyTo = {
-                id: msg.reply_to_id,
-                content: msg.reply_to_content || "Original message",
-                sender: msg.reply_to_sender || "Sender",
-                type: (msg.reply_to_type as MessageType) || "text",
+                id: msgWithReply.reply_to_id,
+                content: msgWithReply.reply_to_content || "Original message",
+                sender: msgWithReply.reply_to_sender || "Sender",
+                type: (msgWithReply.reply_to_type as MessageType) || "text",
                 status: "sent",
-                isOutbound: msg.reply_to_is_outbound || false,
-                timestamp: msg.reply_to_timestamp || msg.timestamp
+                isOutbound: msgWithReply.reply_to_is_outbound || false,
+                timestamp: msgWithReply.reply_to_timestamp || msg.timestamp
               };
             }
             

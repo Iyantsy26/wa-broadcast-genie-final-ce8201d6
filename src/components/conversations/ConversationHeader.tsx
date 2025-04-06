@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useConversation } from '@/contexts/ConversationContext';
 
 interface ConversationHeaderProps {
   conversation: Conversation;
@@ -30,6 +31,13 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   conversation,
   onOpenContactInfo
 }) => {
+  const { 
+    muteContact, 
+    blockContact, 
+    clearChat, 
+    reportContact 
+  } = useConversation();
+  
   const contact = conversation.contact;
   
   const getContactTypeIcon = () => {
@@ -56,6 +64,18 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
       default:
         return 'bg-gray-100 text-gray-700';
     }
+  };
+  
+  const handleMuteContact = () => {
+    muteContact(contact.id, !contact.isMuted);
+  };
+
+  const handleBlockContact = () => {
+    blockContact(contact.id, !contact.isBlocked);
+  };
+
+  const handleClearChat = () => {
+    clearChat(contact.id);
   };
   
   return (
@@ -111,11 +131,17 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Mute notifications</DropdownMenuItem>
-            <DropdownMenuItem>Block contact</DropdownMenuItem>
-            <DropdownMenuItem>Clear chat</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleMuteContact}>
+              {contact.isMuted ? 'Unmute notifications' : 'Mute notifications'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleBlockContact}>
+              {contact.isBlocked ? 'Unblock contact' : 'Block contact'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleClearChat}>Clear chat</DropdownMenuItem>
             <DropdownMenuItem>Export chat</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Delete chat</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => reportContact(contact.id)} className="text-red-600">
+              Report contact
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

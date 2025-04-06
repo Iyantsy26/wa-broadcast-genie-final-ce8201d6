@@ -42,25 +42,22 @@ const ContactSidebar = () => {
     messages,
     selectContact,
     setContactFilter,
-    setSearchTerm
+    setSearchTerm,
+    handleAddContact
   } = useConversation();
   
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [showAddContactDialog, setShowAddContactDialog] = useState(false);
   
-  // Filter and group contacts
   const filteredContacts = contacts.filter(contact => {
-    // Filter by type
     if (contactFilter !== 'all' && contact.type !== contactFilter) {
       return false;
     }
     
-    // Filter by search term
     if (searchTerm && !contact.name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
     
-    // Don't show archived or blocked contacts
     if (contact.isArchived || contact.isBlocked) {
       return false;
     }
@@ -68,13 +65,11 @@ const ContactSidebar = () => {
     return true;
   });
   
-  // Group by type
   const starredContacts = filteredContacts.filter(c => c.isStarred);
   const teamContacts = filteredContacts.filter(c => c.type === 'team');
   const clientContacts = filteredContacts.filter(c => c.type === 'client');
   const leadContacts = filteredContacts.filter(c => c.type === 'lead');
   
-  // Get unread count for tab badges
   const getUnreadCount = (type: ChatType) => {
     return contacts.filter(c => 
       c.type === type &&
@@ -88,9 +83,16 @@ const ContactSidebar = () => {
   const clientUnread = getUnreadCount('client');
   const leadUnread = getUnreadCount('lead');
   
+  const handleCreateContact = (name: string, phone: string, type: ChatType) => {
+    handleAddContact({
+      name,
+      phone,
+      type
+    });
+  };
+  
   return (
     <div className="w-80 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
-      {/* Header with search */}
       <div className="p-4 border-b">
         <div className="flex items-center gap-2 mb-4">
           <div className="relative flex-1">
@@ -136,7 +138,6 @@ const ContactSidebar = () => {
           </Button>
         </div>
         
-        {/* Conversation type tabs */}
         <Tabs
           defaultValue="all"
           value={contactFilter}
@@ -179,7 +180,6 @@ const ContactSidebar = () => {
         </Tabs>
       </div>
       
-      {/* Contact list */}
       <ScrollArea className="flex-1">
         {searchTerm && (
           <div className="py-2 px-3 text-xs text-muted-foreground">
@@ -187,7 +187,6 @@ const ContactSidebar = () => {
           </div>
         )}
         
-        {/* Starred contacts */}
         {starredContacts.length > 0 && (
           <div className="mb-2">
             <div className="px-4 py-2 text-xs font-semibold flex items-center">
@@ -206,7 +205,6 @@ const ContactSidebar = () => {
           </div>
         )}
         
-        {/* Team contacts */}
         {teamContacts.length > 0 && contactFilter !== 'client' && contactFilter !== 'lead' && (
           <div className="mb-2">
             <div className="px-4 py-2 text-xs font-semibold flex items-center">
@@ -225,7 +223,6 @@ const ContactSidebar = () => {
           </div>
         )}
         
-        {/* Client contacts */}
         {clientContacts.length > 0 && contactFilter !== 'team' && contactFilter !== 'lead' && (
           <div className="mb-2">
             <div className="px-4 py-2 text-xs font-semibold flex items-center">
@@ -244,7 +241,6 @@ const ContactSidebar = () => {
           </div>
         )}
         
-        {/* Lead contacts */}
         {leadContacts.length > 0 && contactFilter !== 'team' && contactFilter !== 'client' && (
           <div className="mb-2">
             <div className="px-4 py-2 text-xs font-semibold flex items-center">
@@ -263,7 +259,6 @@ const ContactSidebar = () => {
           </div>
         )}
         
-        {/* No results */}
         {filteredContacts.length === 0 && (
           <div className="p-4 text-center">
             <p className="text-muted-foreground">No contacts found</p>
@@ -284,13 +279,7 @@ const ContactSidebar = () => {
         <NewContactDialog 
           open={showAddContactDialog}
           onOpenChange={setShowAddContactDialog}
-          onContactCreated={(name, phone, type) => {
-            handleAddContact({
-              name,
-              phone,
-              type
-            });
-          }}
+          onContactCreated={handleCreateContact}
         />
       )}
     </div>

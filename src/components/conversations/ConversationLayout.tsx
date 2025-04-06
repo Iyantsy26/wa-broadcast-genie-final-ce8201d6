@@ -11,14 +11,24 @@ const ConversationLayout = () => {
   const {
     selectedContactId,
     contacts,
+    messages,
     isSidebarOpen,
     isAssistantActive,
-    handleRequestAIAssistance
+    handleRequestAIAssistance,
+    handleSendMessage,
+    handleVoiceMessageSent,
+    handleAddReaction,
+    isTyping,
+    messagesEndRef,
+    setIsSidebarOpen
   } = useConversation();
   
   const selectedContact = selectedContactId 
     ? contacts.find(c => c.id === selectedContactId) 
     : null;
+  
+  // Get messages for selected contact
+  const selectedContactMessages = selectedContactId ? messages[selectedContactId] || [] : [];
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -36,12 +46,22 @@ const ConversationLayout = () => {
         {/* Main content area */}
         <div className="flex-1 flex rounded-lg overflow-hidden bg-card shadow-sm">
           {selectedContact ? (
-            <MessagePanel conversation={{
-              id: selectedContactId || '',
-              contact: selectedContact,
-              lastMessage: { content: '', timestamp: '', isOutbound: false, isRead: false },
-              chatType: selectedContact.type
-            }} />
+            <MessagePanel 
+              messages={selectedContactMessages} 
+              contactName={selectedContact.name}
+              isTyping={isTyping}
+              messagesEndRef={messagesEndRef}
+              onSendMessage={handleSendMessage}
+              onVoiceMessageSent={handleVoiceMessageSent}
+              onReaction={handleAddReaction}
+              onOpenContactInfo={() => setIsSidebarOpen(true)}
+              conversation={{
+                id: selectedContactId || '',
+                contact: selectedContact,
+                lastMessage: { content: '', timestamp: '', isOutbound: false, isRead: false },
+                chatType: selectedContact.type
+              }}
+            />
           ) : (
             <EmptyConversation />
           )}
