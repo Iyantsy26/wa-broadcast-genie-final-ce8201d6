@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChatType } from '@/types/conversation';
+import { ChatType, Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
@@ -47,7 +47,7 @@ const formSchema = z.object({
 export interface NewContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onContactCreated: (contact: any) => void;
+  onContactCreated: (contact: Contact) => void;
 }
 
 const NewContactDialog: React.FC<NewContactDialogProps> = ({
@@ -74,7 +74,7 @@ const NewContactDialog: React.FC<NewContactDialogProps> = ({
       // For now, we'll just simulate a successful creation
       
       // Create a new contact object
-      const newContact = {
+      const newContact: Contact = {
         id: `new-${Date.now()}`,
         name: values.name,
         phone: values.phone,

@@ -1,6 +1,9 @@
 
-import React, { createContext, useContext, useState, useRef } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { Contact, Message, MessageStatus, ChatType } from '@/types/conversation';
+import { getLeads } from '@/services/leadService';
+import { getClients } from '@/services/clientService';
+import { toast } from '@/hooks/use-toast';
 
 type MessageMap = Record<string, Message[]>;
 
@@ -14,8 +17,8 @@ interface ConversationContextType {
   isSidebarOpen: boolean;
   isAssistantActive: boolean;
   wallpaper: string | null;
-  contactFilter: ChatType | 'all';  // Added this
-  searchTerm: string;  // Added this
+  contactFilter: ChatType | 'all';
+  searchTerm: string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   selectContact: (contactId: string) => void;
   toggleSidebar: () => void;
@@ -30,8 +33,9 @@ interface ConversationContextType {
     isOnlineOnly?: boolean,
     isUnreadOnly?: boolean
   ) => void;
-  setContactFilter: (filter: ChatType | 'all') => void;  // Added this
-  setSearchTerm: (term: string) => void;  // Added this
+  setContactFilter: (filter: ChatType | 'all') => void;
+  setSearchTerm: (term: string) => void;
+  addContact: (contact: Contact) => void;
 }
 
 interface ConversationProviderProps {
@@ -51,9 +55,73 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAssistantActive, setIsAssistantActive] = useState(false);
   const [wallpaper, setWallpaper] = useState<string | null>(null);
-  const [contactFilter, setContactFilter] = useState<ChatType | 'all'>('all');  // Added this
-  const [searchTerm, setSearchTerm] = useState<string>('');  // Added this
+  const [contactFilter, setContactFilter] = useState<ChatType | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load contacts from the API
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch leads
+        const leads = await getLeads();
+        const leadContacts: Contact[] = leads.map(lead => ({
+          id: lead.id,
+          name: lead.name,
+          avatar: lead.avatar_url,
+          phone: lead.phone || '',
+          type: 'lead' as ChatType,
+          isOnline: false,
+          lastSeen: lead.last_contact || new Date().toISOString(),
+          tags: lead.status ? [lead.status] : []
+        }));
+        
+        // Fetch clients
+        const clients = await getClients();
+        const clientContacts: Contact[] = clients.map(client => ({
+          id: client.id,
+          name: client.name,
+          avatar: client.avatar_url,
+          phone: client.phone || '',
+          type: 'client' as ChatType,
+          isOnline: false,
+          lastSeen: client.join_date || new Date().toISOString(),
+          tags: client.tags || []
+        }));
+
+        // Here you would fetch team members and convert them to contacts
+        // For now we'll use an empty array
+        const teamContacts: Contact[] = [];
+
+        // Combine all contacts
+        const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
+        setContacts(allContacts);
+        setFilteredContacts(allContacts);
+
+        toast({
+          title: 'Contacts loaded',
+          description: `${allContacts.length} contacts loaded successfully`,
+        });
+      } catch (error) {
+        console.error('Error fetching contacts:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load contacts',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Only fetch if we don't have contacts already (from initialContacts)
+    if (initialContacts.length === 0) {
+      fetchContacts();
+    }
+  }, [initialContacts]);
 
   const selectContact = (contactId: string) => {
     setSelectedContactId(contactId);
@@ -187,6 +255,15 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setContactFilter(type);
   };
 
+  const addContact = (contact: Contact) => {
+    setContacts(prev => [...prev, contact]);
+    setFilteredContacts(prev => [...prev, contact]);
+    toast({
+      title: "Contact added",
+      description: `${contact.name} has been added successfully.`,
+    });
+  };
+
   const value = {
     contacts,
     filteredContacts,
@@ -197,8 +274,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     isSidebarOpen,
     isAssistantActive,
     wallpaper,
-    contactFilter,  // Added this
-    searchTerm,  // Added this
+    contactFilter,
+    searchTerm,
     messagesEndRef,
     selectContact,
     toggleSidebar,
@@ -208,8 +285,9 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setReplyTo,
     setWallpaper,
     filterContacts,
-    setContactFilter,  // Added this
-    setSearchTerm,  // Added this
+    setContactFilter,
+    setSearchTerm,
+    addContact
   };
 
   return (

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ContactItem from './ContactItem';
-import { ChatType } from '@/types/conversation';
+import { ChatType, Contact } from '@/types/conversation';
 import NewContactDialog from './dialogs/NewContactDialog';
 
 const ContactSidebar = () => {
@@ -36,9 +36,10 @@ const ContactSidebar = () => {
     searchTerm,
     messages,
     selectContact,
-    setContactFilter, // This was missing before
-    setSearchTerm,    // This was missing before
-    filterContacts
+    setContactFilter,
+    setSearchTerm,
+    filterContacts,
+    addContact
   } = useConversation();
   
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
@@ -84,10 +85,8 @@ const ContactSidebar = () => {
   const leadUnread = getUnreadCount('lead');
 
   // Handle the new contact creation
-  const handleNewContactCreated = (contact: any) => {
-    // You could do something with the new contact here if needed
-    console.log('New contact created:', contact);
-    // Close the dialog
+  const handleContactCreated = (newContact: Contact) => {
+    addContact(newContact);
     setShowNewContactDialog(false);
   };
   
@@ -286,7 +285,7 @@ const ContactSidebar = () => {
       <NewContactDialog
         open={showNewContactDialog}
         onOpenChange={setShowNewContactDialog}
-        onContactCreated={handleNewContactCreated}
+        onContactCreated={handleContactCreated}
       />
     </div>
   );

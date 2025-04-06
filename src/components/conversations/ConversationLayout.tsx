@@ -16,7 +16,8 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     selectedContactId,
     contacts,
     isSidebarOpen,
-    isAssistantActive
+    isAssistantActive,
+    toggleAssistant
   } = useConversation();
   
   const selectedContact = selectedContactId 
@@ -48,8 +49,12 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
       {/* AI Assistant panel (when active) */}
       {isAssistantActive && (
         <AIAssistantPanel 
-          onRequestAIAssistance={() => {}}
-          onClose={() => {}}
+          onRequestAIAssistance={() => {
+            console.log('AI assistance requested');
+            // This would typically call an API or service
+            // to generate AI-powered responses
+          }}
+          onClose={() => toggleAssistant()}
         />
       )}
     </div>
