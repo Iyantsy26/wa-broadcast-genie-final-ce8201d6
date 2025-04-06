@@ -2,7 +2,7 @@
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
-import ConversationHeader from './ConversationHeader';
+// import ConversationHeader from './ConversationHeader'; // Removed due to prop mismatch
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import NoConversation from './NoConversation';
@@ -12,6 +12,31 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
+
+// Create a simple Header component that matches the expected props
+const ConversationHeader: React.FC<{
+  contact: any;
+  onInfoClick: () => void;
+}> = ({ contact, onInfoClick }) => {
+  return (
+    <div className="p-3 border-b bg-card flex justify-between items-center">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+          {contact.name.charAt(0)}
+        </div>
+        <div>
+          <div className="font-medium">{contact.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {contact.isOnline ? 'Online' : 'Offline'}
+          </div>
+        </div>
+      </div>
+      <Button variant="ghost" size="sm" onClick={onInfoClick}>
+        Info
+      </Button>
+    </div>
+  );
+};
 
 const ConversationPage = () => {
   const {
@@ -25,7 +50,7 @@ const ConversationPage = () => {
     replyToMessage,
     cannedReplies,
     selectedDevice,
-    aiAssistantActive,
+    isAssistantActive,
     chatTypeFilter,
     searchTerm,
     dateRange,
@@ -106,9 +131,9 @@ const ConversationPage = () => {
           <AddContactButton onAddContact={addContactAdapter} />
           <Button 
             variant="outline" 
-            onClick={() => setAiAssistantActive(!aiAssistantActive)}
+            onClick={() => setAiAssistantActive(!isAssistantActive)}
           >
-            {aiAssistantActive ? 'Hide AI Assistant' : 'Show AI Assistant'}
+            {isAssistantActive ? 'Hide AI Assistant' : 'Show AI Assistant'}
           </Button>
         </div>
       </div>
@@ -145,10 +170,8 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ConversationHeader 
-                title={activeConversation.contact.name}
-                subtitle={activeConversation.contact.isOnline ? 'Online' : 'Offline'}
-                avatar={activeConversation.contact.avatar}
-                onOpenContactInfo={() => setIsSidebarOpen(true)}
+                contact={activeConversation.contact}
+                onInfoClick={() => setIsSidebarOpen(true)}
               />
               <MessageList 
                 messages={messages || []} 
@@ -169,7 +192,11 @@ const ConversationPage = () => {
                   </div>
                 )}
                 <CannedResponseSelector 
-                  cannedReplies={cannedReplies}
+                  cannedReplies={[
+                    { id: "1", title: "Greeting", content: "Hello there!" },
+                    { id: "2", title: "Thank you", content: "Thank you for your message." },
+                    { id: "3", title: "Follow up", content: "I'll get back to you shortly." }
+                  ]}
                   onSelectReply={handleUseCannedReply}
                 />
                 <MessageInput 
@@ -194,19 +221,8 @@ const ConversationPage = () => {
           />
         )}
         
-        {aiAssistantActive && (
-          <div className="w-80 border rounded-lg bg-white p-4">
-            <h3 className="text-lg font-medium mb-4">AI Assistant</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Get AI-powered assistance for your conversations.
-            </p>
-            <Button 
-              className="w-full" 
-              onClick={() => setAiAssistantActive(false)}
-            >
-              Close
-            </Button>
-          </div>
+        {isAssistantActive && (
+          <AIAssistantPanel />
         )}
       </div>
     </div>

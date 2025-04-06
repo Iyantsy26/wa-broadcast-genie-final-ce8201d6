@@ -1,34 +1,21 @@
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { Lead } from '@/types/conversation';
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table";
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  MoreHorizontal, Calendar, Mail, Phone, ExternalLink,
-  Edit, Trash2, User
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import LeadForm from './LeadForm';
+import { Lead } from '@/types/conversation';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { format } from 'date-fns';
 import DeleteConfirmDialog from '@/components/shared/DeleteConfirmDialog';
 
-interface LeadsTableProps {
+export interface LeadsTableProps {
   leads: Lead[];
-  onDelete: (id: string) => Promise<void>;
-  onUpdate: () => Promise<void>;
+  loading?: boolean;
+  onDelete?: (id: string) => void;
+  onEdit?: (lead: Lead) => void;
+  onView?: (lead: Lead) => void;
+  searchTerm?: string;
+  statusFilter?: string;
 }
 
-const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onDelete, onUpdate }) => {
+const LeadsTable: React.FC<LeadsTableProps> = ({ leads, loading, onDelete, onEdit, onView, searchTerm, statusFilter }) => {
   const navigate = useNavigate();
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -224,7 +211,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onDelete, onUpdate }) =>
               lead={editingLead} 
               onComplete={() => {
                 setEditingLead(null);
-                onUpdate();
+                onEdit && onEdit(editingLead);
               }} 
             />
           </DialogContent>

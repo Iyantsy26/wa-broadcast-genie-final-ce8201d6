@@ -91,7 +91,7 @@ const ChatPage = () => {
         {activeConversation ? (
           <MessagePanel 
             conversation={activeConversation}
-            messages={messages || []}
+            messages={messages}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
             onSendMessage={sendMessageAdapter}
             onVoiceMessageSent={handleVoiceMessageSent}

@@ -25,8 +25,8 @@ export const getConversations = async (): Promise<Conversation[]> => {
       throw error;
     }
 
-    let clients = {};
-    let leads = {};
+    let clients: Record<string, any> = {};
+    let leads: Record<string, any> = {};
 
     if (conversations?.some(c => c.client_id)) {
       const { data: clientsData } = await supabase
@@ -34,7 +34,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         .select('id, name, avatar_url, phone, tags');
       
       if (clientsData) {
-        clients = clientsData.reduce((acc, client) => {
+        clients = clientsData.reduce((acc: Record<string, any>, client: any) => {
           acc[client.id] = client;
           return acc;
         }, {});
@@ -44,10 +44,10 @@ export const getConversations = async (): Promise<Conversation[]> => {
     if (conversations?.some(c => c.lead_id)) {
       const { data: leadsData } = await supabase
         .from('leads')
-        .select('id, name, avatar_url, phone, tags');
+        .select('id, name, avatar_url, phone');
       
       if (leadsData) {
-        leads = leadsData.reduce((acc, lead) => {
+        leads = leadsData.reduce((acc: Record<string, any>, lead: any) => {
           acc[lead.id] = lead;
           return acc;
         }, {});

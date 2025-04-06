@@ -28,7 +28,7 @@ import { Contact } from '@/types/conversation';
 import { useConversation } from '@/contexts/ConversationContext';
 import { format } from 'date-fns';
 
-interface ConversationHeaderProps {
+export interface ConversationHeaderProps {
   contact: Contact;
   onInfoClick: () => void;
 }

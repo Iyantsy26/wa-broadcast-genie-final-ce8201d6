@@ -12,7 +12,7 @@ const ConversationLayout = () => {
     selectedContactId,
     contacts,
     isSidebarOpen,
-    isAssistantActive
+    aiAssistantActive
   } = useConversation();
   
   const selectedContact = selectedContactId 
@@ -47,7 +47,7 @@ const ConversationLayout = () => {
         )}
         
         {/* AI Assistant panel (when active) */}
-        {isAssistantActive && (
+        {aiAssistantActive && (
           <AIAssistantPanel />
         )}
       </div>

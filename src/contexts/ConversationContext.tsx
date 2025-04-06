@@ -1,9 +1,11 @@
+
 import React, {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from 'react';
 import {
   Conversation,
@@ -11,6 +13,8 @@ import {
   Contact,
   ChatType,
   MessageType,
+  DateRange,
+  CannedReply,
 } from '@/types/conversation';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,15 +33,18 @@ interface ConversationContextType {
   isTyping: boolean;
   isReplying: boolean;
   replyToMessage: Message | null;
-  cannedReplies: { id: string; content: string }[];
+  replyTo: Message | null;
+  cannedReplies: CannedReply[];
   selectedDevice: string;
   aiAssistantActive: boolean;
+  isAssistantActive: boolean;
   chatTypeFilter: ChatType | 'all';
-  dateRange?: { from?: Date; to?: Date };
+  dateRange?: DateRange;
   assigneeFilter?: string;
   tagFilter?: string;
   filteredConversations: Conversation[];
   groupedConversations: { [name: string]: Conversation[] };
+  wallpaper?: string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   selectContact: (contactId: string) => void;
   setContactFilter: (filter: ChatType | 'all') => void;
@@ -46,11 +53,11 @@ interface ConversationContextType {
   setIsSidebarOpen: (open: boolean) => void;
   setIsTyping: (typing: boolean) => void;
   setReplyToMessage: (message: Message | null) => void;
+  setReplyTo: (message: Message | null) => void;
   setSelectedDevice: (device: string) => void;
   setAiAssistantActive: (active: boolean) => void;
   setChatTypeFilter: (type: ChatType | 'all') => void;
-  setSearchTerm: (term: string) => void;
-  setDateRange: (range?: { from?: Date; to?: Date }) => void;
+  setDateRange: (range?: DateRange) => void;
   setAssigneeFilter: (assignee?: string) => void;
   setTagFilter: (tag?: string) => void;
   resetAllFilters: () => void;
@@ -59,7 +66,9 @@ interface ConversationContextType {
     type?: MessageType,
     mediaUrl?: string
   ) => Promise<void>;
+  sendMessage: (content: string, type?: MessageType, mediaUrl?: string) => Promise<void>;
   handleVoiceMessageSent: (durationInSeconds: number) => void;
+  sendVoiceMessage: (durationInSeconds: number) => void;
   handleDeleteConversation: (conversationId: string) => void;
   handleArchiveConversation: (
     conversationId: string,
@@ -75,6 +84,14 @@ interface ConversationContextType {
   handleAddContact: (contact: Partial<Contact>) => void;
   deleteMessage: (messageId: string) => void;
   addReaction: (messageId: string, emoji: string) => void;
+  toggleSidebar: () => void;
+  toggleContactStar: (contactId: string) => void;
+  toggleAssistant: () => void;
+  muteContact: (contactId: string, isMuted: boolean) => void;
+  archiveContact: (contactId: string) => void;
+  blockContact: (contactId: string) => void;
+  reportContact: (contactId: string, reason: string) => void;
+  clearChat: (contactId: string) => void;
 }
 
 const ConversationContext = createContext<ConversationContextType | undefined>(
@@ -159,33 +176,158 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
-  const [cannedReplies, setCannedReplies] = useState([
-    { id: uuidv4(), content: 'Thank you for contacting us!' },
-    { id: uuidv4(), content: 'We will get back to you shortly.' },
-    { id: uuidv4(), content: 'How can I help you today?' },
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [wallpaper, setWallpaper] = useState<string | undefined>(undefined);
+  const [cannedReplies, setCannedReplies] = useState<CannedReply[]>([
+    { id: uuidv4(), title: 'Greeting', content: 'Thank you for contacting us!' },
+    { id: uuidv4(), title: 'Follow up', content: 'We will get back to you shortly.' },
+    { id: uuidv4(), title: 'Help', content: 'How can I help you today?' },
   ]);
   const [selectedDevice, setSelectedDevice] = useState('whatsapp');
   const [aiAssistantActive, setAiAssistantActive] = useState(false);
   const [chatTypeFilter, setChatTypeFilter] = useState<ChatType | 'all'>('all');
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [assigneeFilter, setAssigneeFilter] = useState<string | undefined>(
     undefined
   );
   const [tagFilter, setTagFilter] = useState<string | undefined>(undefined);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
+
+  // For compatibility with older components
+  const isAssistantActive = aiAssistantActive;
+  
+  const toggleAssistant = () => {
+    setAiAssistantActive(!aiAssistantActive);
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const toggleContactStar = (contactId: string) => {
+    setContacts((prevContacts) =>
+      prevContacts.map((c) =>
+        c.id === contactId ? { ...c, isStarred: !c.isStarred } : c
+      )
+    );
+  };
+
+  const muteContact = (contactId: string, isMuted: boolean) => {
+    setContacts((prevContacts) =>
+      prevContacts.map((c) =>
+        c.id === contactId ? { ...c, isMuted: isMuted } : c
+      )
+    );
+  };
+
+  const archiveContact = (contactId: string) => {
+    setContacts((prevContacts) =>
+      prevContacts.map((c) =>
+        c.id === contactId ? { ...c, isArchived: true } : c
+      )
+    );
+  };
+
+  const blockContact = (contactId: string) => {
+    setContacts((prevContacts) =>
+      prevContacts.map((c) =>
+        c.id === contactId ? { ...c, isBlocked: true } : c
+      )
+    );
+  };
+
+  const reportContact = (contactId: string, reason: string) => {
+    console.log(`Reported contact ${contactId} for ${reason}`);
+    toast({
+      title: 'Contact reported',
+      description: `The contact has been reported for ${reason}.`,
+    });
+  };
+
+  const clearChat = (contactId: string) => {
+    // Remove messages for this contact
+    setMessages([]);
+    toast({
+      title: 'Chat cleared',
+      description: 'All messages have been cleared.',
+    });
+  };
 
   useEffect(() => {
     // Fetch conversations from Supabase on mount
     const fetchConversations = async () => {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*');
+      try {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .order('last_message_timestamp', { ascending: false });
 
-      if (error) {
+        if (error) {
+          throw error;
+        }
+
+        // Transform the data into conversations
+        if (data && data.length > 0) {
+          const conversationsWithContacts: Conversation[] = await Promise.all(
+            data.map(async (conv) => {
+              const isClient = !!conv.client_id;
+              const contactId = isClient ? conv.client_id : conv.lead_id;
+              
+              // Fetch contact details
+              let contactDetails;
+              if (isClient) {
+                const { data: clientData } = await supabase
+                  .from('clients')
+                  .select('id, name, avatar_url, phone, tags')
+                  .eq('id', contactId)
+                  .single();
+                contactDetails = clientData;
+              } else {
+                const { data: leadData } = await supabase
+                  .from('leads')
+                  .select('id, name, avatar_url, phone')
+                  .eq('id', contactId)
+                  .single();
+                contactDetails = leadData;
+              }
+              
+              return {
+                id: conv.id,
+                contact: {
+                  id: contactId,
+                  name: contactDetails?.name || 'Unknown Contact',
+                  avatar: contactDetails?.avatar_url,
+                  phone: contactDetails?.phone || '',
+                  type: isClient ? 'client' : 'lead',
+                  tags: contactDetails?.tags || [],
+                },
+                lastMessage: {
+                  content: conv.last_message || '',
+                  timestamp: conv.last_message_timestamp || conv.created_at,
+                  isOutbound: false,
+                  isRead: true
+                },
+                status: conv.status || 'new',
+                chatType: isClient ? 'client' : 'lead',
+                tags: conv.tags || [],
+                assignedTo: conv.assigned_to,
+                isPinned: false,
+                isArchived: false,
+                unreadCount: 0
+              };
+            })
+          );
+          
+          setConversations(conversationsWithContacts);
+        }
+      } catch (error) {
         console.error('Error fetching conversations:', error);
-      } else {
-        setConversations(data || []);
+        toast({
+          title: 'Error',
+          description: 'Failed to load conversations',
+          variant: 'destructive',
+        });
       }
     };
 
@@ -197,16 +339,43 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     const fetchMessages = async () => {
       if (!activeConversation) return;
 
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', activeConversation.id)
-        .order('timestamp', { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', activeConversation.id)
+          .order('timestamp', { ascending: true });
 
-      if (error) {
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          const formattedMessages: Message[] = data.map(msg => ({
+            id: msg.id,
+            content: msg.content || '',
+            timestamp: msg.timestamp,
+            isOutbound: msg.is_outbound,
+            status: msg.status as MessageStatus,
+            sender: msg.sender,
+            type: (msg.message_type || 'text') as MessageType,
+            media: msg.media_url ? {
+              url: msg.media_url,
+              type: (msg.media_type || 'document') as 'image' | 'video' | 'document' | 'voice',
+              filename: msg.media_filename,
+              duration: msg.media_duration,
+            } : undefined,
+          }));
+          
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
         console.error('Error fetching messages:', error);
-      } else {
-        setMessages(data || []);
+        toast({
+          title: 'Error',
+          description: 'Failed to load messages',
+          variant: 'destructive',
+        });
       }
     };
 
@@ -345,11 +514,17 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Alias for compatibility
+  const sendMessage = handleSendMessage;
+
   const handleVoiceMessageSent = (durationInSeconds: number) => {
     console.log(
       `Voice message sent with duration: ${durationInSeconds} seconds`
     );
   };
+
+  // Alias for compatibility
+  const sendVoiceMessage = handleVoiceMessageSent;
 
   const handleDeleteConversation = (conversationId: string) => {
     setConversations((prevConversations) =>
@@ -376,11 +551,13 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleReplyToMessage = (message: Message) => {
     setIsReplying(true);
     setReplyToMessage(message);
+    setReplyTo(message);
   };
 
   const handleCancelReply = () => {
     setIsReplying(false);
     setReplyToMessage(null);
+    setReplyTo(null);
   };
 
   const handleUseCannedReply = (reply: string) => {
@@ -481,15 +658,18 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     isTyping,
     isReplying,
     replyToMessage,
+    replyTo,
     cannedReplies,
     selectedDevice,
     aiAssistantActive,
+    isAssistantActive,
     chatTypeFilter,
     dateRange,
     assigneeFilter,
     tagFilter,
     filteredConversations,
     groupedConversations,
+    wallpaper,
     messagesEndRef,
     selectContact,
     setContactFilter,
@@ -498,6 +678,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsSidebarOpen,
     setIsTyping,
     setReplyToMessage,
+    setReplyTo,
     setSelectedDevice,
     setAiAssistantActive,
     setChatTypeFilter,
@@ -506,7 +687,9 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     setTagFilter,
     resetAllFilters,
     handleSendMessage,
+    sendMessage,
     handleVoiceMessageSent,
+    sendVoiceMessage,
     handleDeleteConversation,
     handleArchiveConversation,
     handleAddReaction,
@@ -519,6 +702,14 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     handleAddContact,
     deleteMessage,
     addReaction,
+    toggleSidebar,
+    toggleContactStar,
+    toggleAssistant,
+    muteContact,
+    archiveContact,
+    blockContact,
+    reportContact,
+    clearChat,
   };
 
   return (

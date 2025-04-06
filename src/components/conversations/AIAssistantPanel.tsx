@@ -12,7 +12,7 @@ import {
 import { useConversation } from '@/contexts/ConversationContext';
 
 const AIAssistantPanel = () => {
-  const { toggleAssistant } = useConversation();
+  const { setAiAssistantActive } = useConversation();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [responses, setResponses] = useState<Array<{
@@ -60,6 +60,11 @@ const AIAssistantPanel = () => {
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+  };
+  
+  // Update to use setAiAssistantActive instead of toggleAssistant
+  const toggleAssistant = () => {
+    setAiAssistantActive(false);
   };
   
   return (
