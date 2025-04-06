@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -43,14 +43,16 @@ export interface LeadsTableProps {
   leads: Lead[];
   searchTerm: string;
   statusFilter: string;
+  loading?: boolean; // Adding this prop to match usage in Leads.tsx
 }
 
 const LeadsTable: React.FC<LeadsTableProps> = ({ 
   leads, 
   searchTerm, 
-  statusFilter 
+  statusFilter,
+  loading = false
 }) => {
-  const router = useRouter();
+  const navigate = useNavigate(); // Using react-router's navigate instead of Next's router
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -165,7 +167,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                   )}
                 </TableCell>
                 <TableCell>
-                  {lead.status === 'new' ? (
+                  {lead.status === 'New' ? (
                     <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">New</Badge>
                   ) : (
                     <Badge>{lead.status}</Badge>
@@ -188,7 +190,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/leads/${lead.id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
                           <ExternalLink className="mr-2 h-4 w-4" /> View details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {
@@ -225,9 +227,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               Make changes to this lead's information below.
             </DialogDescription>
           </DialogHeader>
-          {/* The actual form would be imported and used here */}
           <div className="grid gap-4 py-4">
-            {/* Lead form would go here */}
+            {/* The actual form would be imported and used here */}
           </div>
         </DialogContent>
       </Dialog>

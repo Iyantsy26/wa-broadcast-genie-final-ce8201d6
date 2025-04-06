@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -120,7 +121,7 @@ const Leads = () => {
 
       <LeadsTable 
         leads={leads} 
-        loading={loading} 
+        loading={loading}
         searchTerm={searchTerm}
         statusFilter={statusFilter}
       />
