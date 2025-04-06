@@ -43,7 +43,7 @@ export interface LeadsTableProps {
   leads: Lead[];
   searchTerm: string;
   statusFilter: string;
-  loading?: boolean; // Adding this prop to match usage in Leads.tsx
+  loading?: boolean;
 }
 
 const LeadsTable: React.FC<LeadsTableProps> = ({ 
