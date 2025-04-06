@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -145,6 +146,12 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
   // Settings
   const [settings, setSettings] = useState<ConversationSettings>(defaultSettings);
   
+  // Added for compatibility with ChatPage and ConversationPage
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('');
+  const [tagFilter, setTagFilter] = useState<string>('');
+  const [aiAssistantActive, setAiAssistantActive] = useState<boolean>(false);
+  
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -194,7 +201,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
         const clientContacts = clients?.map(client => ({
           id: client.id,
           name: client.name,
-          avatar: client.avatar,
+          avatar: client.avatar_url,
           phone: client.phone || '',
           type: 'client' as ChatType,
           isOnline: Math.random() > 0.7, // Mock online status
@@ -204,13 +211,13 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
           isMuted: false,
           isArchived: false,
           isBlocked: false,
-          tags: ['active'],
+          tags: client.tags || ['active'],
         })) || [];
         
         const leadContacts = leads?.map(lead => ({
           id: lead.id,
           name: lead.name,
-          avatar: lead.avatar,
+          avatar: lead.avatar_url,
           phone: lead.phone || '',
           type: 'lead' as ChatType,
           isOnline: Math.random() > 0.8, // Mock online status
@@ -589,7 +596,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
       // Determine which table to update based on contact type
       let table;
       if (contactToUpdate.type === 'team') {
-        table = 'agents';
+        table = 'team_members';
       } else if (contactToUpdate.type === 'client') {
         table = 'clients';
       } else {
@@ -701,7 +708,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
       // Determine which table to update based on contact type
       let table;
       if (contactToUpdate.type === 'team') {
-        table = 'agents';
+        table = 'team_members';
       } else if (contactToUpdate.type === 'client') {
         table = 'clients';
       } else {
@@ -859,25 +866,21 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
       setReplyTo(null);
       
       // Send message to database
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
         .insert({
           id: newMessageId,
           content,
           timestamp,
-          type,
+          message_type: type,
           status: 'sent',
-          sender_id: 'current-user', // Replace with actual user ID
+          sender: 'current-user', // Replace with actual user ID
           recipient_id: selectedContactId,
+          is_outbound: true,
           media_url: mediaUrl,
-          reply_to_id: replyTo?.id,
-          reply_to_content: replyTo?.content,
-          reply_to_sender: replyTo?.sender,
-          reply_to_type: replyTo?.type,
-          reply_to_is_outbound: replyTo?.isOutbound,
-          reply_to_timestamp: replyTo?.timestamp
-        })
-        .select();
+          media_type: type !== 'text' ? type : null,
+          media_filename: mediaUrl?.split('/').pop()
+        });
         
       if (error) throw error;
       
@@ -1255,7 +1258,7 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
       const { error } = await supabase
         .from('messages')
         .delete()
-        .or(`sender_id.eq.${contactId},recipient_id.eq.${contactId}`);
+        .or(`sender.eq.${contactId},recipient_id.eq.${contactId}`);
         
       if (error) throw error;
       
@@ -1381,10 +1384,10 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
   const filteredConversations = useMemo(() => {
     // Simple filtering implementation
     return conversations.filter(convo => 
-      (chatTypeFilter === 'all' || convo.chatType === chatTypeFilter) &&
+      (contactFilter === 'all' || convo.chatType === contactFilter) &&
       (!searchTerm || convo.contact.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [conversations, chatTypeFilter, searchTerm]);
+  }, [conversations, contactFilter, searchTerm]);
   
   // Add grouped conversations for compatibility
   const groupedConversations = useMemo(() => {
@@ -1470,6 +1473,102 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
   const resetAllFilters = () => {
     setContactFilter('all');
     setSearchTerm('');
+    setDateRange(undefined);
+    setAssigneeFilter('');
+    setTagFilter('');
+  };
+
+  // Handle adding a contact
+  const handleAddContact = async (contact: Partial<Contact>) => {
+    try {
+      // First, add the contact to the database
+      let table;
+      if (contact.type === 'client') {
+        table = 'clients';
+      } else if (contact.type === 'lead') {
+        table = 'leads';
+      } else {
+        table = 'team_members';
+      }
+      
+      // Create a new ID if one is not provided
+      const contactId = contact.id || uuidv4();
+      
+      // Create new contact
+      const { error } = await supabase
+        .from(table)
+        .insert({
+          id: contactId,
+          name: contact.name,
+          phone: contact.phone,
+          tags: contact.tags || [],
+          created_at: new Date().toISOString()
+        });
+        
+      if (error) throw error;
+      
+      // Add the new contact to our local state
+      const newContact: Contact = {
+        id: contactId,
+        name: contact.name || 'New Contact',
+        avatar: contact.avatar || '',
+        phone: contact.phone || '',
+        type: contact.type || 'client',
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+        role: contact.type === 'team' ? 'Team Member' : contact.type === 'client' ? 'Client' : 'Lead',
+        isStarred: false,
+        isMuted: false,
+        isArchived: false,
+        isBlocked: false,
+        tags: contact.tags || []
+      };
+      
+      setContacts(prev => [...prev, newContact]);
+      
+      // Create an empty message array for the new contact
+      setMessages(prev => ({
+        ...prev,
+        [contactId]: [{
+          id: uuidv4(),
+          content: `Chat started with ${newContact.name}`,
+          timestamp: new Date().toISOString(),
+          type: 'text',
+          status: 'sent',
+          sender: 'System',
+          isOutbound: true,
+          reactions: []
+        }]
+      }));
+      
+      // Select the new contact
+      setSelectedContactId(contactId);
+      
+      toast({
+        title: "Success",
+        description: `Added new contact: ${newContact.name}`,
+      });
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error adding contact:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add contact",
+        variant: "destructive",
+      });
+      return Promise.reject(error);
+    }
+  };
+  
+  // Handle reply to message
+  const handleReplyToMessage = (message: Message) => {
+    setReplyTo(message);
+  };
+  
+  // Handle cancel reply
+  const handleCancelReply = () => {
+    setReplyTo(null);
   };
   
   // Include these additional properties in the context value
@@ -1517,10 +1616,16 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
     filteredConversations,
     groupedConversations,
     activeConversation,
-    chatTypeFilter,
+    chatTypeFilter: contactFilter,
+    dateRange,
+    assigneeFilter,
+    tagFilter,
     setActiveConversation,
     setIsSidebarOpen,
     setChatTypeFilter: setContactFilter,
+    setDateRange,
+    setAssigneeFilter,
+    setTagFilter,
     resetAllFilters,
     handleSendMessage,
     handleVoiceMessageSent,
@@ -1528,7 +1633,35 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
     handleArchiveConversation,
     handleAddTag,
     handleAssignConversation,
-    handleAddReaction: addReaction
+    handleAddReaction: addReaction,
+    handleReplyToMessage,
+    handleCancelReply,
+    handleAddContact,
+    isReplying: !!replyTo,
+    replyToMessage: replyTo,
+    cannedReplies: [
+      { id: '1', title: 'Greeting', content: 'Hello! How can I assist you today?' },
+      { id: '2', title: 'Thanks', content: 'Thank you for your message. We appreciate your business!' },
+      { id: '3', title: 'Follow up', content: 'I wanted to follow up on our previous conversation.' }
+    ],
+    aiAssistantActive,
+    setAiAssistantActive,
+    handleUseCannedReply: (replyId: string) => {
+      const reply = [
+        { id: '1', title: 'Greeting', content: 'Hello! How can I assist you today?' },
+        { id: '2', title: 'Thanks', content: 'Thank you for your message. We appreciate your business!' },
+        { id: '3', title: 'Follow up', content: 'I wanted to follow up on our previous conversation.' }
+      ].find(r => r.id === replyId);
+      
+      if (reply && selectedContactId) {
+        sendMessage(reply.content, 'text');
+      }
+    },
+    handleRequestAIAssistance: async (prompt: string) => {
+      // Simulate AI assistance with a delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return "This is a simulated AI response based on your request: " + prompt;
+    }
   };
 
   return (
