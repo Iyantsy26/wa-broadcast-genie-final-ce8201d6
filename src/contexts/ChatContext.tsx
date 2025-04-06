@@ -15,6 +15,40 @@ import { useConversationFilters } from '@/hooks/conversations/useConversationFil
 import { useConversationActions } from '@/hooks/conversations/useConversationActions';
 import { DateRange } from 'react-day-picker';
 
+// Mock data with tags property for all contacts
+const mockContacts = [
+  {
+    id: '1',
+    name: 'John Smith',
+    avatar: '/avatars/john-smith.png',
+    phone: '+1234567890',
+    type: 'client' as ChatType,
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    tags: ['VIP', 'Paid']
+  },
+  {
+    id: '2',
+    name: 'Jane Doe',
+    avatar: '/avatars/jane-doe.png',
+    phone: '+0987654321',
+    type: 'client' as ChatType,
+    isOnline: false,
+    lastSeen: new Date().toISOString(),
+    tags: ['VIP']
+  },
+  {
+    id: '3',
+    name: 'Alice Johnson',
+    avatar: '/avatars/alice-johnson.png',
+    phone: '+1122334455',
+    type: 'client' as ChatType,
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+    tags: []
+  }
+];
+
 // Context type definition
 interface ConversationContextType {
   // State
@@ -109,7 +143,7 @@ const useConversationState = () => {
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -275,31 +309,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         }
         
         if (messageData) {
-          const transformedMessages: Message[] = messageData.map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            timestamp: msg.timestamp,
-            isOutbound: msg.is_outbound,
-            status: msg.status as MessageStatus,
-            sender: msg.sender,
-            type: msg.message_type as MessageType,
-            media: msg.media_url ? {
-              url: msg.media_url,
-              type: msg.media_type as 'image' | 'video' | 'document' | 'voice',
-              filename: msg.media_filename,
-              duration: msg.media_duration,
-            } : undefined,
-            replyTo: msg.reply_to_id ? {
-              id: msg.reply_to_id,
-              content: msg.reply_to_content || "Original message",
-              sender: msg.reply_to_sender || "Sender",
-              type: (msg.reply_to_type as MessageType) || "text",
-              status: "sent",
-              isOutbound: msg.reply_to_is_outbound || false,
-              timestamp: msg.reply_to_timestamp || msg.timestamp
-            } : undefined,
-            reactions: []
-          }));
+          const transformedMessages = transformMessages(messageData);
           
           allMessages[contactId] = transformedMessages;
         }
@@ -820,4 +830,39 @@ export const useConversation = (): ConversationContextType => {
   }
   
   return context;
+};
+
+const transformMessages = (messageData: any[]): Message[] => {
+  return messageData.map(msg => {
+    const message: Message = {
+      id: msg.id,
+      content: msg.content,
+      timestamp: msg.timestamp,
+      isOutbound: msg.is_outbound,
+      status: msg.status as MessageStatus,
+      sender: msg.sender,
+      type: msg.message_type as MessageType,
+      media: msg.media_url ? {
+        url: msg.media_url,
+        type: (msg.media_type as 'image' | 'video' | 'document' | 'voice'),
+        filename: msg.media_filename,
+        duration: msg.media_duration,
+      } : undefined,
+      reactions: []
+    };
+    
+    if (msg.reply_to_id) {
+      message.replyTo = {
+        id: msg.reply_to_id,
+        content: msg.reply_to_content || "Original message",
+        sender: msg.reply_to_sender || "Sender",
+        type: (msg.reply_to_type as MessageType) || "text",
+        status: "sent",
+        isOutbound: msg.reply_to_is_outbound || false,
+        timestamp: msg.reply_to_timestamp || msg.timestamp
+      };
+    }
+    
+    return message;
+  });
 };

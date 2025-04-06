@@ -10,6 +10,7 @@ import {
   Clock, 
   Reply,
   Globe,
+  Play,
 } from 'lucide-react';
 
 interface MessageListProps {
@@ -84,7 +85,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <div className="mt-2 flex items-center p-2 bg-gray-100 rounded-md">
           <div className="flex items-center space-x-2 w-full">
             <button className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
-              <play className="h-4 w-4" />
+              <Play className="h-4 w-4" />
             </button>
             <div className="flex-1">
               <div className="h-1 w-full bg-gray-300 rounded-full">

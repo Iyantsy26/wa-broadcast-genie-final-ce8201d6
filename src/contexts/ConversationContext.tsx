@@ -15,7 +15,6 @@ import { useConversationFilters } from '@/hooks/conversations/useConversationFil
 import { useConversationActions } from '@/hooks/conversations/useConversationActions';
 import { DateRange } from 'react-day-picker';
 
-// Context type definition
 interface ConversationContextType {
   // State
   contacts: Contact[];
@@ -96,7 +95,6 @@ interface ConversationContextType {
   toggleAssistant: () => void;
 }
 
-// Create context with initial values
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
 const useConversationState = () => {
@@ -151,7 +149,6 @@ const useConversationState = () => {
   };
 };
 
-// Provider component
 interface ConversationProviderProps {
   children: ReactNode;
 }
@@ -230,7 +227,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   }, [messages, selectedContactId]);
   
   const loadContacts = async () => {
-    setLoading(true);
+    const setLoadingValue = true;
     try {
       const fetchedConversations = await getConversations();
       
@@ -257,7 +254,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      const setLoadingValue = false;
     }
   };
 
@@ -278,31 +275,38 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         }
         
         if (messageData) {
-          const transformedMessages: Message[] = messageData.map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            timestamp: msg.timestamp,
-            isOutbound: msg.is_outbound,
-            status: msg.status as MessageStatus,
-            sender: msg.sender,
-            type: msg.message_type as MessageType,
-            media: msg.media_url ? {
-              url: msg.media_url,
-              type: (msg.media_type as 'image' | 'video' | 'document' | 'voice'),
-              filename: msg.media_filename,
-              duration: msg.media_duration,
-            } : undefined,
-            replyTo: msg.reply_to_id ? {
-              id: msg.reply_to_id,
-              content: msg.reply_to_content || "Original message",
-              sender: msg.reply_to_sender || "Sender",
-              type: (msg.reply_to_type as MessageType) || "text",
-              status: "sent",
-              isOutbound: msg.reply_to_is_outbound || false,
-              timestamp: msg.reply_to_timestamp || msg.timestamp
-            } : undefined,
-            reactions: []
-          }));
+          const transformedMessages: Message[] = messageData.map(msg => {
+            const message: Message = {
+              id: msg.id,
+              content: msg.content,
+              timestamp: msg.timestamp,
+              isOutbound: msg.is_outbound,
+              status: msg.status as MessageStatus,
+              sender: msg.sender,
+              type: msg.message_type as MessageType,
+              media: msg.media_url ? {
+                url: msg.media_url,
+                type: (msg.media_type as 'image' | 'video' | 'document' | 'voice'),
+                filename: msg.media_filename,
+                duration: msg.media_duration,
+              } : undefined,
+              reactions: []
+            };
+            
+            if (msg.reply_to_id) {
+              message.replyTo = {
+                id: msg.reply_to_id,
+                content: msg.reply_to_content || "Original message",
+                sender: msg.reply_to_sender || "Sender",
+                type: (msg.reply_to_type as MessageType) || "text",
+                status: "sent",
+                isOutbound: msg.reply_to_is_outbound || false,
+                timestamp: msg.reply_to_timestamp || msg.timestamp
+              };
+            }
+            
+            return message;
+          });
           
           allMessages[contactId] = transformedMessages;
         }

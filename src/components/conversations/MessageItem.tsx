@@ -1,91 +1,89 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Message, Contact } from '@/types/conversation';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, Play, Reply, SmilePlus, MoreVertical, Globe } from 'lucide-react';
+import { 
+  MoreVertical, 
+  Reply, 
+  Trash, 
+  Smile,
+  CheckCircle
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useConversation } from '@/contexts/ConversationContext';
 
 interface MessageItemProps {
   message: Message;
   contact: Contact;
-  isSequential: boolean;
-  isLast: boolean;
+  isSequential?: boolean;
+  isLast?: boolean;
+  onReaction: (messageId: string, emoji: string) => void;
+  onReply: (message: Message) => void;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ message, contact, isSequential, isLast }) => {
-  const { addReaction, deleteMessage, handleReplyToMessage } = useConversation();
-
+const MessageItem: React.FC<MessageItemProps> = ({
+  message,
+  contact,
+  isSequential = false,
+  isLast = false,
+  onReaction,
+  onReply
+}) => {
+  const [showEmojis, setShowEmojis] = useState(false);
+  const { handleAddReaction, deleteMessage } = useConversation();
+  
+  const commonEmojis = ['👍', '❤️', '😂', '🙏', '😮', '😢', '👏'];
+  
   const renderContent = () => {
     if (message.type === 'image' && message.media) {
       return (
-        <div className="mt-2">
+        <div>
           <img 
             src={message.media.url} 
-            alt="Image attachment" 
-            className="rounded-md max-h-60 object-cover"
+            alt="Image"
+            className="max-h-60 rounded-md object-cover"
           />
-          {message.content && <p className="mt-1 text-sm">{message.content}</p>}
+          {message.content && (
+            <p className="mt-1 text-sm">{message.content}</p>
+          )}
         </div>
       );
-    } else if (message.type === 'video' && message.media) {
-      return (
-        <div className="mt-2">
-          <video 
-            src={message.media.url} 
-            className="rounded-md max-h-60 w-full" 
-            controls
-          />
-          {message.content && <p className="mt-1 text-sm">{message.content}</p>}
-        </div>
-      );
-    } else if (message.type === 'document' && message.media) {
-      return (
-        <div className="mt-2 flex items-center p-2 bg-gray-100 rounded-md">
-          <div>
-            <p className="text-sm font-medium">{message.media.filename || "Document"}</p>
-            {message.media.size && (
-              <p className="text-xs text-gray-500">
-                {(message.media.size / (1024 * 1024)).toFixed(2)} MB
-              </p>
-            )}
-            {message.content && <p className="text-xs text-gray-500">{message.content}</p>}
-          </div>
-        </div>
-      );
-    } else if (message.type === 'voice' && message.media) {
-      return (
-        <div className="mt-2 flex items-center p-2 bg-gray-100 rounded-md">
-          <div className="flex items-center space-x-2 w-full">
-            <button className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white">
-              <Play className="h-4 w-4" />
-            </button>
-            <div className="flex-1">
-              <div className="h-1 w-full bg-gray-300 rounded-full">
-                <div className="h-1 w-1/3 bg-primary rounded-full"></div>
-              </div>
-              <div className="flex justify-between text-xs mt-1">
-                <span>0:00</span>
-                <span>{message.media.duration}s</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    } else if (message.replyTo) {
+    }
+    
+    if (message.type === 'video' && message.media) {
       return (
         <div>
-          <div className="bg-muted/50 p-2 rounded-md mb-1 border-l-2 border-primary text-sm">
-            <div className="font-medium text-xs">{message.replyTo.sender}</div>
-            <div className="text-muted-foreground truncate">{message.replyTo.content}</div>
-          </div>
-          <div className="text-sm">{message.content}</div>
+          <video 
+            src={message.media.url} 
+            controls
+            className="max-h-60 w-full rounded-md"
+          />
+          {message.content && (
+            <p className="mt-1 text-sm">{message.content}</p>
+          )}
         </div>
       );
-    } else {
-      return <div className="text-sm whitespace-pre-wrap">{message.content}</div>;
     }
+    
+    if (message.replyTo) {
+      return (
+        <div>
+          <div className="bg-muted/30 p-2 rounded border-l-2 border-primary mb-2 text-sm">
+            <p className="text-xs font-medium">{message.replyTo.sender || (message.replyTo.isOutbound ? 'You' : contact.name)}</p>
+            <p className="text-muted-foreground truncate">{message.replyTo.content}</p>
+          </div>
+          <p>{message.content}</p>
+        </div>
+      );
+    }
+    
+    return <p>{message.content}</p>;
   };
   
   const getMessageStatus = () => {
@@ -93,24 +91,24 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, contact, isSequentia
     
     switch (message.status) {
       case 'sending':
-        return <Clock className="h-3 w-3 text-muted-foreground" />;
+        return <span className="text-muted-foreground">Sending...</span>;
       case 'sent':
         return <CheckCircle className="h-3 w-3 text-muted-foreground" />;
       case 'delivered':
-        return <div className="flex"><CheckCircle className="h-3 w-3 text-muted-foreground" /><CheckCircle className="h-3 w-3 text-muted-foreground -ml-1" /></div>;
+        return <div className="flex text-muted-foreground"><CheckCircle className="h-3 w-3" /><CheckCircle className="h-3 w-3 -ml-1" /></div>;
       case 'read':
-        return <div className="flex"><CheckCircle className="h-3 w-3 text-primary" /><CheckCircle className="h-3 w-3 text-primary -ml-1" /></div>;
+        return <div className="flex text-primary"><CheckCircle className="h-3 w-3" /><CheckCircle className="h-3 w-3 -ml-1" /></div>;
+      case 'error':
+        return <span className="text-destructive text-xs">Failed</span>;
       default:
         return null;
     }
   };
   
-  const showAvatar = !isSequential || !message.isOutbound;
-  
   return (
-    <div className={`flex items-end gap-2 ${message.isOutbound ? 'justify-end' : 'justify-start'} ${!isSequential ? 'mt-3' : 'mt-1'}`}>
-      {!message.isOutbound && showAvatar && (
-        <Avatar className="h-6 w-6">
+    <div className={`flex ${message.isOutbound ? 'justify-end' : 'justify-start'} relative group mb-1`}>
+      {!message.isOutbound && !isSequential && (
+        <Avatar className="h-6 w-6 mr-2 mt-1">
           <AvatarImage src={contact.avatar} />
           <AvatarFallback className="text-[10px]">
             {contact.name.split(' ').map(n => n[0]).join('')}
@@ -118,77 +116,106 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, contact, isSequentia
         </Avatar>
       )}
       
-      {!message.isOutbound && !showAvatar && <div className="w-6" />}
-      
-      <div className={`
-        group relative max-w-[75%] 
-        ${message.isOutbound 
-          ? 'bg-primary text-primary-foreground rounded-tl-lg rounded-tr-lg rounded-bl-lg' 
-          : 'bg-white border rounded-tl-lg rounded-tr-lg rounded-br-lg'
-        } 
-        p-3 shadow-sm
-      `}>
-        {/* Message sender if needed */}
-        {!isSequential && message.sender && !message.isOutbound && (
-          <div className="text-xs font-medium mb-1">
-            {message.sender}
-          </div>
+      <div
+        className={`
+          relative
+          max-w-[75%]
+          ${message.isOutbound 
+            ? 'bg-primary text-primary-foreground' 
+            : 'bg-white border'
+          }
+          ${isSequential
+            ? (message.isOutbound 
+                ? 'rounded-tl-xl rounded-bl-xl rounded-tr-sm' 
+                : 'rounded-tr-xl rounded-br-xl rounded-tl-sm')
+            : (message.isOutbound 
+                ? 'rounded-tl-xl rounded-tr-xl rounded-bl-xl' 
+                : 'rounded-tr-xl rounded-tl-xl rounded-br-xl')
+          }
+          p-3 shadow-sm
+        `}
+      >
+        {!isSequential && !message.isOutbound && (
+          <p className="text-xs font-medium mb-1">{contact.name}</p>
         )}
         
-        {/* Message content */}
         {renderContent()}
         
-        {/* Message metadata */}
-        <div className="text-[10px] mt-1 flex justify-end items-center gap-1.5 opacity-80">
-          {format(new Date(message.timestamp), 'h:mm a')}
+        <div className="flex justify-end items-center gap-1 mt-1 text-xs opacity-70">
+          <span>{format(new Date(message.timestamp), 'h:mm a')}</span>
           {getMessageStatus()}
         </div>
         
-        {/* Message actions on hover */}
-        <div className={`
-          absolute ${message.isOutbound ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'}
-          top-1/2 -translate-y-1/2
-          opacity-0 group-hover:opacity-100 transition-opacity
-          flex flex-col items-center gap-1 p-1
-        `}>
-          <button 
-            className="h-7 w-7 bg-white border rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50"
-            onClick={() => handleReplyToMessage && handleReplyToMessage(message)}
+        {/* Message reactions */}
+        {message.reactions && message.reactions.length > 0 && (
+          <div className={`absolute ${message.isOutbound ? 'left-0' : 'right-0'} -bottom-2 flex`}>
+            {message.reactions.map((reaction, i) => (
+              <div 
+                key={`${reaction.userId}-${i}`}
+                className="bg-white rounded-full h-5 w-5 flex items-center justify-center text-xs shadow border -ml-1 first:ml-0"
+                title={`${reaction.userName} reacted with ${reaction.emoji}`}
+              >
+                {reaction.emoji}
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Message actions (visible on hover) */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+          <button
+            className="p-1 hover:bg-gray-200 rounded-full"
+            onClick={() => setShowEmojis(!showEmojis)}
+          >
+            <Smile className="h-3 w-3" />
+          </button>
+          
+          <button
+            className="p-1 hover:bg-gray-200 rounded-full"
+            onClick={() => onReply(message)}
           >
             <Reply className="h-3 w-3" />
           </button>
-          <button 
-            className="h-7 w-7 bg-white border rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50"
-            onClick={() => {}}
-          >
-            <SmilePlus className="h-3 w-3" />
-          </button>
-          <button 
-            className="h-7 w-7 bg-white border rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50"
-            onClick={() => {}}
-          >
-            <MoreVertical className="h-3 w-3" />
-          </button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-gray-200 rounded-full">
+                <MoreVertical className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => onReply(message)}>
+                <Reply className="h-4 w-4 mr-2" />
+                Reply
+              </DropdownMenuItem>
+              {message.isOutbound && (
+                <DropdownMenuItem onClick={() => deleteMessage(message.id)} className="text-destructive">
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
-        {/* WhatsApp indicator */}
-        {message.viaWhatsApp && (
-          <Badge variant="outline" className="absolute -top-2 right-2 text-[9px] h-4 px-1 bg-whatsapp/10 text-whatsapp border-whatsapp/20">
-            <Globe className="h-2 w-2 mr-0.5" />
-            WhatsApp
-          </Badge>
+        {/* Emoji picker */}
+        {showEmojis && (
+          <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border p-2 flex gap-1">
+            {commonEmojis.map(emoji => (
+              <button 
+                key={emoji}
+                className="hover:bg-gray-100 p-1 rounded"
+                onClick={() => {
+                  onReaction(message.id, emoji);
+                  setShowEmojis(false);
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
         )}
       </div>
-      
-      {message.isOutbound && showAvatar && (
-        <Avatar className="h-6 w-6">
-          <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
-            {message.sender?.split(' ').map(n => n[0]).join('') || 'You'}
-          </AvatarFallback>
-        </Avatar>
-      )}
-      
-      {message.isOutbound && !showAvatar && <div className="w-6" />}
     </div>
   );
 };

@@ -1,22 +1,25 @@
 
 import React, { useMemo } from 'react';
 import { format } from 'date-fns';
-import { Message } from '@/types/conversation';
+import { Message, Contact } from '@/types/conversation';
 import MessageItem from './MessageItem';
-import { Contact } from '@/types/conversation';
 
 interface MessageListProps {
   messages: Message[];
   contact: Contact;
   isTyping: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  onReaction: (messageId: string, emoji: string) => void;
+  onReply: (message: Message) => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
   contact,
   isTyping,
-  messagesEndRef
+  messagesEndRef,
+  onReaction,
+  onReply
 }) => {
   // Group messages by date
   const messagesByDate = useMemo(() => {
@@ -85,6 +88,8 @@ const MessageList: React.FC<MessageListProps> = ({
                 contact={contact}
                 isSequential={isSequential}
                 isLast={!nextMessage || nextMessage.isOutbound !== message.isOutbound}
+                onReaction={onReaction}
+                onReply={onReply}
               />
             );
           })}

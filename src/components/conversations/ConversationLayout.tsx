@@ -12,7 +12,8 @@ const ConversationLayout = () => {
     selectedContactId,
     contacts,
     isSidebarOpen,
-    isAssistantActive
+    isAssistantActive,
+    handleRequestAIAssistance
   } = useConversation();
   
   const selectedContact = selectedContactId 
@@ -35,7 +36,12 @@ const ConversationLayout = () => {
         {/* Main content area */}
         <div className="flex-1 flex rounded-lg overflow-hidden bg-card shadow-sm">
           {selectedContact ? (
-            <MessagePanel contact={selectedContact} />
+            <MessagePanel conversation={{
+              id: selectedContactId || '',
+              contact: selectedContact,
+              lastMessage: { content: '', timestamp: '', isOutbound: false, isRead: false },
+              chatType: selectedContact.type
+            }} />
           ) : (
             <EmptyConversation />
           )}
@@ -48,7 +54,10 @@ const ConversationLayout = () => {
         
         {/* AI Assistant panel (when active) */}
         {isAssistantActive && (
-          <AIAssistantPanel />
+          <AIAssistantPanel 
+            onRequestAIAssistance={handleRequestAIAssistance} 
+            onClose={() => {}} 
+          />
         )}
       </div>
     </div>

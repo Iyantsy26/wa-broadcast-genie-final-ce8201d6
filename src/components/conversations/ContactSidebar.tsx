@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import {
@@ -28,6 +27,12 @@ import ContactItem from './ContactItem';
 import { ChatType } from '@/types/conversation';
 import NewContactDialog from './dialogs/NewContactDialog';
 
+interface NewContactDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onContactCreated: (name: string, phone: string, type: ChatType) => void;
+}
+
 const ContactSidebar = () => {
   const {
     contacts,
@@ -41,6 +46,7 @@ const ContactSidebar = () => {
   } = useConversation();
   
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
+  const [showAddContactDialog, setShowAddContactDialog] = useState(false);
   
   // Filter and group contacts
   const filteredContacts = contacts.filter(contact => {
@@ -125,7 +131,7 @@ const ContactSidebar = () => {
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => setShowNewContactDialog(true)} size="icon">
+          <Button onClick={() => setShowAddContactDialog(true)} size="icon">
             <PlusCircle className="h-4 w-4" />
           </Button>
         </div>
@@ -274,10 +280,19 @@ const ContactSidebar = () => {
         )}
       </ScrollArea>
       
-      <NewContactDialog
-        open={showNewContactDialog}
-        onOpenChange={setShowNewContactDialog}
-      />
+      {showAddContactDialog && (
+        <NewContactDialog 
+          open={showAddContactDialog}
+          onOpenChange={setShowAddContactDialog}
+          onContactCreated={(name, phone, type) => {
+            handleAddContact({
+              name,
+              phone,
+              type
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
@@ -12,6 +11,7 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
+import { Contact, ChatType } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
@@ -55,12 +55,14 @@ const ConversationPage = () => {
     handleRequestAIAssistance
   } = useConversation();
 
-  // Get messages for active conversation
   const activeMessages = selectedContactId && messages[selectedContactId] ? messages[selectedContactId] : [];
 
-  // Define dummy pinConversation function to satisfy the interface
-  const pinConversation = (conversationId: string) => {
-    console.log('Pin conversation not implemented:', conversationId);
+  const handleAddNewContact = (name: string, phone: string, type: ChatType) => {
+    handleAddContact({
+      name,
+      phone,
+      type
+    });
   };
 
   return (
@@ -73,7 +75,7 @@ const ConversationPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AddContactButton onAddContact={handleAddContact} />
+          <AddContactButton onAddContact={handleAddNewContact} />
           <Button 
             variant="outline" 
             onClick={() => setAiAssistantActive(!aiAssistantActive)}
@@ -115,12 +117,12 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ConversationHeader 
-                conversation={activeConversation}
+                contact={activeConversation.contact}
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
                 messages={activeMessages} 
-                contactName={activeConversation.contact.name}
+                contact={activeConversation.contact}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}
                 onReaction={handleAddReaction}
