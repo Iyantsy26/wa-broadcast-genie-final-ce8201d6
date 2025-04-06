@@ -1,1628 +1,506 @@
-
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from '@/hooks/use-toast';
-import { DateRange } from 'react-day-picker';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import {
-  Contact,
-  Message,
-  MessageType,
-  MessageStatus,
-  ChatType,
-  ConversationSettings,
-  ReplyTo,
-  Reaction,
   Conversation,
+  Message,
+  Contact,
+  ChatType,
+  MessageType,
 } from '@/types/conversation';
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@/hooks/use-user';
+import { toast } from '@/hooks/use-toast';
 
 interface ConversationContextType {
-  // Contacts
+  conversations: Conversation[];
+  activeConversation: Conversation | null;
+  messages: Message[];
   contacts: Contact[];
   selectedContactId: string | null;
   contactFilter: ChatType | 'all';
   searchTerm: string;
-  
-  // Messages
-  messages: Record<string, Message[]>;
-  isTyping: boolean;
-  replyTo: Message | null;
-  
-  // UI States
-  wallpaper: string;
-  soundEnabled: boolean;
   isSidebarOpen: boolean;
+  isTyping: boolean;
+  isReplying: boolean;
+  replyToMessage: Message | null;
+  cannedReplies: { id: string; content: string }[];
   selectedDevice: string;
-  isAssistantActive: boolean;
-  
-  // Settings
-  settings: ConversationSettings;
-  
-  // Added for compatibility with ChatPage and ConversationPage
-  filteredConversations: Conversation[];
-  groupedConversations: Record<string, Conversation[]>;
-  activeConversation: Conversation | null;
+  aiAssistantActive: boolean;
   chatTypeFilter: ChatType | 'all';
-  dateRange?: DateRange;
+  dateRange?: { from?: Date; to?: Date };
   assigneeFilter?: string;
   tagFilter?: string;
+  filteredConversations: Conversation[];
+  groupedConversations: { [name: string]: Conversation[] };
   messagesEndRef: React.RefObject<HTMLDivElement>;
-  isReplying?: boolean;
-  replyToMessage?: Message | null;
-  cannedReplies?: {id: string; title: string; content: string}[];
-  aiAssistantActive?: boolean;
-  
-  // Contact Actions
-  selectContact: (id: string) => void;
+  selectContact: (contactId: string) => void;
   setContactFilter: (filter: ChatType | 'all') => void;
   setSearchTerm: (term: string) => void;
-  toggleContactStar: (id: string) => Promise<void>;
-  muteContact: (id: string, muted: boolean) => Promise<void>;
-  archiveContact: (id: string) => Promise<void>;
-  blockContact: (id: string) => Promise<void>;
-  reportContact: (id: string, reason: string) => Promise<void>;
-
-  // Message Actions
-  sendMessage: (content: string, type: MessageType, mediaUrl?: string) => Promise<void>;
-  sendVoiceMessage: (durationSeconds: number) => Promise<void>;
-  addReaction: (messageId: string, emoji: string) => Promise<void>;
-  deleteMessage: (messageId: string) => Promise<void>;
-  forwardMessage: (messageId: string, contactIds: string[]) => Promise<void>;
-  setReplyTo: (message: Message | null) => void;
-  
-  // UI Actions
-  toggleSidebar: () => void;
-  changeWallpaper: (wallpaperUrl: string) => void;
-  toggleSound: () => void;
-  setSelectedDevice: (deviceId: string) => void;
-  toggleAssistant: () => void;
-  
-  // Settings Actions
-  updateSettings: (newSettings: Partial<ConversationSettings>) => void;
-  clearChat: (contactId: string) => Promise<void>;
-  exportChat: (contactId: string) => Promise<void>;
-  
-  // Search
-  searchContacts: (query: string) => Contact[];
-  searchMessages: (contactId: string, query: string) => Message[];
-  
-  // Added for compatibility with ChatPage and ConversationPage
-  setActiveConversation: (conversation: Conversation) => void;
-  setIsSidebarOpen: (isOpen: boolean) => void;
-  setChatTypeFilter: (filter: ChatType | 'all') => void;
-  setDateRange?: (range: DateRange | undefined) => void;
-  setAssigneeFilter?: (assignee: string) => void;
-  setTagFilter?: (tag: string) => void;
+  setActiveConversation: (conversation: Conversation | null) => void;
+  setIsSidebarOpen: (open: boolean) => void;
+  setIsTyping: (typing: boolean) => void;
+  setReplyToMessage: (message: Message | null) => void;
+  setSelectedDevice: (device: string) => void;
+  setAiAssistantActive: (active: boolean) => void;
+  setChatTypeFilter: (type: ChatType | 'all') => void;
+  setSearchTerm: (term: string) => void;
+  setDateRange: (range?: { from?: Date; to?: Date }) => void;
+  setAssigneeFilter: (assignee?: string) => void;
+  setTagFilter: (tag?: string) => void;
   resetAllFilters: () => void;
-  handleSendMessage: (content: string, type?: MessageType, mediaUrl?: string) => Promise<void>;
-  handleVoiceMessageSent: (durationSeconds: number) => Promise<void>;
-  handleDeleteConversation: (conversationId: string) => Promise<void>;
-  handleArchiveConversation: (conversationId: string) => Promise<void>;
-  handleAddTag: (conversationId: string, tag: string) => Promise<void>;
-  handleAssignConversation: (conversationId: string, assignee: string) => Promise<void>;
-  handleAddReaction?: (messageId: string, emoji: string) => Promise<void>;
-  handleReplyToMessage?: (message: Message) => void;
-  handleCancelReply?: () => void;
-  handleUseCannedReply?: (replyId: string) => void;
-  handleRequestAIAssistance?: (prompt: string) => Promise<string>;
-  handleAddContact?: (contact: Partial<Contact>) => Promise<void>;
-  setAiAssistantActive?: (active: boolean) => void;
+  handleSendMessage: (
+    content: string,
+    type?: MessageType,
+    mediaUrl?: string
+  ) => Promise<void>;
+  handleVoiceMessageSent: (durationInSeconds: number) => void;
+  handleDeleteConversation: (conversationId: string) => void;
+  handleArchiveConversation: (
+    conversationId: string,
+    isArchived: boolean
+  ) => void;
+  handleAddReaction: (messageId: string, emoji: string) => void;
+  handleReplyToMessage: (message: Message) => void;
+  handleCancelReply: () => void;
+  handleUseCannedReply: (reply: string) => void;
+  handleRequestAIAssistance: (prompt: string) => Promise<string>;
+  handleAddTag: (conversationId: string, tag: string) => void;
+  handleAssignConversation: (conversationId: string, assignee: string) => void;
+  handleAddContact: (contact: Partial<Contact>) => void;
+  deleteMessage: (messageId: string) => void;
+  addReaction: (messageId: string, emoji: string) => void;
 }
 
-const defaultSettings: ConversationSettings = {
-  notifications: true,
-  showTypingIndicator: true,
-  messageDisappearing: false,
-  disappearingTimeout: 24, // hours
-  mediaAutoDownload: true,
-  chatBackup: false,
-  language: 'en',
-  fontSize: 'medium',
-};
+const ConversationContext = createContext<ConversationContextType | undefined>(
+  undefined
+);
 
-export const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
-
-export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  // State for contacts and messages
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  
-  // UI state
-  const [isTyping, setIsTyping] = useState(false);
-  const [wallpaper, setWallpaper] = useState('');
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<string>('default');
-  const [isAssistantActive, setIsAssistantActive] = useState(false);
-  
-  // Search and filter state
-  const [searchTerm, setSearchTerm] = useState('');
+export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversation, setActiveConversation] =
+    useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([
+    {
+      id: '1',
+      name: 'John Smith',
+      avatar: '/avatars/john-smith.png',
+      phone: '+1 (555) 123-4567',
+      type: 'client',
+      isOnline: true,
+      lastSeen: new Date().toISOString(),
+      tags: ['premium', 'active'],
+    },
+    {
+      id: '2',
+      name: 'Jane Doe',
+      avatar: '/avatars/jane-doe.png',
+      phone: '+1 (555) 987-6543',
+      type: 'lead',
+      isOnline: false,
+      lastSeen: '2023-10-01T18:45:00Z',
+      tags: ['new', 'interested'],
+    },
+    {
+      id: '3',
+      name: 'Acme Corporation',
+      avatar: '/avatars/acme-corp.png',
+      phone: '+1 (555) 333-2222',
+      type: 'client',
+      isOnline: true,
+      lastSeen: new Date().toISOString(),
+      tags: ['enterprise', 'active'],
+    },
+    {
+      id: '4',
+      name: 'Alex Johnson',
+      avatar: '/avatars/alex-johnson.png',
+      phone: '+1 (555) 777-8888',
+      type: 'lead',
+      isOnline: false,
+      lastSeen: '2023-09-30T09:20:00Z',
+      tags: ['referral'],
+    },
+    {
+      id: '5',
+      name: 'Global Partners Inc',
+      avatar: '/avatars/global-partners.png',
+      phone: '+1 (555) 444-5555',
+      type: 'client',
+      isOnline: false,
+      lastSeen: '2023-10-01T15:10:00Z',
+      tags: ['enterprise'],
+    },
+    {
+      id: '6',
+      name: 'Team Member 1',
+      avatar: '/avatars/team-member-1.png',
+      phone: '+1 (555) 111-2222',
+      type: 'team',
+      isOnline: true,
+      lastSeen: new Date().toISOString(),
+      tags: ['support', 'sales'],
+    },
+  ]);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(
+    null
+  );
   const [contactFilter, setContactFilter] = useState<ChatType | 'all'>('all');
-  
-  // Reply and reaction state
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
-  
-  // Settings
-  const [settings, setSettings] = useState<ConversationSettings>(defaultSettings);
-  
-  // Added for compatibility with ChatPage and ConversationPage
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('');
-  const [tagFilter, setTagFilter] = useState<string>('');
-  const [aiAssistantActive, setAiAssistantActive] = useState<boolean>(false);
-  
-  // Refs
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Load contacts and messages from Supabase
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [cannedReplies, setCannedReplies] = useState([
+    { id: uuidv4(), content: 'Thank you for contacting us!' },
+    { id: uuidv4(), content: 'We will get back to you shortly.' },
+    { id: uuidv4(), content: 'How can I help you today?' },
+  ]);
+  const [selectedDevice, setSelectedDevice] = useState('whatsapp');
+  const [aiAssistantActive, setAiAssistantActive] = useState(false);
+  const [chatTypeFilter, setChatTypeFilter] = useState<ChatType | 'all'>('all');
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>();
+  const [assigneeFilter, setAssigneeFilter] = useState<string | undefined>(
+    undefined
+  );
+  const [tagFilter, setTagFilter] = useState<string | undefined>(undefined);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const { user } = useUser();
+
   useEffect(() => {
-    const loadContacts = async () => {
-      try {
-        // Fetch team members (team_members instead of agents)
-        const { data: agents, error: agentsError } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('status', 'active');
-        
-        if (agentsError) throw agentsError;
-        
-        // Fetch clients
-        const { data: clients, error: clientsError } = await supabase
-          .from('clients')
-          .select('*');
-          
-        if (clientsError) throw clientsError;
-        
-        // Fetch leads
-        const { data: leads, error: leadsError } = await supabase
-          .from('leads')
-          .select('*');
-          
-        if (leadsError) throw leadsError;
-        
-        // Transform data to our Contact type
-        const teamContacts = agents?.map(agent => ({
-          id: agent.id,
-          name: agent.name,
-          avatar: agent.avatar,
-          phone: agent.phone || '',
-          type: 'team' as ChatType,
-          isOnline: Math.random() > 0.5, // Mock online status
-          lastSeen: new Date().toISOString(),
-          role: agent.role || '',
-          isStarred: false,
-          isMuted: false,
-          isArchived: false,
-          isBlocked: false,
-          tags: [],
-        })) || [];
-        
-        const clientContacts = clients?.map(client => ({
-          id: client.id,
-          name: client.name,
-          avatar: client.avatar_url,
-          phone: client.phone || '',
-          type: 'client' as ChatType,
-          isOnline: Math.random() > 0.7, // Mock online status
-          lastSeen: new Date().toISOString(),
-          role: 'Client',
-          isStarred: false,
-          isMuted: false,
-          isArchived: false,
-          isBlocked: false,
-          tags: client.tags || ['active'],
-        })) || [];
-        
-        const leadContacts = leads?.map(lead => ({
-          id: lead.id,
-          name: lead.name,
-          avatar: lead.avatar_url,
-          phone: lead.phone || '',
-          type: 'lead' as ChatType,
-          isOnline: Math.random() > 0.8, // Mock online status
-          lastSeen: new Date().toISOString(),
-          role: 'Lead',
-          isStarred: false,
-          isMuted: true,
-          isArchived: false,
-          isBlocked: false,
-          tags: [lead.status || 'new'],
-        })) || [];
-        
-        const allContacts = [...teamContacts, ...clientContacts, ...leadContacts];
-        setContacts(allContacts);
-        
-        // If we have contacts but no selected contact, select the first one
-        if (allContacts.length > 0 && !selectedContactId) {
-          setSelectedContactId(allContacts[0].id);
-        }
-        
-        // Now load messages for all contacts
-        await loadAllMessages(allContacts);
-        
-      } catch (error) {
-        console.error('Error loading contacts:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load contacts. Using demo data instead.",
-          variant: "destructive",
-        });
-        
-        // Load demo data if API fails
-        loadDemoData();
+    // Fetch conversations from Supabase on mount
+    const fetchConversations = async () => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching conversations:', error);
+      } else {
+        setConversations(data || []);
       }
     };
-    
-    const loadAllMessages = async (contacts: Contact[]) => {
-      try {
-        const messagesByContact: Record<string, Message[]> = {};
-        
-        for (const contact of contacts) {
-          const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .or(`sender.eq.${contact.id},recipient_id.eq.${contact.id}`)
-            .order('timestamp', { ascending: true });
-            
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            messagesByContact[contact.id] = data.map(msg => ({
-              id: msg.id,
-              content: msg.content || '',
-              timestamp: msg.timestamp,
-              type: msg.message_type as MessageType,
-              status: msg.status as MessageStatus,
-              sender: msg.sender || 'Unknown',
-              isOutbound: msg.is_outbound || false,
-              media: msg.media_url ? {
-                url: msg.media_url,
-                type: msg.media_type as 'image' | 'video' | 'document' | 'voice',
-                filename: msg.media_filename,
-                duration: msg.media_duration,
-                size: undefined
-              } : undefined,
-              replyTo: undefined,
-              reactions: []
-            }));
-          } else {
-            // Create welcome message for each contact
-            messagesByContact[contact.id] = [{
-              id: uuidv4(),
-              content: `Welcome to your conversation with ${contact.name}!`,
-              timestamp: new Date().toISOString(),
-              type: 'text',
-              status: 'sent',
-              sender: 'System',
-              isOutbound: true,
-              reactions: []
-            }];
-          }
-        }
-        
-        setMessages(messagesByContact);
-      } catch (error) {
-        console.error('Error loading messages:', error);
-        // Create empty message arrays for all contacts if loading fails
-        const emptyMessages: Record<string, Message[]> = {};
-        contacts.forEach(contact => {
-          emptyMessages[contact.id] = [{
-            id: uuidv4(),
-            content: `Start your conversation with ${contact.name}`,
-            timestamp: new Date().toISOString(),
-            type: 'text',
-            status: 'sent',
-            sender: 'System',
-            isOutbound: true,
-            reactions: []
-          }];
-        });
-        
-        setMessages(emptyMessages);
-      }
-    };
-    
-    const loadDemoData = () => {
-      // Create demo contacts
-      const demoContacts: Contact[] = [
-        {
-          id: 'team-1',
-          name: 'Jane Smith',
-          avatar: '/avatars/jane.jpg',
-          phone: '+1 (555) 123-4567',
-          type: 'team',
-          isOnline: true,
-          lastSeen: new Date().toISOString(),
-          role: 'Support Agent',
-          isStarred: true,
-          isMuted: false,
-          isArchived: false,
-          isBlocked: false,
-          tags: ['support', 'tier1']
-        },
-        {
-          id: 'client-1',
-          name: 'John Doe',
-          avatar: '/avatars/john.jpg',
-          phone: '+1 (555) 987-6543',
-          type: 'client',
-          isOnline: false,
-          lastSeen: new Date(Date.now() - 3600000).toISOString(),
-          role: 'Client',
-          isStarred: false,
-          isMuted: false,
-          isArchived: false,
-          isBlocked: false,
-          tags: ['premium', 'enterprise']
-        },
-        {
-          id: 'lead-1',
-          name: 'Sarah Johnson',
-          avatar: '/avatars/sarah.jpg',
-          phone: '+1 (555) 765-4321',
-          type: 'lead',
-          isOnline: false,
-          lastSeen: new Date(Date.now() - 7200000).toISOString(),
-          role: 'Lead',
-          isStarred: false,
-          isMuted: true,
-          isArchived: false,
-          isBlocked: false,
-          tags: ['website-inquiry', 'high-value']
-        }
-      ];
-      
-      setContacts(demoContacts);
-      
-      // Create demo messages
-      const demoMessages: Record<string, Message[]> = {
-        'team-1': [
-          {
-            id: '1',
-            content: 'Hi there! How can I help you today?',
-            timestamp: new Date(Date.now() - 86400000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'Jane Smith',
-            isOutbound: false,
-            reactions: []
-          },
-          {
-            id: '2',
-            content: 'I have a question about the latest update',
-            timestamp: new Date(Date.now() - 86300000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'You',
-            isOutbound: true,
-            reactions: []
-          },
-          {
-            id: '3',
-            content: 'Sure! What specifically would you like to know?',
-            timestamp: new Date(Date.now() - 86200000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'Jane Smith',
-            isOutbound: false,
-            reactions: [{
-              emoji: '👍',
-              userId: 'you',
-              userName: 'You',
-              timestamp: new Date(Date.now() - 86100000).toISOString()
-            }]
-          }
-        ],
-        'client-1': [
-          {
-            id: '4',
-            content: 'Hello! Thank you for your recent purchase.',
-            timestamp: new Date(Date.now() - 172800000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'You',
-            isOutbound: true,
-            reactions: []
-          },
-          {
-            id: '5',
-            content: 'Thank you! When can I expect delivery?',
-            timestamp: new Date(Date.now() - 172700000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'John Doe',
-            isOutbound: false,
-            reactions: []
-          },
-          {
-            id: '6',
-            content: 'Your order should arrive within 3-5 business days.',
-            timestamp: new Date(Date.now() - 172600000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'You',
-            isOutbound: true,
-            reactions: [{
-              emoji: '🙏',
-              userId: 'client-1',
-              userName: 'John Doe',
-              timestamp: new Date(Date.now() - 172500000).toISOString()
-            }]
-          }
-        ],
-        'lead-1': [
-          {
-            id: '7',
-            content: 'I found your website and I\'m interested in your services.',
-            timestamp: new Date(Date.now() - 259200000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'Sarah Johnson',
-            isOutbound: false,
-            reactions: []
-          },
-          {
-            id: '8',
-            content: 'Great to hear from you! What specifically are you looking for?',
-            timestamp: new Date(Date.now() - 259100000).toISOString(),
-            type: 'text',
-            status: 'read',
-            sender: 'You',
-            isOutbound: true,
-            reactions: []
-          },
-          {
-            id: '9',
-            content: 'Here\'s our latest brochure with pricing details.',
-            timestamp: new Date(Date.now() - 259000000).toISOString(),
-            type: 'document',
-            status: 'read',
-            sender: 'You',
-            isOutbound: true,
-            media: {
-              url: '/documents/brochure.pdf',
-              type: 'document',
-              filename: 'Company_Brochure_2023.pdf',
-              size: 1240000
-            },
-            reactions: []
-          }
-        ]
-      };
-      
-      setMessages(demoMessages);
-      setSelectedContactId('team-1');
-    };
-    
-    loadContacts();
+
+    fetchConversations();
   }, []);
-  
-  // Scroll to bottom when messages change
+
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, selectedContactId]);
-  
-  // Filtered contacts based on search term and filter
-  const filteredContacts = useMemo(() => {
-    return contacts.filter(contact => {
-      // Filter by contact type
-      if (contactFilter !== 'all' && contact.type !== contactFilter) {
-        return false;
+    // Fetch messages for the active conversation
+    const fetchMessages = async () => {
+      if (!activeConversation) return;
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', activeConversation.id)
+        .order('timestamp', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+      } else {
+        setMessages(data || []);
       }
-      
-      // Filter by search term
-      if (searchTerm && !contact.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      
-      // Don't show archived or blocked contacts in the main list
-      if (contact.isArchived || contact.isBlocked) {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [contacts, contactFilter, searchTerm]);
-  
-  // Sort contacts by last message timestamp
-  const sortedContacts = useMemo(() => {
-    return [...filteredContacts].sort((a, b) => {
-      const aMessages = messages[a.id] || [];
-      const bMessages = messages[b.id] || [];
-      
-      const aLastMessage = aMessages[aMessages.length - 1];
-      const bLastMessage = bMessages[bMessages.length - 1];
-      
-      if (!aLastMessage) return 1;
-      if (!bLastMessage) return -1;
-      
-      return new Date(bLastMessage.timestamp).getTime() - new Date(aLastMessage.timestamp).getTime();
-    });
-  }, [filteredContacts, messages]);
-  
-  // Group contacts by type
-  const groupedContacts = useMemo(() => {
-    const groups: Record<string, Contact[]> = {
-      starred: sortedContacts.filter(c => c.isStarred),
-      team: sortedContacts.filter(c => c.type === 'team'),
-      client: sortedContacts.filter(c => c.type === 'client'),
-      lead: sortedContacts.filter(c => c.type === 'lead')
     };
-    
-    return groups;
-  }, [sortedContacts]);
-  
-  // Contact actions
-  const selectContact = useCallback((id: string) => {
-    setSelectedContactId(id);
-    setReplyTo(null);
-    
-    // Update message status to read
-    setMessages(prev => {
-      const contactMessages = prev[id] || [];
-      const updatedMessages = contactMessages.map(msg => {
-        if (!msg.isOutbound && msg.status !== 'read') {
-          return { ...msg, status: 'read' as MessageStatus };
-        }
-        return msg;
+
+    if (activeConversation) {
+      fetchMessages();
+    }
+  }, [activeConversation]);
+
+  const filteredConversations = React.useMemo(() => {
+    let filtered = conversations;
+
+    if (chatTypeFilter !== 'all') {
+      filtered = filtered.filter((c) => c.chatType === chatTypeFilter);
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter((c) =>
+        c.contact.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (dateRange?.from) {
+      filtered = filtered.filter((c) => {
+        const messageDate = new Date(c.lastMessage.timestamp);
+        const fromDate = dateRange.from;
+        const toDate = dateRange.to || new Date();
+        return messageDate >= fromDate && messageDate <= toDate;
       });
-      
-      return {
-        ...prev,
-        [id]: updatedMessages
-      };
+    }
+
+    if (assigneeFilter) {
+      filtered = filtered.filter((c) => c.assignedTo === assigneeFilter);
+    }
+
+    if (tagFilter) {
+      filtered = filtered.filter((c) => c.tags?.includes(tagFilter));
+    }
+
+    return filtered;
+  }, [
+    conversations,
+    chatTypeFilter,
+    searchTerm,
+    dateRange,
+    assigneeFilter,
+    tagFilter,
+  ]);
+
+  const groupedConversations = React.useMemo(() => {
+    const grouped: { [name: string]: Conversation[] } = {};
+    filteredConversations.forEach((conversation) => {
+      const date = new Date(conversation.lastMessage.timestamp).toLocaleDateString();
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(conversation);
     });
-  }, []);
-  
-  const toggleContactStar = async (id: string) => {
-    try {
-      // Update local state first (optimistic update)
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isStarred: !contact.isStarred };
-          }
-          return contact;
-        });
-      });
-      
-      // Update in database
-      const contactToUpdate = contacts.find(c => c.id === id);
-      if (!contactToUpdate) return;
-      
-      // Determine which table to update based on contact type
-      let table;
-      if (contactToUpdate.type === 'team') {
-        table = 'team_members';
-      } else if (contactToUpdate.type === 'client') {
-        table = 'clients';
-      } else {
-        table = 'leads';
-      }
-      
-      // Update the starred status
-      const { error } = await supabase
-        .from(table)
-        .update({ is_starred: !contactToUpdate.isStarred })
-        .eq('id', id);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: contactToUpdate.isStarred 
-          ? `Removed ${contactToUpdate.name} from starred contacts`
-          : `Added ${contactToUpdate.name} to starred contacts`,
-      });
-    } catch (error) {
-      console.error('Error toggling star status:', error);
-      
-      // Revert optimistic update
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isStarred: !contact.isStarred };
-          }
-          return contact;
-        });
-      });
-      
-      toast({
-        title: "Error",
-        description: "Failed to update star status",
-        variant: "destructive",
-      });
-    }
+    return grouped;
+  }, [filteredConversations]);
+
+  const selectContact = (contactId: string) => {
+    setSelectedContactId(contactId);
   };
-  
-  const muteContact = async (id: string, muted: boolean) => {
+
+  const handleSendMessage = async (
+    content: string,
+    type: MessageType = 'text',
+    mediaUrl?: string
+  ) => {
+    if (!activeConversation) return;
+
     try {
-      // Update local state first (optimistic update)
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isMuted: muted };
-          }
-          return contact;
-        });
-      });
-      
-      // We could update this in the database if needed
-      
-      toast({
-        title: "Success",
-        description: muted 
-          ? `Muted notifications for ${contacts.find(c => c.id === id)?.name}`
-          : `Unmuted notifications for ${contacts.find(c => c.id === id)?.name}`,
-      });
-    } catch (error) {
-      console.error('Error updating mute status:', error);
-      
-      // Revert optimistic update
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isMuted: !muted };
-          }
-          return contact;
-        });
-      });
-      
-      toast({
-        title: "Error",
-        description: "Failed to update notification settings",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const archiveContact = async (id: string) => {
-    try {
-      // Update local state first (optimistic update)
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isArchived: true };
-          }
-          return contact;
-        });
-      });
-      
-      // If currently selected contact was archived, select another one
-      if (selectedContactId === id) {
-        const nextContact = filteredContacts.find(c => c.id !== id);
-        if (nextContact) {
-          setSelectedContactId(nextContact.id);
-        } else {
-          setSelectedContactId(null);
-        }
-      }
-      
-      // Update in database
-      const contactToUpdate = contacts.find(c => c.id === id);
-      if (!contactToUpdate) return;
-      
-      // Determine which table to update based on contact type
-      let table;
-      if (contactToUpdate.type === 'team') {
-        table = 'team_members';
-      } else if (contactToUpdate.type === 'client') {
-        table = 'clients';
-      } else {
-        table = 'leads';
-      }
-      
-      // Update the archived status
-      const { error } = await supabase
-        .from(table)
-        .update({ is_archived: true })
-        .eq('id', id);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: `Archived conversation with ${contactToUpdate.name}`,
-      });
-    } catch (error) {
-      console.error('Error archiving contact:', error);
-      
-      // Revert optimistic update
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isArchived: false };
-          }
-          return contact;
-        });
-      });
-      
-      toast({
-        title: "Error",
-        description: "Failed to archive conversation",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const blockContact = async (id: string) => {
-    try {
-      // Update local state first (optimistic update)
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isBlocked: true };
-          }
-          return contact;
-        });
-      });
-      
-      // If currently selected contact was blocked, select another one
-      if (selectedContactId === id) {
-        const nextContact = filteredContacts.find(c => c.id !== id);
-        if (nextContact) {
-          setSelectedContactId(nextContact.id);
-        } else {
-          setSelectedContactId(null);
-        }
-      }
-      
-      // Update in database if needed
-      
-      toast({
-        title: "Success",
-        description: `Blocked ${contacts.find(c => c.id === id)?.name}`,
-      });
-    } catch (error) {
-      console.error('Error blocking contact:', error);
-      
-      // Revert optimistic update
-      setContacts(prev => {
-        return prev.map(contact => {
-          if (contact.id === id) {
-            return { ...contact, isBlocked: false };
-          }
-          return contact;
-        });
-      });
-      
-      toast({
-        title: "Error",
-        description: "Failed to block contact",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const reportContact = async (id: string, reason: string) => {
-    try {
-      // Send report to backend
-      toast({
-        title: "Success",
-        description: `Reported ${contacts.find(c => c.id === id)?.name} for ${reason}`,
-      });
-    } catch (error) {
-      console.error('Error reporting contact:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to report contact",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Message actions
-  const sendMessage = async (content: string, type: MessageType = 'text', mediaUrl?: string) => {
-    if (!selectedContactId) return;
-    
-    try {
-      const newMessageId = uuidv4();
       const timestamp = new Date().toISOString();
-      
-      // Create the new message
+
+      const messageData = {
+        conversation_id: activeConversation.id,
+        content,
+        is_outbound: true,
+        timestamp,
+        status: 'sent',
+        sender: user?.name || 'You',
+        message_type: type,
+        media_url: mediaUrl || null,
+        media_type: mediaUrl ? type : null,
+      };
+
+      const { data, error } = await supabase
+        .from('messages')
+        .insert(messageData)
+        .select();
+
+      if (error) throw error;
+
       const newMessage: Message = {
-        id: newMessageId,
+        id: data?.[0]?.id || uuidv4(),
         content,
         timestamp,
-        type,
-        status: 'sending',
-        sender: 'You',
         isOutbound: true,
-        reactions: [],
-        ...(mediaUrl ? {
-          media: {
-            url: mediaUrl,
-            type: type as 'image' | 'video' | 'document' | 'voice',
-            filename: mediaUrl.split('/').pop() || 'file'
-          }
-        } : {}),
-        ...(replyTo ? {
-          replyTo: {
-            id: replyTo.id,
-            content: replyTo.content,
-            sender: replyTo.sender,
-            type: replyTo.type,
-            status: replyTo.status,
-            isOutbound: replyTo.isOutbound,
-            timestamp: replyTo.timestamp
-          }
-        } : {})
+        status: 'sent',
+        sender: user?.name || 'You',
+        type,
+        media: mediaUrl
+          ? {
+              url: mediaUrl,
+              type: type as 'image' | 'video' | 'document' | 'voice',
+            }
+          : undefined,
       };
-      
-      // Add message to state (optimistic update)
-      setMessages(prev => {
-        const contactMessages = prev[selectedContactId] || [];
-        return {
-          ...prev,
-          [selectedContactId]: [...contactMessages, newMessage]
-        };
-      });
-      
-      // Clear reply to
-      setReplyTo(null);
-      
-      // Send message to database
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          id: newMessageId,
-          content,
-          timestamp,
-          message_type: type,
-          status: 'sent',
-          sender: 'current-user', // Replace with actual user ID
-          recipient_id: selectedContactId,
-          is_outbound: true,
-          media_url: mediaUrl,
-          media_type: type !== 'text' ? type : null,
-          media_filename: mediaUrl?.split('/').pop()
-        });
-        
-      if (error) throw error;
-      
-      // Update message status to sent
-      setTimeout(() => {
-        setMessages(prev => {
-          const contactMessages = prev[selectedContactId] || [];
-          const updatedMessages = contactMessages.map(msg => {
-            if (msg.id === newMessageId) {
-              return { ...msg, status: 'sent' as MessageStatus };
-            }
-            return msg;
-          });
-          
-          return {
-            ...prev,
-            [selectedContactId]: updatedMessages
-          };
-        });
-        
-        // Simulate typing from the other person
-        setIsTyping(true);
-        setTimeout(() => {
-          setIsTyping(false);
-          
-          // For demo purposes, generate an auto-reply for certain types of messages
-          if (type === 'text' && !mediaUrl) {
-            const contact = contacts.find(c => c.id === selectedContactId);
-            if (contact) {
-              const autoReply: Message = {
-                id: uuidv4(),
-                content: `This is an automated response from ${contact.name}`,
-                timestamp: new Date().toISOString(),
-                type: 'text',
-                status: 'read',
-                sender: contact.name,
-                isOutbound: false,
-                reactions: []
-              };
-              
-              setMessages(prev => {
-                const contactMessages = prev[selectedContactId] || [];
-                return {
-                  ...prev,
-                  [selectedContactId]: [...contactMessages, autoReply]
-                };
-              });
-            }
-          }
-          
-          // Update original message status to delivered
-          setTimeout(() => {
-            setMessages(prev => {
-              const contactMessages = prev[selectedContactId] || [];
-              const updatedMessages = contactMessages.map(msg => {
-                if (msg.id === newMessageId) {
-                  return { ...msg, status: 'delivered' as MessageStatus };
-                }
-                return msg;
-              });
-              
-              return {
-                ...prev,
-                [selectedContactId]: updatedMessages
-              };
-            });
-            
-            // Finally update to read after a bit more time
-            setTimeout(() => {
-              setMessages(prev => {
-                const contactMessages = prev[selectedContactId] || [];
-                const updatedMessages = contactMessages.map(msg => {
-                  if (msg.id === newMessageId) {
-                    return { ...msg, status: 'read' as MessageStatus };
-                  }
-                  return msg;
-                });
-                
-                return {
-                  ...prev,
-                  [selectedContactId]: updatedMessages
-                };
-              });
-            }, 2000);
-          }, 1500);
-        }, 3000);
-      }, 1000);
-      
+
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+      const updatedConversation: Conversation = {
+        ...activeConversation,
+        lastMessage: {
+          content: content || 'Attachment',
+          timestamp: timestamp,
+          isOutbound: true,
+          isRead: false,
+        },
+      };
+
+      setConversations((prevConversations) =>
+        prevConversations.map((c) =>
+          c.id === updatedConversation.id ? updatedConversation : c
+        )
+      );
+
+      setActiveConversation(updatedConversation);
     } catch (error) {
       console.error('Error sending message:', error);
-      
-      // Update message status to error
-      setMessages(prev => {
-        const contactMessages = prev[selectedContactId] || [];
-        const updatedMessages = contactMessages.map(msg => {
-          if (msg.status === 'sending') {
-            return { ...msg, status: 'error' as MessageStatus };
-          }
-          return msg;
-        });
-        
-        return {
-          ...prev,
-          [selectedContactId]: updatedMessages
-        };
-      });
-      
       toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to send message',
+        variant: 'destructive',
       });
     }
-  };
-  
-  const sendVoiceMessage = async (durationSeconds: number) => {
-    try {
-      // In a real app, we would upload the audio file
-      // Here we'll just simulate it with a dummy URL
-      const dummyAudioUrl = '/audio/voice-message.mp3';
-      
-      await sendMessage(`Voice message (${durationSeconds}s)`, 'voice', dummyAudioUrl);
-      
-      // Update the media object to include duration
-      setMessages(prev => {
-        const contactMessages = prev[selectedContactId!] || [];
-        const lastMessage = contactMessages[contactMessages.length - 1];
-        
-        if (lastMessage && lastMessage.type === 'voice') {
-          const updatedMessage = {
-            ...lastMessage,
-            media: {
-              ...lastMessage.media!,
-              duration: durationSeconds
-            }
-          };
-          
-          return {
-            ...prev,
-            [selectedContactId!]: [
-              ...contactMessages.slice(0, -1),
-              updatedMessage
-            ]
-          };
-        }
-        
-        return prev;
-      });
-    } catch (error) {
-      console.error('Error sending voice message:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to send voice message",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const addReaction = async (messageId: string, emoji: string) => {
-    if (!selectedContactId) return;
-    
-    try {
-      const timestamp = new Date().toISOString();
-      
-      // Add reaction to state (optimistic update)
-      setMessages(prev => {
-        const contactMessages = prev[selectedContactId] || [];
-        const updatedMessages = contactMessages.map(msg => {
-          if (msg.id === messageId) {
-            // Check if reaction already exists
-            const existingReaction = msg.reactions?.find(
-              r => r.emoji === emoji && r.userId === 'current-user'
-            );
-            
-            if (existingReaction) {
-              // Remove existing reaction
-              return {
-                ...msg,
-                reactions: msg.reactions?.filter(
-                  r => !(r.emoji === emoji && r.userId === 'current-user')
-                ) || []
-              };
-            } else {
-              // Add new reaction
-              const newReaction: Reaction = {
-                emoji,
-                userId: 'current-user',
-                userName: 'You',
-                timestamp
-              };
-              
-              return {
-                ...msg,
-                reactions: [...(msg.reactions || []), newReaction]
-              };
-            }
-          }
-          return msg;
-        });
-        
-        return {
-          ...prev,
-          [selectedContactId]: updatedMessages
-        };
-      });
-      
-      // Update reaction in database
-      // (In a real app, this would be implemented)
-      
-    } catch (error) {
-      console.error('Error adding reaction:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to add reaction",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const deleteMessage = async (messageId: string) => {
-    if (!selectedContactId) return;
-    
-    try {
-      // Remove message from state (optimistic update)
-      setMessages(prev => {
-        const contactMessages = prev[selectedContactId] || [];
-        
-        return {
-          ...prev,
-          [selectedContactId]: contactMessages.filter(msg => msg.id !== messageId)
-        };
-      });
-      
-      // Delete from database
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Message deleted successfully",
-      });
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      
-      // Restore message (revert optimistic update)
-      toast({
-        title: "Error",
-        description: "Failed to delete message",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const forwardMessage = async (messageId: string, contactIds: string[]) => {
-    if (!selectedContactId) return;
-    
-    try {
-      // Get the message to forward
-      const contactMessages = messages[selectedContactId] || [];
-      const messageToForward = contactMessages.find(msg => msg.id === messageId);
-      
-      if (!messageToForward) {
-        throw new Error('Message not found');
-      }
-      
-      // Forward to each selected contact
-      for (const contactId of contactIds) {
-        const timestamp = new Date().toISOString();
-        
-        // Create forwarded message
-        const forwardedMessage: Message = {
-          id: uuidv4(),
-          content: messageToForward.content,
-          timestamp,
-          type: messageToForward.type,
-          status: 'sending',
-          sender: 'You',
-          isOutbound: true,
-          reactions: [],
-          media: messageToForward.media
-        };
-        
-        // Add message to state
-        setMessages(prev => {
-          const targetContactMessages = prev[contactId] || [];
-          return {
-            ...prev,
-            [contactId]: [...targetContactMessages, forwardedMessage]
-          };
-        });
-        
-        // Update message status to sent after a delay
-        setTimeout(() => {
-          setMessages(prev => {
-            const targetContactMessages = prev[contactId] || [];
-            const updatedMessages = targetContactMessages.map(msg => {
-              if (msg.id === forwardedMessage.id) {
-                return { ...msg, status: 'sent' as MessageStatus };
-              }
-              return msg;
-            });
-            
-            return {
-              ...prev,
-              [contactId]: updatedMessages
-            };
-          });
-        }, 1000);
-      }
-      
-      toast({
-        title: "Success",
-        description: `Message forwarded to ${contactIds.length} contacts`,
-      });
-    } catch (error) {
-      console.error('Error forwarding message:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to forward message",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // UI actions
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen(prev => !prev);
-  }, []);
-  
-  const changeWallpaper = (wallpaperUrl: string) => {
-    setWallpaper(wallpaperUrl);
-  };
-  
-  const toggleSound = () => {
-    setSoundEnabled(prev => !prev);
-  };
-  
-  const toggleAssistant = () => {
-    setIsAssistantActive(prev => !prev);
-  };
-  
-  // Settings actions
-  const updateSettings = (newSettings: Partial<ConversationSettings>) => {
-    setSettings(prev => ({
-      ...prev,
-      ...newSettings
-    }));
-  };
-  
-  const clearChat = async (contactId: string) => {
-    try {
-      // Clear messages from state
-      setMessages(prev => ({
-        ...prev,
-        [contactId]: [{
-          id: uuidv4(),
-          content: `Chat history cleared.`,
-          timestamp: new Date().toISOString(),
-          type: 'text',
-          status: 'sent',
-          sender: 'System',
-          isOutbound: true,
-          reactions: []
-        }]
-      }));
-      
-      // Delete from database
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .or(`sender.eq.${contactId},recipient_id.eq.${contactId}`);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Chat history cleared successfully",
-      });
-    } catch (error) {
-      console.error('Error clearing chat:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to clear chat history",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const exportChat = async (contactId: string) => {
-    try {
-      const contactMessages = messages[contactId] || [];
-      const contact = contacts.find(c => c.id === contactId);
-      
-      if (!contact) {
-        throw new Error('Contact not found');
-      }
-      
-      // Prepare export data
-      const exportData = {
-        contact: {
-          name: contact.name,
-          type: contact.type,
-          id: contact.id
-        },
-        messages: contactMessages.map(msg => ({
-          content: msg.content,
-          timestamp: msg.timestamp,
-          sender: msg.sender,
-          type: msg.type
-        })),
-        exportedAt: new Date().toISOString()
-      };
-      
-      // Convert to JSON
-      const jsonData = JSON.stringify(exportData, null, 2);
-      
-      // Create download link
-      const blob = new Blob([jsonData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create and click download link
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `chat-with-${contact.name.replace(/\s+/g, '-')}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Success",
-        description: `Chat history with ${contact.name} exported successfully`,
-      });
-    } catch (error) {
-      console.error('Error exporting chat:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to export chat history",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Search functions
-  const searchContacts = (query: string): Contact[] => {
-    if (!query.trim()) return [];
-    
-    const lowercaseQuery = query.toLowerCase();
-    return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(lowercaseQuery) ||
-      contact.phone.toLowerCase().includes(lowercaseQuery) ||
-      contact.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery))
-    );
-  };
-  
-  const searchMessages = (contactId: string, query: string): Message[] => {
-    if (!query.trim()) return [];
-    
-    const contactMessages = messages[contactId] || [];
-    const lowercaseQuery = query.toLowerCase();
-    
-    return contactMessages.filter(message => 
-      message.content.toLowerCase().includes(lowercaseQuery)
-    );
-  };
-  
-  // Create conversations from contacts and messages for compatibility
-  const conversations: Conversation[] = useMemo(() => {
-    return contacts.map(contact => {
-      const contactMessages = messages[contact.id] || [];
-      const lastMsg = contactMessages.length > 0 ? 
-        contactMessages[contactMessages.length - 1] : 
-        { content: "No messages", timestamp: new Date().toISOString(), isOutbound: true, status: "sent" as MessageStatus };
-      
-      return {
-        id: contact.id,
-        contact,
-        lastMessage: {
-          content: lastMsg.content,
-          timestamp: lastMsg.timestamp,
-          isOutbound: lastMsg.isOutbound,
-          isRead: lastMsg.status === 'read'
-        },
-        status: contact.isOnline ? 'online' : 'offline',
-        chatType: contact.type,
-        tags: contact.tags,
-        assignedTo: undefined
-      };
-    });
-  }, [contacts, messages]);
-  
-  // Add filtered conversations for compatibility
-  const filteredConversations = useMemo(() => {
-    // Simple filtering implementation
-    return conversations.filter(convo => 
-      (contactFilter === 'all' || convo.chatType === contactFilter) &&
-      (!searchTerm || convo.contact.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [conversations, contactFilter, searchTerm]);
-  
-  // Add grouped conversations for compatibility
-  const groupedConversations = useMemo(() => {
-    const groups: Record<string, Conversation[]> = {};
-    filteredConversations.forEach(convo => {
-      const groupName = convo.chatType.charAt(0).toUpperCase() + convo.chatType.slice(1);
-      if (!groups[groupName]) {
-        groups[groupName] = [];
-      }
-      groups[groupName].push(convo);
-    });
-    return groups;
-  }, [filteredConversations]);
-  
-  // Find active conversation based on selectedContactId
-  const activeConversation = useMemo(() => {
-    if (!selectedContactId) return null;
-    return conversations.find(convo => convo.id === selectedContactId) || null;
-  }, [conversations, selectedContactId]);
-  
-  // Add missing handler functions
-  const setActiveConversation = (conversation: Conversation) => {
-    selectContact(conversation.id);
-  };
-  
-  const handleSendMessage = (content: string, type: MessageType = 'text', mediaUrl?: string) => {
-    return sendMessage(content, type, mediaUrl);
-  };
-  
-  const handleVoiceMessageSent = (durationSeconds: number) => {
-    return sendVoiceMessage(durationSeconds);
-  };
-  
-  const handleDeleteConversation = async (conversationId: string) => {
-    try {
-      // Implement basic delete functionality
-      toast({
-        title: "Success",
-        description: "Conversation deleted successfully",
-      });
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error deleting conversation:', error);
-      toast({
-        title: "Error", 
-        description: "Failed to delete conversation"
-      });
-      return Promise.reject(error);
-    }
-  };
-  
-  const handleArchiveConversation = async (conversationId: string) => {
-    return archiveContact(conversationId);
-  };
-  
-  const handleAddTag = async (conversationId: string, tag: string) => {
-    try {
-      // Implement basic tag functionality
-      const contact = contacts.find(c => c.id === conversationId);
-      if (contact) {
-        setContacts(prev => prev.map(c => {
-          if (c.id === conversationId) {
-            return { ...c, tags: [...c.tags, tag] };
-          }
-          return c;
-        }));
-      }
-      return Promise.resolve();
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  };
-  
-  const handleAssignConversation = async (conversationId: string, assignee: string) => {
-    // Implement basic assign functionality
-    toast({
-      title: "Success",
-      description: `Conversation assigned to ${assignee}`,
-    });
-    return Promise.resolve();
-  };
-  
-  const resetAllFilters = () => {
-    setContactFilter('all');
-    setSearchTerm('');
-    setDateRange(undefined);
-    setAssigneeFilter('');
-    setTagFilter('');
   };
 
-  // Handle adding a contact
-  const handleAddContact = async (contact: Partial<Contact>) => {
-    try {
-      // First, add the contact to the database
-      let table;
-      if (contact.type === 'client') {
-        table = 'clients';
-      } else if (contact.type === 'lead') {
-        table = 'leads';
-      } else {
-        table = 'team_members';
-      }
-      
-      // Create a new ID if one is not provided
-      const contactId = contact.id || uuidv4();
-      
-      // Create new contact
-      const { error } = await supabase
-        .from(table)
-        .insert({
-          id: contactId,
-          name: contact.name,
-          phone: contact.phone,
-          tags: contact.tags || [],
-          created_at: new Date().toISOString()
-        });
-        
-      if (error) throw error;
-      
-      // Add the new contact to our local state
-      const newContact: Contact = {
-        id: contactId,
-        name: contact.name || 'New Contact',
-        avatar: contact.avatar || '',
-        phone: contact.phone || '',
-        type: contact.type || 'client',
-        isOnline: false,
-        lastSeen: new Date().toISOString(),
-        role: contact.type === 'team' ? 'Team Member' : contact.type === 'client' ? 'Client' : 'Lead',
-        isStarred: false,
-        isMuted: false,
-        isArchived: false,
-        isBlocked: false,
-        tags: contact.tags || []
-      };
-      
-      setContacts(prev => [...prev, newContact]);
-      
-      // Create an empty message array for the new contact
-      setMessages(prev => ({
-        ...prev,
-        [contactId]: [{
-          id: uuidv4(),
-          content: `Chat started with ${newContact.name}`,
-          timestamp: new Date().toISOString(),
-          type: 'text',
-          status: 'sent',
-          sender: 'System',
-          isOutbound: true,
-          reactions: []
-        }]
-      }));
-      
-      // Select the new contact
-      setSelectedContactId(contactId);
-      
-      toast({
-        title: "Success",
-        description: `Added new contact: ${newContact.name}`,
-      });
-      
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error adding contact:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add contact",
-        variant: "destructive",
-      });
-      return Promise.reject(error);
+  const handleVoiceMessageSent = (durationInSeconds: number) => {
+    console.log(
+      `Voice message sent with duration: ${durationInSeconds} seconds`
+    );
+  };
+
+  const handleDeleteConversation = (conversationId: string) => {
+    setConversations((prevConversations) =>
+      prevConversations.filter((c) => c.id !== conversationId)
+    );
+    setActiveConversation(null);
+  };
+
+  const handleArchiveConversation = (
+    conversationId: string,
+    isArchived: boolean
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) =>
+        c.id === conversationId ? { ...c, isArchived: isArchived } : c
+      )
+    );
+  };
+
+  const handleAddReaction = (messageId: string, emoji: string) => {
+    console.log(`Reaction added: ${emoji} to message ${messageId}`);
+  };
+
+  const handleReplyToMessage = (message: Message) => {
+    setIsReplying(true);
+    setReplyToMessage(message);
+  };
+
+  const handleCancelReply = () => {
+    setIsReplying(false);
+    setReplyToMessage(null);
+  };
+
+  const handleUseCannedReply = (reply: string) => {
+    if (replyToMessage) {
+      handleSendMessage(`${replyToMessage.content} \n ${reply}`);
+      handleCancelReply();
+    } else {
+      handleSendMessage(reply);
     }
   };
-  
-  // Handle reply to message
-  const handleReplyToMessage = (message: Message) => {
-    setReplyTo(message);
+
+  const handleRequestAIAssistance = async (prompt: string): Promise<string> => {
+    console.log(`Requesting AI assistance with prompt: ${prompt}`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return `AI response for: ${prompt}`;
   };
-  
-  // Handle cancel reply
-  const handleCancelReply = () => {
-    setReplyTo(null);
+
+  const handleAddTag = (conversationId: string, tag: string) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) =>
+        c.id === conversationId ? { ...c, tags: [...(c.tags || []), tag] } : c
+      )
+    );
   };
-  
-  // Include these additional properties in the context value
-  const contextValue: ConversationContextType = {
+
+  const handleAssignConversation = (conversationId: string, assignee: string) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((c) =>
+        c.id === conversationId ? { ...c, assignedTo: assignee } : c
+      )
+    );
+  };
+
+  const handleAddContact = async (contact: Partial<Contact>) => {
+    if (!contact.name || !contact.phone || !contact.type) {
+      console.error('Name, phone, and type are required to add a contact.');
+      return;
+    }
+
+    const newContact: Contact = {
+      id: uuidv4(),
+      name: contact.name,
+      phone: contact.phone,
+      type: contact.type,
+      avatar: contact.avatar || '',
+      isOnline: false,
+      lastSeen: new Date().toISOString(),
+      tags: contact.tags || [],
+    };
+
+    setContacts((prevContacts) => [...prevContacts, newContact]);
+  };
+
+  const deleteMessage = (messageId: string) => {
+    setMessages((prevMessages) =>
+      prevMessages.filter((message) => message.id !== messageId)
+    );
+  };
+
+  const addReaction = (messageId: string, emoji: string) => {
+    setMessages((prevMessages) =>
+      prevMessages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              reactions: [
+                ...(message.reactions || []),
+                {
+                  emoji,
+                  userId: user?.id || 'temp-user',
+                  userName: user?.name || 'You',
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            }
+          : message
+      )
+    );
+  };
+
+  const resetAllFilters = () => {
+    setChatTypeFilter('all');
+    setSearchTerm('');
+    setDateRange(undefined);
+    setAssigneeFilter(undefined);
+    setTagFilter(undefined);
+  };
+
+  const value = {
+    conversations,
+    activeConversation,
+    messages,
     contacts,
     selectedContactId,
     contactFilter,
     searchTerm,
-    messages,
-    isTyping,
-    replyTo,
-    wallpaper,
-    soundEnabled,
     isSidebarOpen,
+    isTyping,
+    isReplying,
+    replyToMessage,
+    cannedReplies,
     selectedDevice,
-    isAssistantActive,
-    settings,
-    selectContact,
-    setContactFilter,
-    setSearchTerm,
-    toggleContactStar,
-    muteContact,
-    archiveContact,
-    blockContact, 
-    reportContact,
-    sendMessage,
-    sendVoiceMessage,
-    addReaction,
-    deleteMessage,
-    forwardMessage,
-    setReplyTo,
-    toggleSidebar,
-    changeWallpaper,
-    toggleSound,
-    setSelectedDevice,
-    toggleAssistant,
-    updateSettings,
-    clearChat,
-    exportChat,
-    searchContacts,
-    searchMessages,
-    messagesEndRef,
-    
-    // Add compatibility properties
-    filteredConversations,
-    groupedConversations,
-    activeConversation,
-    chatTypeFilter: contactFilter,
+    aiAssistantActive,
+    chatTypeFilter,
     dateRange,
     assigneeFilter,
     tagFilter,
+    filteredConversations,
+    groupedConversations,
+    messagesEndRef,
+    selectContact,
+    setContactFilter,
+    setSearchTerm,
     setActiveConversation,
     setIsSidebarOpen,
-    setChatTypeFilter: setContactFilter,
+    setIsTyping,
+    setReplyToMessage,
+    setSelectedDevice,
+    setAiAssistantActive,
+    setChatTypeFilter,
     setDateRange,
     setAssigneeFilter,
     setTagFilter,
@@ -1631,50 +509,31 @@ export const ConversationProvider: React.FC<{children: ReactNode}> = ({ children
     handleVoiceMessageSent,
     handleDeleteConversation,
     handleArchiveConversation,
-    handleAddTag,
-    handleAssignConversation,
-    handleAddReaction: addReaction,
+    handleAddReaction,
     handleReplyToMessage,
     handleCancelReply,
+    handleUseCannedReply,
+    handleRequestAIAssistance,
+    handleAddTag,
+    handleAssignConversation,
     handleAddContact,
-    isReplying: !!replyTo,
-    replyToMessage: replyTo,
-    cannedReplies: [
-      { id: '1', title: 'Greeting', content: 'Hello! How can I assist you today?' },
-      { id: '2', title: 'Thanks', content: 'Thank you for your message. We appreciate your business!' },
-      { id: '3', title: 'Follow up', content: 'I wanted to follow up on our previous conversation.' }
-    ],
-    aiAssistantActive,
-    setAiAssistantActive,
-    handleUseCannedReply: (replyId: string) => {
-      const reply = [
-        { id: '1', title: 'Greeting', content: 'Hello! How can I assist you today?' },
-        { id: '2', title: 'Thanks', content: 'Thank you for your message. We appreciate your business!' },
-        { id: '3', title: 'Follow up', content: 'I wanted to follow up on our previous conversation.' }
-      ].find(r => r.id === replyId);
-      
-      if (reply && selectedContactId) {
-        sendMessage(reply.content, 'text');
-      }
-    },
-    handleRequestAIAssistance: async (prompt: string) => {
-      // Simulate AI assistance with a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      return "This is a simulated AI response based on your request: " + prompt;
-    }
+    deleteMessage,
+    addReaction,
   };
 
   return (
-    <ConversationContext.Provider value={contextValue}>
+    <ConversationContext.Provider value={value}>
       {children}
     </ConversationContext.Provider>
   );
 };
 
-export const useConversation = () => {
+export const useConversation = (): ConversationContextType => {
   const context = useContext(ConversationContext);
   if (!context) {
-    throw new Error('useConversation must be used within a ConversationProvider');
+    throw new Error(
+      'useConversation must be used within a ConversationProvider'
+    );
   }
   return context;
 };

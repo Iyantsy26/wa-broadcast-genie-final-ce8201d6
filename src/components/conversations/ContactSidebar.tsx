@@ -37,7 +37,8 @@ const ContactSidebar = () => {
     messages,
     selectContact,
     setContactFilter,
-    setSearchTerm
+    setSearchTerm,
+    handleAddContact
   } = useConversation();
   
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
@@ -277,6 +278,7 @@ const ContactSidebar = () => {
       <NewContactDialog
         open={showNewContactDialog}
         onOpenChange={setShowNewContactDialog}
+        onAddContact={handleAddContact}
       />
     </div>
   );

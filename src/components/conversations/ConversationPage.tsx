@@ -12,7 +12,6 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
-import { ChatType } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
@@ -55,9 +54,43 @@ const ConversationPage = () => {
     handleAddContact
   } = useConversation();
 
+  // Adapter function to bridge the interface between what MessageInput expects
+  // and what our ConversationContext provides
+  const sendMessageAdapter = (content: string, file: File | null) => {
+    if (handleSendMessage) {
+      // If file is provided, determine message type
+      if (file) {
+        const fileType = file.type.split('/')[0];
+        const mediaType = fileType === 'image' ? 'image' : 
+                          fileType === 'video' ? 'video' : 'document';
+        
+        // For files, we need to convert them to URLs or handle upload
+        const mediaUrl = URL.createObjectURL(file);
+        
+        return handleSendMessage(content, mediaType, mediaUrl);
+      }
+      
+      // For text messages
+      return handleSendMessage(content);
+    }
+    return Promise.resolve();
+  };
+
   // Define dummy pinConversation function to satisfy the interface
   const pinConversation = (conversationId: string) => {
     console.log('Pin conversation not implemented:', conversationId);
+  };
+
+  // Adapter function for AddContactButton
+  const addContactAdapter = (name: string, phone: string, type: 'team' | 'client' | 'lead') => {
+    if (handleAddContact) {
+      return handleAddContact({
+        name,
+        phone,
+        type,
+        tags: []
+      });
+    }
   };
 
   return (
@@ -70,7 +103,7 @@ const ConversationPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AddContactButton onAddContact={handleAddContact} />
+          <AddContactButton onAddContact={addContactAdapter} />
           <Button 
             variant="outline" 
             onClick={() => setAiAssistantActive(!aiAssistantActive)}
@@ -112,16 +145,16 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ConversationHeader 
-                conversation={activeConversation}
+                title={activeConversation.contact.name}
+                subtitle={activeConversation.contact.isOnline ? 'Online' : 'Offline'}
+                avatar={activeConversation.contact.avatar}
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
-                messages={messages} 
-                contactName={activeConversation.contact.name}
+                messages={messages || []} 
+                contact={activeConversation.contact}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}
-                onReaction={handleAddReaction}
-                onReply={handleReplyToMessage}
               />
               <div className="flex-shrink-0">
                 {isReplying && replyToMessage && (
@@ -140,11 +173,10 @@ const ConversationPage = () => {
                   onSelectReply={handleUseCannedReply}
                 />
                 <MessageInput 
-                  onSendMessage={handleSendMessage}
+                  onSendMessage={sendMessageAdapter}
                   onVoiceMessageSent={handleVoiceMessageSent}
                   replyTo={replyToMessage}
                   onCancelReply={handleCancelReply}
-                  onRequestAIAssistance={handleRequestAIAssistance}
                 />
               </div>
             </>
@@ -163,10 +195,18 @@ const ConversationPage = () => {
         )}
         
         {aiAssistantActive && (
-          <AIAssistantPanel 
-            onRequestAIAssistance={handleRequestAIAssistance}
-            onClose={() => setAiAssistantActive(false)}
-          />
+          <div className="w-80 border rounded-lg bg-white p-4">
+            <h3 className="text-lg font-medium mb-4">AI Assistant</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Get AI-powered assistance for your conversations.
+            </p>
+            <Button 
+              className="w-full" 
+              onClick={() => setAiAssistantActive(false)}
+            >
+              Close
+            </Button>
+          </div>
         )}
       </div>
     </div>

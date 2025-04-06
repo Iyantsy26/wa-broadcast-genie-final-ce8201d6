@@ -67,7 +67,6 @@ export interface ConversationSettings {
   fontSize: 'small' | 'medium' | 'large';
 }
 
-// Add the missing Conversation interface
 export interface Conversation {
   id: string;
   contact: Contact;
@@ -82,9 +81,11 @@ export interface Conversation {
   tags?: string[];
   assignedTo?: string;
   isEncrypted?: boolean;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  unreadCount?: number;
 }
 
-// Add Client interface
 export interface Client {
   id: string;
   name: string;
@@ -101,7 +102,6 @@ export interface Client {
   referred_by?: string;
 }
 
-// Add Lead interface
 export interface Lead {
   id: string;
   name: string;
