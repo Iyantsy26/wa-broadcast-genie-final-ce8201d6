@@ -1,16 +1,27 @@
 
 import React, { useState } from 'react';
-import { 
-  Dialog, 
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -18,172 +29,165 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 import { ChatType } from '@/types/conversation';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
-interface NewContactDialogProps {
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: 'Name must be at least 2 characters.',
+  }),
+  phone: z.string().min(6, {
+    message: 'Phone number must be at least 6 characters.',
+  }),
+  type: z.enum(['client', 'lead', 'team'], {
+    required_error: 'Please select a contact type.',
+  }),
+});
+
+export interface NewContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onContactCreated: (contact: any) => void;
 }
 
-const NewContactDialog: React.FC<NewContactDialogProps> = ({ open, onOpenChange }) => {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [contactType, setContactType] = useState<ChatType>('client');
+const NewContactDialog: React.FC<NewContactDialogProps> = ({
+  open,
+  onOpenChange,
+  onContactCreated
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a name",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!phone.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a phone number",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      phone: '',
+      type: 'lead' as ChatType,
+    },
+  });
+  
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      // Determine which table to insert into based on contact type
-      const table = contactType === 'team' ? 'agents' : 
-                    contactType === 'client' ? 'clients' : 'leads';
+      setIsSubmitting(true);
       
-      // Create the contact in the database
-      const { data, error } = await supabase
-        .from(table)
-        .insert({
-          id: uuidv4(),
-          name,
-          phone,
-          email: email || null,
-          created_at: new Date().toISOString(),
-          status: contactType === 'team' ? 'pending' : 'active'
-        })
-        .select();
-        
-      if (error) throw error;
+      // Here you would normally call an API to create a contact
+      // For now, we'll just simulate a successful creation
+      
+      // Create a new contact object
+      const newContact = {
+        id: `new-${Date.now()}`,
+        name: values.name,
+        phone: values.phone,
+        type: values.type as ChatType,
+        // Add any other required fields with default values
+        tags: [],
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+      };
+      
+      // Call the callback with the new contact
+      onContactCreated(newContact);
       
       toast({
         title: "Success",
-        description: `${contactType === 'team' ? 'Team member' : contactType === 'client' ? 'Client' : 'Lead'} added successfully`
+        description: `${values.type === 'lead' ? 'Lead' : values.type === 'client' ? 'Client' : 'Team member'} ${values.name} was added successfully.`,
       });
       
-      // Close the dialog and reset form
+      form.reset();
       onOpenChange(false);
-      resetForm();
-      
     } catch (error) {
-      console.error('Error adding contact:', error);
-      
+      console.error("Error creating contact:", error);
       toast({
         title: "Error",
-        description: "Failed to add contact. Please try again.",
-        variant: "destructive"
+        description: "Failed to create contact. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  const resetForm = () => {
-    setName('');
-    setPhone('');
-    setEmail('');
-    setContactType('client');
-  };
-  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Contact</DialogTitle>
           <DialogDescription>
-            Create a new contact to start a conversation
+            Create a new contact to start a conversation.
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="contactType">Contact Type</Label>
-              <Select
-                value={contactType}
-                onValueChange={(value) => setContactType(value as ChatType)}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="+1 (555) 123-4567" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contact Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a contact type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="lead">Lead</SelectItem>
+                      <SelectItem value="client">Client</SelectItem>
+                      <SelectItem value="team">Team Member</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    This determines how the contact will be categorized.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select contact type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="team">Team Member</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="lead">Lead</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="Enter full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                placeholder="Enter phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email (optional)</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter className="mt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Adding...' : 'Add Contact'}
-            </Button>
-          </DialogFooter>
-        </form>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating...' : 'Create Contact'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

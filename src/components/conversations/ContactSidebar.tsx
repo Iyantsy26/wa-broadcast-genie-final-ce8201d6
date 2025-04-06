@@ -36,8 +36,9 @@ const ContactSidebar = () => {
     searchTerm,
     messages,
     selectContact,
-    setContactFilter,
-    setSearchTerm
+    setContactFilter, // This was missing before
+    setSearchTerm,    // This was missing before
+    filterContacts
   } = useConversation();
   
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
@@ -81,6 +82,14 @@ const ContactSidebar = () => {
   const teamUnread = getUnreadCount('team');
   const clientUnread = getUnreadCount('client');
   const leadUnread = getUnreadCount('lead');
+
+  // Handle the new contact creation
+  const handleNewContactCreated = (contact: any) => {
+    // You could do something with the new contact here if needed
+    console.log('New contact created:', contact);
+    // Close the dialog
+    setShowNewContactDialog(false);
+  };
   
   return (
     <div className="w-80 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
@@ -277,6 +286,7 @@ const ContactSidebar = () => {
       <NewContactDialog
         open={showNewContactDialog}
         onOpenChange={setShowNewContactDialog}
+        onContactCreated={handleNewContactCreated}
       />
     </div>
   );

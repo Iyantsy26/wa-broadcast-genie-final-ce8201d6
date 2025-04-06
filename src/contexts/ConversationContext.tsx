@@ -14,6 +14,8 @@ interface ConversationContextType {
   isSidebarOpen: boolean;
   isAssistantActive: boolean;
   wallpaper: string | null;
+  contactFilter: ChatType | 'all';  // Added this
+  searchTerm: string;  // Added this
   messagesEndRef: React.RefObject<HTMLDivElement>;
   selectContact: (contactId: string) => void;
   toggleSidebar: () => void;
@@ -28,6 +30,8 @@ interface ConversationContextType {
     isOnlineOnly?: boolean,
     isUnreadOnly?: boolean
   ) => void;
+  setContactFilter: (filter: ChatType | 'all') => void;  // Added this
+  setSearchTerm: (term: string) => void;  // Added this
 }
 
 interface ConversationProviderProps {
@@ -47,6 +51,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAssistantActive, setIsAssistantActive] = useState(false);
   const [wallpaper, setWallpaper] = useState<string | null>(null);
+  const [contactFilter, setContactFilter] = useState<ChatType | 'all'>('all');  // Added this
+  const [searchTerm, setSearchTerm] = useState<string>('');  // Added this
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectContact = (contactId: string) => {
@@ -177,6 +183,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     // We would filter by unread here if we had that data
     
     setFilteredContacts(filtered);
+    setSearchTerm(searchQuery);
+    setContactFilter(type);
   };
 
   const value = {
@@ -189,6 +197,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     isSidebarOpen,
     isAssistantActive,
     wallpaper,
+    contactFilter,  // Added this
+    searchTerm,  // Added this
     messagesEndRef,
     selectContact,
     toggleSidebar,
@@ -198,6 +208,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setReplyTo,
     setWallpaper,
     filterContacts,
+    setContactFilter,  // Added this
+    setSearchTerm,  // Added this
   };
 
   return (

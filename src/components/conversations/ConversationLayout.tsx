@@ -47,7 +47,10 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
       
       {/* AI Assistant panel (when active) */}
       {isAssistantActive && (
-        <AIAssistantPanel />
+        <AIAssistantPanel 
+          onRequestAIAssistance={() => {}}
+          onClose={() => {}}
+        />
       )}
     </div>
   );
