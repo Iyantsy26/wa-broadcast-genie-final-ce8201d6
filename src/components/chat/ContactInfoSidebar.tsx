@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -54,15 +55,18 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
     }
   };
   
+  // Use conversation.contact.type instead of conversation.chatType
+  const contactType = conversation.contact.type;
+  
   const contactDetails = {
-    email: conversation.chatType === 'team' ? 'employee@company.com' : 
-           conversation.chatType === 'client' ? 'client@example.com' : 
+    email: contactType === 'team' ? 'employee@company.com' : 
+           contactType === 'client' ? 'client@example.com' : 
            'lead@prospect.com',
-    address: conversation.chatType === 'client' ? '123 Business St, New York, NY 10001' : null,
-    company: conversation.chatType === 'client' ? 'ABC Corporation' : 
-             conversation.chatType === 'lead' ? 'XYZ Prospects Inc.' : null,
-    website: conversation.chatType === 'client' ? 'www.abccorp.com' : null,
-    notes: conversation.chatType === 'lead' ? 'Interested in our premium service package.' : null,
+    address: contactType === 'client' ? '123 Business St, New York, NY 10001' : null,
+    company: contactType === 'client' ? 'ABC Corporation' : 
+             contactType === 'lead' ? 'XYZ Prospects Inc.' : null,
+    website: contactType === 'client' ? 'www.abccorp.com' : null,
+    notes: contactType === 'lead' ? 'Interested in our premium service package.' : null,
     firstContact: '2023-03-15',
     totalConversations: 23,
     sharedFiles: 8,
@@ -95,8 +99,8 @@ const ContactInfoSidebar: React.FC<ContactInfoSidebarProps> = ({
               
               <h3 className="text-xl font-semibold">{conversation.contact.name}</h3>
               
-              <Badge className={`mt-1 ${getTypeClass(conversation.chatType)}`}>
-                {getTypeLabel(conversation.chatType)}
+              <Badge className={`mt-1 ${getTypeClass(contactType)}`}>
+                {getTypeLabel(contactType)}
               </Badge>
               
               {conversation.contact.role && (

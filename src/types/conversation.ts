@@ -70,7 +70,12 @@ export interface ConversationSettings {
 export interface Conversation {
   id: string;
   contact: Contact;
-  lastMessage?: string;
+  lastMessage?: string | {
+    content: string;
+    timestamp: string;
+    isOutbound: boolean;
+    isRead: boolean;
+  };
   lastMessageTimestamp?: string;
   unreadCount?: number;
   isTyping?: boolean;
@@ -83,6 +88,7 @@ export interface Conversation {
   assignedTo?: string;
   status?: string;
   settings?: ConversationSettings;
+  chatType?: ChatType; // Added this property
 }
 
 export interface Lead {

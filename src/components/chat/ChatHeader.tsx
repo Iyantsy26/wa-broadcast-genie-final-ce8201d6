@@ -62,6 +62,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
     }
   };
   
+  // Use contact.type instead of conversation.chatType
+  const contactType = conversation.contact.type;
+  
   return (
     <div className="p-3 border-b flex justify-between items-center">
       <div className="flex items-center gap-3">
@@ -77,8 +80,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
             {conversation.contact.isOnline && (
               <span className="h-2 w-2 rounded-full bg-green-500"></span>
             )}
-            <Badge className={getTypeClass(conversation.chatType)} variant="secondary">
-              {getTypeLabel(conversation.chatType)}
+            <Badge className={getTypeClass(contactType)} variant="secondary">
+              {getTypeLabel(contactType)}
             </Badge>
             {conversation.contact.role && (
               <Badge variant="outline">{conversation.contact.role}</Badge>
@@ -107,7 +110,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
       </div>
       
       <div className="flex items-center gap-1">
-        {conversation.chatType === 'client' && (
+        {contactType === 'client' && (
           <>
             <Button variant="ghost" size="icon" title="Voice call">
               <Phone className="h-4 w-4" />

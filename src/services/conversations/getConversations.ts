@@ -1,5 +1,5 @@
 
-import { Conversation } from '@/types/conversation';
+import { Conversation, ChatType } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 
 export const getConversations = async (): Promise<Conversation[]> => {
@@ -58,6 +58,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
       const isClient = !!conv.client_id;
       const contactId = isClient ? conv.client_id : conv.lead_id;
       const contactInfo = isClient ? clients[contactId] : leads[contactId];
+      const chatType = isClient ? 'client' : 'lead';
       
       return {
         id: conv.id,
@@ -66,16 +67,13 @@ export const getConversations = async (): Promise<Conversation[]> => {
           name: contactInfo?.name || 'Unknown Contact',
           avatar: contactInfo?.avatar_url,
           phone: isClient ? '' : (contactInfo?.phone || ''),
-          type: isClient ? 'client' : 'lead'
+          type: isClient ? 'client' : 'lead',
+          tags: [] // Added empty tags array to satisfy the Contact type
         },
-        lastMessage: {
-          content: conv.last_message || '',
-          timestamp: conv.last_message_timestamp || conv.created_at,
-          isOutbound: false,
-          isRead: true
-        },
+        lastMessage: conv.last_message || '',
+        lastMessageTimestamp: conv.last_message_timestamp || conv.created_at,
         status: conv.status || 'new',
-        chatType: isClient ? 'client' : 'lead',
+        chatType: chatType,
         tags: conv.tags || [],
         assignedTo: conv.assigned_to
       };
