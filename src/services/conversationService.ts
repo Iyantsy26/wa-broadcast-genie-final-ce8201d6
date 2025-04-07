@@ -9,11 +9,17 @@ import { addTagToConversation, removeTag } from './conversations/tagOperations';
 import { assignConversation } from './conversations/assignOperations';
 import { translateMessage } from './conversations/translateMessage';
 import { generateAIResponse } from './conversations/generateAIResponse';
+import { sendAttachment } from './conversations/sendAttachment';
+import { sendVoiceMessage } from './conversations/sendVoiceMessage';
+import { sendLocationMessage } from './conversations/sendLocationMessage';
 
 export {
   getConversations,
   getMessages,
   sendMessage,
+  sendAttachment,
+  sendVoiceMessage,
+  sendLocationMessage,
   createConversation,
   deleteConversation,
   archiveConversation,

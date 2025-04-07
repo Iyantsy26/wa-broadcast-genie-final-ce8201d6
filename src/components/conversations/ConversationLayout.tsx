@@ -28,6 +28,7 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     sendLocation,
     addReaction,
     setReplyTo,
+    replyTo,
     requestAIAssistance
   } = useConversation();
   

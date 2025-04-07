@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
@@ -8,11 +9,14 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
+import { Bot, MessageSquarePlus, Settings } from 'lucide-react';
 import { ChatType, Contact } from '@/types/conversation';
 import MessageList from '../chat/MessageList';
 import MessageInput from '../chat/MessageInput';
 import ChatHeader from '../chat/ChatHeader';
 import { toast } from '@/hooks/use-toast';
+import CannedResponseManager from './inputs/CannedResponseManager';
+import AIAutoReply from './inputs/AIAutoReply';
 
 const ConversationPage = () => {
   const {
@@ -65,6 +69,15 @@ const ConversationPage = () => {
     '/backgrounds/chat-bg-2.jpg',
     '/backgrounds/chat-bg-3.jpg'
   ]);
+  
+  const [showCannedResponseManager, setShowCannedResponseManager] = useState(false);
+  const [showAutoReplySettings, setShowAutoReplySettings] = useState(false);
+  const [autoReplySettings, setAutoReplySettings] = useState({
+    enabled: false,
+    message: "Hello! I'm currently unavailable. My AI assistant will help you in the meantime. I'll respond personally as soon as I'm back.",
+    activationDelay: 15,
+    respondToAll: false
+  });
 
   const handleAddContact = (name: string, phone: string, type: ChatType) => {
     const newContact: Contact = {
@@ -101,6 +114,24 @@ const ConversationPage = () => {
     });
   };
 
+  const handleSaveCannedResponses = (responses: any[]) => {
+    // In a real app, this would save to backend/context
+    toast({
+      title: "Canned responses saved",
+      description: `${responses.length} responses saved successfully`,
+    });
+  };
+
+  const handleSaveAutoReplySettings = (settings: any) => {
+    setAutoReplySettings(settings);
+    toast({
+      title: settings.enabled ? "AI Auto-Reply enabled" : "AI Auto-Reply disabled",
+      description: settings.enabled 
+        ? `The assistant will activate after ${settings.activationDelay} minutes of inactivity` 
+        : "Auto responses have been disabled",
+    });
+  };
+
   return (
     <div className="flex flex-col space-y-4 h-full">
       <div className="flex-none flex justify-between items-center">
@@ -112,6 +143,25 @@ const ConversationPage = () => {
         </div>
         <div className="flex items-center gap-2">
           <AddContactButton onAddContact={handleAddContact} />
+          
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCannedResponseManager(true)}
+            className="flex items-center gap-1"
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+            <span>Manage Responses</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAutoReplySettings(true)}
+            className="flex items-center gap-1"
+          >
+            <Bot className="h-4 w-4" />
+            <span>Auto-Reply</span>
+          </Button>
+          
           <Button 
             variant="outline" 
             onClick={() => setAiAssistantActive(!aiAssistantActive)}
@@ -234,6 +284,21 @@ const ConversationPage = () => {
           />
         )}
       </div>
+      
+      {/* Dialog for managing canned responses */}
+      <CannedResponseManager
+        isOpen={showCannedResponseManager}
+        onClose={() => setShowCannedResponseManager(false)}
+        initialResponses={cannedResponses || []}
+        onSave={handleSaveCannedResponses}
+      />
+      
+      {/* Dialog for AI auto-reply settings */}
+      <AIAutoReply
+        isOpen={showAutoReplySettings}
+        onClose={() => setShowAutoReplySettings(false)}
+        onSave={handleSaveAutoReplySettings}
+      />
     </div>
   );
 };
