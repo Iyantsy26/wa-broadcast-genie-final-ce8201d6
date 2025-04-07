@@ -1,117 +1,246 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send } from 'lucide-react';
-import { Message } from '@/types/conversation';
-import EmojiPicker from './inputs/EmojiPicker';
+import { Smile, Paperclip, Send, Mic, MapPin, X } from 'lucide-react';
 import FileUploader from './inputs/FileUploader';
 import VoiceRecorder from './inputs/VoiceRecorder';
-import FilePreview from './inputs/FilePreview';
+import EmojiPicker from './inputs/EmojiPicker';
 import ReplyPreview from './inputs/ReplyPreview';
+import CannedResponseSelector from './CannedResponseSelector';
+import AIResponseGenerator from './inputs/AIResponseGenerator';
+import { Message } from '@/types/conversation';
+import FilePreview from './inputs/FilePreview';
 
 interface MessageInputBarProps {
-  replyTo?: Message | null;
-  onCancelReply: () => void;
   onSendMessage: (content: string, file: File | null) => void;
   onSendVoiceMessage: (durationInSeconds: number) => void;
-  onReaction?: (messageId: string, emoji: string) => void;
   onReply?: (message: Message) => void;
+  onCancelReply: () => void;
+  onReaction?: (messageId: string, emoji: string) => void;
   onLocationShare?: () => void;
   deviceId: string;
 }
 
 const MessageInputBar: React.FC<MessageInputBarProps> = ({
-  replyTo,
-  onCancelReply,
   onSendMessage,
   onSendVoiceMessage,
+  onReply,
+  onCancelReply,
   onLocationShare,
   deviceId
 }) => {
-  const [messageInput, setMessageInput] = useState('');
+  const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [showFilePreview, setShowFilePreview] = useState(false);
-  const [activeAttachmentType, setActiveAttachmentType] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showFileUploader, setShowFileUploader] = useState(false);
+  const [aiAssistanceActive, setAIAssistanceActive] = useState(false);
+  const [showCannedResponses, setShowCannedResponses] = useState(false);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const handleAIAssistanceToggle = () => {
+    setAIAssistanceActive(!aiAssistanceActive);
+  };
+
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
+    setShowFileUploader(false);
+  };
 
   const handleSendMessage = () => {
-    if (messageInput.trim() || selectedFile) {
-      onSendMessage(messageInput, selectedFile);
-      setMessageInput('');
+    if ((message.trim() || selectedFile) && !isRecording) {
+      onSendMessage(message, selectedFile);
+      setMessage('');
       setSelectedFile(null);
-      setShowFilePreview(false);
-      setActiveAttachmentType(null);
+      textAreaRef.current?.focus();
     }
   };
 
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setShowFilePreview(true);
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    setMessageInput(prev => prev + emoji);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
+  const handleInsertEmoji = (emoji: string) => {
+    setMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    textAreaRef.current?.focus();
+  };
+
+  const handleLocationShare = () => {
+    if (onLocationShare) {
+      onLocationShare();
+    } else {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            console.log(`Lat: ${position.coords.latitude}, Long: ${position.coords.longitude}`);
+            // Handle location sharing
+          },
+          error => {
+            console.error('Error getting location:', error);
+          }
+        );
+      }
+    }
+  };
+  
+  const handleUseCannedResponse = (responseText: string) => {
+    setMessage(responseText);
+    setShowCannedResponses(false);
+    textAreaRef.current?.focus();
+  };
+  
+  const handleAIResponseGenerated = (response: string) => {
+    setMessage(response);
+    setAIAssistanceActive(false);
+    textAreaRef.current?.focus();
+  };
+
   return (
-    <div className="p-3 border-t">
-      {replyTo && (
-        <ReplyPreview 
-          replyTo={replyTo} 
-          onCancelReply={onCancelReply} 
+    <div className="bg-background border-t p-3 space-y-2">
+      {/* Reply preview is visible when replying to a message */}
+      <ReplyPreview onCancel={onCancelReply} />
+      
+      {/* AI assistance panel */}
+      {aiAssistanceActive && (
+        <AIResponseGenerator
+          currentMessage={message}
+          onResponseGenerated={handleAIResponseGenerated}
+          onClose={() => setAIAssistanceActive(false)}
         />
       )}
       
-      <div className="flex items-center gap-2">
-        <FileUploader 
-          onFileSelect={handleFileSelect}
-          onLocationShare={onLocationShare}
-          activeAttachmentType={activeAttachmentType}
-          setActiveAttachmentType={setActiveAttachmentType}
+      {/* File preview */}
+      {selectedFile && (
+        <FilePreview
+          file={selectedFile}
+          onRemove={() => setSelectedFile(null)}
         />
-        
-        <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-        
+      )}
+      
+      {/* Voice recorder UI */}
+      {isRecording && (
+        <VoiceRecorder
+          onFinish={onSendVoiceMessage}
+          onCancel={() => setIsRecording(false)}
+        />
+      )}
+      
+      {/* File uploader UI */}
+      {showFileUploader && (
+        <FileUploader
+          onFileSelected={handleFileChange}
+          onClose={() => setShowFileUploader(false)}
+        />
+      )}
+      
+      {/* Emoji picker */}
+      {showEmojiPicker && (
+        <div className="absolute bottom-16 right-0">
+          <EmojiPicker onEmojiSelected={handleInsertEmoji} />
+        </div>
+      )}
+      
+      {/* Canned responses */}
+      {showCannedResponses && (
+        <CannedResponseSelector
+          onSelectResponse={handleUseCannedResponse}
+          onClose={() => setShowCannedResponses(false)}
+        />
+      )}
+      
+      <div className="flex items-end gap-2">
+        <div className="flex space-x-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowFileUploader(true)}
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+          
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => setIsRecording(true)}
+          >
+            <Mic className="h-5 w-5" />
+          </Button>
+          
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={handleLocationShare}
+          >
+            <MapPin className="h-5 w-5" />
+          </Button>
+          
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <Smile className="h-5 w-5" />
+          </Button>
+        </div>
+
         <Textarea
+          ref={textAreaRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="min-h-[40px] max-h-[120px] flex-1 resize-none"
-          value={messageInput}
-          onChange={(e) => setMessageInput(e.target.value)}
-          onKeyDown={handleKeyPress}
+          className="resize-none min-h-[40px] max-h-32"
           rows={1}
         />
-        
-        <VoiceRecorder 
-          onRecordingComplete={onSendVoiceMessage}
-          disabled={false}
-        />
-        
-        <Button 
-          size="icon" 
-          onClick={handleSendMessage}
-          disabled={!messageInput.trim() && !selectedFile}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+
+        <div className="flex space-x-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowCannedResponses(true)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 10c0 3.976-7 13-7 13S5 13.976 5 10c0-3.866 3.134-7 7-7s7 3.134 7 7Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </Button>
+          
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={handleAIAssistanceToggle}
+            className={aiAssistanceActive ? "text-primary" : ""}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a5 5 0 0 0-2.5 9.33v4.67h5V11.33A5 5 0 0 0 12 2Z" />
+              <path d="M9.5 16v4h5v-4" />
+              <path d="M5.5 13a3.5 3.5 0 0 0 3.5 3.5" />
+              <path d="M15 16.5a3.5 3.5 0 0 0 3.5-3.5" />
+              <path d="M9.5 21h5" />
+            </svg>
+          </Button>
+          
+          <Button
+            type="button"
+            onClick={handleSendMessage}
+            disabled={!message.trim() && !selectedFile}
+            className="rounded-full"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
-      
-      {selectedFile && showFilePreview && (
-        <FilePreview 
-          file={selectedFile}
-          type={activeAttachmentType}
-          onRemove={() => {
-            setSelectedFile(null);
-            setShowFilePreview(false);
-          }}
-        />
-      )}
     </div>
   );
 };

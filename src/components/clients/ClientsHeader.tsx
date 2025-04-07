@@ -10,14 +10,13 @@ interface ClientsHeaderProps {
 const ClientsHeader: React.FC<ClientsHeaderProps> = ({ onAddClient }) => {
   return (
     <div className="flex justify-between items-center">
-      <h1 className="text-3xl font-bold">CLIENTS</h1>
+      <h2 className="text-2xl font-bold tracking-tight">Clients</h2>
       <Button 
-        className="bg-green-600 hover:bg-green-700" 
-        size="lg"
+        className="bg-primary hover:bg-primary/90" 
         onClick={onAddClient}
       >
-        <Plus className="mr-2 h-5 w-5" />
-        Add New Client
+        <Plus className="mr-2 h-4 w-4" />
+        Add Client
       </Button>
     </div>
   );

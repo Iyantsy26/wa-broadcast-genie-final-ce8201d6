@@ -17,6 +17,7 @@ import {
   Pencil,
   Trash,
   UserRound,
+  MessageSquare
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -33,7 +34,7 @@ export interface ClientsTableProps {
   searchTerm: string;
   statusFilter: string;
   onViewClient: (client: Client) => void;
-  onMessageClient: (client: Client) => Promise<void>; // Added this prop
+  onMessageClient: (client: Client) => Promise<void>;
   formatDate: (dateString?: string) => string;
 }
 
@@ -134,7 +135,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             </div>
           </TableHead>
           <TableHead>Renewal</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="text-right">Message</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -165,55 +166,16 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
               {client.renewal_date ? formatDate(client.renewal_date) : "—"}
             </TableCell>
             <TableCell className="text-right">
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewClient(client);
-                  }}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onViewClient(client);
-                    }}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onMessageClient(client);
-                    }}>
-                      {/* Using message icon directly as we're removing the icon components */}
-                      <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                      Message
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={e => e.stopPropagation()}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={e => e.stopPropagation()}
-                      className="text-red-600"
-                    >
-                      <Trash className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMessageClient(client);
+                }}
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
             </TableCell>
           </TableRow>
         ))}
