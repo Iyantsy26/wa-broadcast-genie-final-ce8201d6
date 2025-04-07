@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
@@ -25,7 +24,7 @@ const ConversationPage = () => {
     isTyping,
     isReplying,
     replyTo,
-    cannedResponses = [], // Provide a default empty array
+    cannedResponses = [],
     selectedDevice,
     aiAssistantActive,
     chatTypeFilter,
@@ -60,15 +59,13 @@ const ConversationPage = () => {
     setWallpaper
   } = useConversation();
 
-  // Sample wallpapers for demonstration
   const [wallpapers] = useState([
-    null, // Default (no wallpaper)
+    null,
     '/backgrounds/chat-bg-1.jpg',
     '/backgrounds/chat-bg-2.jpg',
     '/backgrounds/chat-bg-3.jpg'
   ]);
-  
-  // Create a wrapper function for handleAddContact that adapts to expected interface
+
   const handleAddContact = (name: string, phone: string, type: ChatType) => {
     const newContact: Contact = {
       id: `new-${Date.now()}`,
@@ -81,16 +78,13 @@ const ConversationPage = () => {
     addContact(newContact);
   };
 
-  // Define dummy pinConversation function to satisfy the interface
   const pinConversation = (conversationId: string) => {
     console.log('Pin conversation not implemented:', conversationId);
   };
 
-  // Extract the messages array for the active conversation
   const activeMessages = activeConversation ? 
     (messages[activeConversation.id] || []) : [];
 
-  // Create a wrapper function for AI assistance to return a Promise
   const handleRequestAIAssistancePromise = async (prompt: string): Promise<string> => {
     try {
       return await requestAIAssistance(prompt);
@@ -99,8 +93,7 @@ const ConversationPage = () => {
       return 'Failed to get AI assistance';
     }
   };
-  
-  // Handle wallpaper change
+
   const handleWallpaperChange = (wallpaperUrl: string | null) => {
     setWallpaper(wallpaperUrl);
     toast({
@@ -126,7 +119,6 @@ const ConversationPage = () => {
             {aiAssistantActive ? 'Hide AI Assistant' : 'Show AI Assistant'}
           </Button>
           
-          {/* Sound toggle button */}
           <Button 
             variant="outline" 
             onClick={toggleSoundEnabled}
@@ -135,7 +127,6 @@ const ConversationPage = () => {
             {soundEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
           </Button>
           
-          {/* Wallpaper selector */}
           <select 
             className="rounded border p-2"
             onChange={(e) => handleWallpaperChange(e.target.value === 'none' ? null : e.target.value)}
@@ -210,7 +201,7 @@ const ConversationPage = () => {
                   </div>
                 )}
                 <CannedResponseSelector 
-                  cannedReplies={cannedReplies || []}
+                  cannedReplies={cannedResponses || []}
                   onSelectReply={handleUseCannedReply || (() => {})}
                 />
                 <MessageInput 

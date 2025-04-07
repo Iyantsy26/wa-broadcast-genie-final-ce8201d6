@@ -72,6 +72,7 @@ const ChatPage = () => {
         
         {activeConversation ? (
           <MessagePanel 
+            contact={activeConversation.contact}
             conversation={activeConversation}
             messages={activeMessages}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
@@ -80,6 +81,8 @@ const ChatPage = () => {
             messagesEndRef={messagesEndRef}
             isTyping={false}
             onReaction={() => {}}
+            onReply={() => {}}
+            onCancelReply={() => {}}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-white rounded-lg border shadow-sm">
