@@ -13,6 +13,7 @@ import { ChatType, Contact } from '@/types/conversation';
 import MessageList from '../chat/MessageList';
 import MessageInput from '../chat/MessageInput';
 import ChatHeader from '../chat/ChatHeader';
+import { toast } from '@/hooks/use-toast';
 
 const ConversationPage = () => {
   const {
@@ -24,7 +25,7 @@ const ConversationPage = () => {
     isTyping,
     isReplying,
     replyTo,
-    cannedReplies,
+    cannedResponses = [], // Provide a default empty array
     selectedDevice,
     aiAssistantActive,
     chatTypeFilter,

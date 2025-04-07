@@ -1,16 +1,16 @@
 
 import React, { useRef } from 'react';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { 
   Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+  PopoverTrigger, 
+  PopoverContent 
 } from '@/components/ui/popover';
 import { 
-  PaperclipIcon, 
+  Paperclip, 
   Image, 
-  File, 
-  Film, 
+  FileText, 
+  Video, 
   MapPin 
 } from 'lucide-react';
 
@@ -28,112 +28,85 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   setActiveAttachmentType
 }) => {
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const documentInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
-  
-  const handleOpenFileDialog = (type: string) => {
-    setActiveAttachmentType(type);
-    
-    switch (type) {
-      case 'image':
-        imageInputRef.current?.click();
-        break;
-      case 'document':
-        documentInputRef.current?.click();
-        break;
-      case 'video':
-        videoInputRef.current?.click();
-        break;
-      case 'location':
-        if (onLocationShare) {
-          onLocationShare();
-        }
-        break;
-      default:
-        break;
-    }
-  };
-  
+  const documentInputRef = useRef<HTMLInputElement>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onFileSelect(file);
-      e.target.value = ''; // Reset input value
+      setActiveAttachmentType(e.target.name);
     }
   };
 
   return (
-    <>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <PaperclipIcon className="h-5 w-5 text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-2" align="start" sideOffset={5}>
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline" 
-              className="flex flex-col gap-1 h-16 items-center justify-center"
-              onClick={() => handleOpenFileDialog('image')}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Paperclip className="h-5 w-5 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48" align="start" sideOffset={5}>
+        <div className="space-y-1">
+          <button 
+            className="flex items-center gap-2 w-full p-2 hover:bg-gray-100 rounded-md transition-colors text-left"
+            onClick={() => imageInputRef.current?.click()}
+          >
+            <Image className="h-4 w-4" />
+            <span>Photo</span>
+          </button>
+          <input 
+            type="file"
+            name="image"
+            ref={imageInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
+          />
+          
+          <button 
+            className="flex items-center gap-2 w-full p-2 hover:bg-gray-100 rounded-md transition-colors text-left"
+            onClick={() => videoInputRef.current?.click()}
+          >
+            <Video className="h-4 w-4" />
+            <span>Video</span>
+          </button>
+          <input 
+            type="file"
+            name="video"
+            ref={videoInputRef}
+            onChange={handleFileChange}
+            accept="video/*"
+            className="hidden"
+          />
+          
+          <button 
+            className="flex items-center gap-2 w-full p-2 hover:bg-gray-100 rounded-md transition-colors text-left"
+            onClick={() => documentInputRef.current?.click()}
+          >
+            <FileText className="h-4 w-4" />
+            <span>Document</span>
+          </button>
+          <input 
+            type="file"
+            name="document"
+            ref={documentInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          
+          {onLocationShare && (
+            <button 
+              className="flex items-center gap-2 w-full p-2 hover:bg-gray-100 rounded-md transition-colors text-left"
+              onClick={onLocationShare}
             >
-              <Image className="h-5 w-5" />
-              <span className="text-xs">Image</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex flex-col gap-1 h-16 items-center justify-center"
-              onClick={() => handleOpenFileDialog('document')}
-            >
-              <File className="h-5 w-5" />
-              <span className="text-xs">Document</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex flex-col gap-1 h-16 items-center justify-center"
-              onClick={() => handleOpenFileDialog('video')}
-            >
-              <Film className="h-5 w-5" />
-              <span className="text-xs">Video</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex flex-col gap-1 h-16 items-center justify-center"
-              onClick={() => handleOpenFileDialog('location')}
-            >
-              <MapPin className="h-5 w-5" />
-              <span className="text-xs">Location</span>
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
-      
-      {/* Hidden file inputs */}
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-      <input
-        ref={documentInputRef}
-        type="file"
-        accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-    </>
+              <MapPin className="h-4 w-4" />
+              <span>Location</span>
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 

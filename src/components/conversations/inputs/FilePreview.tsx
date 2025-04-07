@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { X, FileText, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface FilePreviewProps {
   file: File;
@@ -10,50 +11,60 @@ interface FilePreviewProps {
 }
 
 const FilePreview: React.FC<FilePreviewProps> = ({ file, type, onRemove }) => {
-  const fileUrl = URL.createObjectURL(file);
+  const fileURL = URL.createObjectURL(file);
   
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    else return (bytes / 1048576).toFixed(1) + ' MB';
-  };
-  
-  return (
-    <div className="mt-3 p-3 border rounded-md bg-gray-50">
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-medium text-sm">
-          {type === 'image' ? 'Image Attachment' : 
-           type === 'video' ? 'Video Attachment' : 
-           'Document Attachment'}
-        </span>
-        <Button variant="ghost" size="sm" onClick={onRemove}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      {type === 'image' && (
+  const renderPreview = () => {
+    if (type === 'image' || file.type.startsWith('image/')) {
+      return (
         <div className="relative">
           <img 
-            src={fileUrl} 
-            alt="Preview" 
-            className="max-h-32 rounded object-contain"
+            src={fileURL} 
+            alt="File preview" 
+            className="object-cover rounded-md max-h-32"
           />
         </div>
-      )}
-      
-      {type === 'video' && (
-        <div className="relative">
-          <video 
-            src={fileUrl} 
-            controls 
-            className="max-h-32 w-full rounded" 
-          />
+      );
+    } else if (type === 'video' || file.type.startsWith('video/')) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 flex items-center justify-center bg-gray-100 rounded-md">
+            <VideoIcon className="h-5 w-5" />
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-sm font-medium truncate">{file.name}</p>
+            <p className="text-xs text-gray-500">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+          </div>
         </div>
-      )}
-      
-      <div className="text-xs text-muted-foreground mt-1">
-        {file.name} • {formatFileSize(file.size)}
-      </div>
+      );
+    } else {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 flex items-center justify-center bg-gray-100 rounded-md">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-sm font-medium truncate">{file.name}</p>
+            <p className="text-xs text-gray-500">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className={cn(
+      "mt-2 p-2 border rounded-md relative",
+      type === 'image' || file.type.startsWith('image/') ? 'inline-block' : 'flex items-center'
+    )}>
+      {renderPreview()}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="h-6 w-6 absolute top-1 right-1 bg-white rounded-full shadow-sm" 
+        onClick={onRemove}
+      >
+        <X className="h-3 w-3" />
+      </Button>
     </div>
   );
 };

@@ -90,7 +90,7 @@ interface ConversationContextType {
   handleReplyToMessage?: (message: Message) => void;
   handleCancelReply?: () => void;
   handleUseCannedReply?: (replyId: string) => void;
-  handleRequestAIAssistance?: () => Promise<string>;
+  handleRequestAIAssistance?: (prompt: string) => Promise<string>;
   handleAddContact?: (contact: Contact) => void;
   setSelectedDevice?: (deviceId: string) => void;
   setAiAssistantActive?: (active: boolean) => void;
@@ -736,9 +736,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     
     handleAddReaction,
     handleArchiveConversation,
-    handleRequestAIAssistance: async (prompt: string): Promise<string> => {
-      return await requestAIAssistance(prompt);
-    }
+    handleRequestAIAssistance: requestAIAssistance
   };
 
   return (
