@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -200,6 +201,7 @@ const Clients = () => {
             </DialogHeader>
             
             <div className="space-y-4">
+              {/* Client avatar and basic info */}
               <div className="flex items-center space-x-4">
                 {selectedClient.avatar_url ? (
                   <img src={selectedClient.avatar_url} alt={selectedClient.name} className="h-16 w-16 rounded-full" />
@@ -216,6 +218,7 @@ const Clients = () => {
                 </div>
               </div>
               
+              {/* Contact details */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Contact Information</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-1">
@@ -230,6 +233,7 @@ const Clients = () => {
                 </div>
               </div>
               
+              {/* Membership details */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Membership Information</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-1">
@@ -244,6 +248,7 @@ const Clients = () => {
                 </div>
               </div>
               
+              {/* Tags */}
               {selectedClient.tags && selectedClient.tags.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Tags</h4>
@@ -257,6 +262,7 @@ const Clients = () => {
                 </div>
               )}
               
+              {/* Notes */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Notes</h4>
                 <p className="text-sm whitespace-pre-line border rounded p-3">
