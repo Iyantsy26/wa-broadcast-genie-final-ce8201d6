@@ -32,7 +32,7 @@ const Clients = () => {
   };
   
   // This function will be used to start a conversation with a client
-  const handleMessageClient = (client: Client) => {
+  const handleMessageClient = async (client: Client): Promise<void> => {
     // Store client data in sessionStorage to be picked up by the Conversations page
     sessionStorage.setItem('selectedContactId', client.id);
     
@@ -43,6 +43,9 @@ const Clients = () => {
       title: 'Conversation opened',
       description: `Chat with ${client.name} started.`,
     });
+    
+    // Return a resolved promise to satisfy the Promise<void> return type
+    return Promise.resolve();
   };
   
   const formatDate = (dateString?: string) => {
