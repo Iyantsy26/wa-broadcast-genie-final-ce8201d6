@@ -23,7 +23,7 @@ const ConversationPage = () => {
     isSidebarOpen,
     isTyping,
     isReplying,
-    replyToMessage,
+    replyTo,
     cannedReplies,
     selectedDevice,
     aiAssistantActive,
@@ -80,7 +80,7 @@ const ConversationPage = () => {
   // Create a wrapper function for AI assistance to return a Promise
   const handleRequestAIAssistancePromise = async (prompt: string): Promise<string> => {
     if (handleRequestAIAssistance) {
-      handleRequestAIAssistance();
+      handleRequestAIAssistance(prompt); // Pass the prompt parameter
     }
     return `Response to: ${prompt}`;
   };
@@ -137,7 +137,7 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ChatHeader 
-                conversation={activeConversation}
+                contact={activeConversation.contact}
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
@@ -149,11 +149,11 @@ const ConversationPage = () => {
                 onReply={handleReplyToMessage}
               />
               <div className="flex-shrink-0">
-                {isReplying && replyToMessage && (
+                {isReplying && replyTo && (
                   <div className="p-2 bg-gray-100 border-t flex items-center justify-between">
                     <div className="flex-1">
                       <span className="text-xs font-medium">Replying to:</span>
-                      <p className="text-sm truncate">{replyToMessage.content}</p>
+                      <p className="text-sm truncate">{replyTo.content}</p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={handleCancelReply}>
                       Cancel
@@ -167,9 +167,8 @@ const ConversationPage = () => {
                 <MessageInput 
                   onSendMessage={handleSendMessage}
                   onVoiceMessageSent={handleVoiceMessageSent}
-                  replyTo={replyToMessage}
+                  replyTo={replyTo}
                   onCancelReply={handleCancelReply || (() => {})}
-                  onRequestAIAssistance={handleRequestAIAssistancePromise}
                 />
               </div>
             </>

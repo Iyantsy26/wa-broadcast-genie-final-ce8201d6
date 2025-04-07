@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Bot, X } from 'lucide-react';
 
 interface AIAssistantPanelProps {
-  onRequestAIAssistance: () => void;
+  onRequestAIAssistance: (prompt: string) => Promise<string>;
   onClose: () => void;
 }
 
@@ -31,13 +31,13 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ onRequestAIAssistan
           <div className="bg-muted p-3 rounded-lg">
             <p className="text-sm font-medium mb-1">Suggested responses:</p>
             <div className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance()}>
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance("Generate a polite greeting")}>
                 Thank you for your inquiry!
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance()}>
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance("Generate a response about checking information")}>
                 I'll check and get back to you soon.
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance()}>
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance("Generate a response asking for more details")}>
                 Could you provide more details?
               </Button>
             </div>
@@ -46,13 +46,13 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ onRequestAIAssistan
           <div className="bg-muted p-3 rounded-lg">
             <p className="text-sm font-medium mb-1">AI Actions:</p>
             <div className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance()}>
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance("Summarize this conversation")}>
                 Summarize conversation
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance()}>
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance("Draft a follow-up email")}>
                 Draft follow-up email
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance()}>
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onRequestAIAssistance("Generate a meeting agenda")}>
                 Generate meeting agenda
               </Button>
             </div>
@@ -63,7 +63,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ onRequestAIAssistan
       <CardFooter className="border-t p-4">
         <Button 
           className="w-full" 
-          onClick={onRequestAIAssistance}
+          onClick={() => onRequestAIAssistance("Generate a professional response")}
         >
           Generate AI Response
         </Button>
