@@ -141,7 +141,7 @@ const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDevi
       {/* Contact sidebar */}
       <div className="md:col-span-1">
         <ContactSidebar
-          filteredContacts={filteredContacts}
+          contacts={filteredContacts}
           onSelectContact={selectContact}
           selectedContactId={activeConversation?.contact.id || null}
           isSidebarOpen={isSidebarOpen}

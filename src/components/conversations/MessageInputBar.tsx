@@ -20,6 +20,7 @@ interface MessageInputBarProps {
   onReaction?: (messageId: string, emoji: string) => void;
   onLocationShare?: () => void;
   deviceId: string;
+  replyTo?: Message | null;
 }
 
 const MessageInputBar: React.FC<MessageInputBarProps> = ({
@@ -28,7 +29,8 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
   onReply,
   onCancelReply,
   onLocationShare,
-  deviceId
+  deviceId,
+  replyTo
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -37,13 +39,14 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
   const [showFileUploader, setShowFileUploader] = useState(false);
   const [aiAssistanceActive, setAIAssistanceActive] = useState(false);
   const [showCannedResponses, setShowCannedResponses] = useState(false);
+  const [activeAttachmentType, setActiveAttachmentType] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   
   const handleAIAssistanceToggle = () => {
     setAIAssistanceActive(!aiAssistanceActive);
   };
 
-  const handleFileChange = (file: File | null) => {
+  const handleFileChange = (file: File) => {
     setSelectedFile(file);
     setShowFileUploader(false);
   };
@@ -103,7 +106,7 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
   return (
     <div className="bg-background border-t p-3 space-y-2">
       {/* Reply preview is visible when replying to a message */}
-      <ReplyPreview onCancel={onCancelReply} />
+      <ReplyPreview replyTo={replyTo || null} onCancelReply={onCancelReply} />
       
       {/* AI assistance panel */}
       {aiAssistanceActive && (
@@ -118,6 +121,7 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
       {selectedFile && (
         <FilePreview
           file={selectedFile}
+          type={activeAttachmentType}
           onRemove={() => setSelectedFile(null)}
         />
       )}
@@ -125,23 +129,24 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
       {/* Voice recorder UI */}
       {isRecording && (
         <VoiceRecorder
-          onFinish={onSendVoiceMessage}
-          onCancel={() => setIsRecording(false)}
+          onRecordingComplete={onSendVoiceMessage}
+          disabled={false}
         />
       )}
       
       {/* File uploader UI */}
       {showFileUploader && (
         <FileUploader
-          onFileSelected={handleFileChange}
-          onClose={() => setShowFileUploader(false)}
+          onFileSelect={handleFileChange}
+          activeAttachmentType={activeAttachmentType}
+          setActiveAttachmentType={setActiveAttachmentType}
         />
       )}
       
       {/* Emoji picker */}
       {showEmojiPicker && (
         <div className="absolute bottom-16 right-0">
-          <EmojiPicker onEmojiSelected={handleInsertEmoji} />
+          <EmojiPicker onEmojiSelect={handleInsertEmoji} />
         </div>
       )}
       
