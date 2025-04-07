@@ -17,7 +17,7 @@ interface MessagePanelProps {
   onVoiceMessageSent: (durationInSeconds: number) => void;
   onReaction: (messageId: string, emoji: string) => void;
   onReply: (message: Message) => void;
-  onCancelReply?: () => void;
+  onCancelReply: () => void; // Added this prop
   onLocationShare?: () => void;
   deviceId: string;
 }
@@ -33,7 +33,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
   onVoiceMessageSent,
   onReaction,
   onReply,
-  onCancelReply = () => {},
+  onCancelReply, // Added this parameter
   onLocationShare,
   deviceId
 }) => {

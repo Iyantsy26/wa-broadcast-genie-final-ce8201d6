@@ -16,6 +16,7 @@ interface MessagePanelProps {
   onVoiceMessageSent: (durationInSeconds: number) => void;
   onReaction: (messageId: string, emoji: string) => void;
   onReply?: (message: Message) => void;
+  onCancelReply: () => void; // Added this prop
   onLocationShare?: () => void;
   deviceId?: string;
 }
@@ -31,6 +32,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
   onVoiceMessageSent,
   onReaction,
   onReply,
+  onCancelReply, // Added this parameter
   deviceId
 }) => {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -56,6 +58,11 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
   const handleReply = (message: Message) => {
     setReplyTo(message);
     if (onReply) onReply(message);
+  };
+  
+  const handleCancelReply = () => {
+    setReplyTo(null);
+    onCancelReply();
   };
 
   // Create an AI assistance function for the message input
@@ -93,7 +100,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
         onVoiceMessageSent={onVoiceMessageSent}
         isEncrypted={false}
         replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
+        onCancelReply={handleCancelReply}
         onRequestAIAssistance={handleRequestAIAssistance}
       />
     </div>
