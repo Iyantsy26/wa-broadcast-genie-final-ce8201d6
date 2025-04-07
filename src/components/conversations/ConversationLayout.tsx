@@ -73,6 +73,11 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     addReaction(messageId, emoji);
   };
 
+  // Add the cancel reply handler
+  const handleCancelReply = () => {
+    setReplyTo(null);
+  };
+
   return (
     <div className="flex gap-3 overflow-hidden h-full">
       {/* Contact sidebar */}
@@ -91,6 +96,7 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
             onVoiceMessageSent={handleVoiceMessage}
             onReaction={handleReaction}
             onReply={setReplyTo}
+            onCancelReply={handleCancelReply}
             onLocationShare={handleLocationShare}
             deviceId={currentDeviceId}
           />
