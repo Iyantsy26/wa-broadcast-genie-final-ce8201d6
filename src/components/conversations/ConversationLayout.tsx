@@ -49,10 +49,10 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
       {/* AI Assistant panel (when active) */}
       {isAssistantActive && (
         <AIAssistantPanel 
-          onRequestAIAssistance={() => {
-            console.log('AI assistance requested');
-            // This would typically call an API or service
-            // to generate AI-powered responses
+          onRequestAIAssistance={async (prompt: string) => {
+            console.log('AI assistance requested with prompt:', prompt);
+            // Return a promise with some mock data
+            return Promise.resolve(`AI response to: ${prompt}`);
           }}
           onClose={() => toggleAssistant()}
         />

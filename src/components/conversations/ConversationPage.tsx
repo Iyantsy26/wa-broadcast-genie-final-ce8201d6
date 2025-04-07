@@ -137,7 +137,7 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ChatHeader 
-                contact={activeConversation.contact}
+                conversation={activeConversation}
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 

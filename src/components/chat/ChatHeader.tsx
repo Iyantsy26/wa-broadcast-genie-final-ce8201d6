@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Conversation } from '@/types/conversation';
+import { Conversation, Contact } from '@/types/conversation';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
