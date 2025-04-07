@@ -1,185 +1,123 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { useConversation } from '@/contexts/ConversationContext';
 import ContactSidebar from './ContactSidebar';
 import MessagePanel from './MessagePanel';
-import ContactInfoSidebar from './ContactInfoSidebar';
-import NoConversation from './NoConversation';
-import { useConversation } from '@/contexts/ConversationContext';
-import { Contact, Conversation } from '@/types/conversation';
-import { getConversations } from '@/services/conversationService';
-import { toast } from '@/hooks/use-toast';
+import ContactInfoPanel from './ContactInfoPanel';
+import AIAssistantPanel from './AIAssistantPanel';
+import EmptyConversation from './EmptyConversation';
 
-const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDeviceId }) => {
+interface ConversationLayoutProps {
+  currentDeviceId: string;
+}
+
+const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId }) => {
   const {
+    selectedContactId,
     contacts,
-    filteredContacts,
-    selectContact,
     messages,
-    isTyping,
     isSidebarOpen,
     isAssistantActive,
-    wallpaper,
-    contactFilter,
-    searchTerm,
-    soundEnabled,
-    disappearingMessages,
-    disappearingTimeout,
-    cannedResponses,
+    isTyping,
     messagesEndRef,
-    selectContact: setSelectedContactId,
     toggleSidebar,
     toggleAssistant,
     sendMessage,
     sendVoiceMessage,
-    setReplyTo,
-    filterContacts,
-    setContactFilter,
-    setSearchTerm,
-    addContact,
     sendAttachment,
     sendLocation,
-    forwardMessage,
     addReaction,
-    useCannedResponse,
-    setWallpaper,
-    toggleSoundEnabled,
-    toggleDisappearingMessages,
-    setDisappearingTimeout,
-    toggleContactStar,
-    muteContact,
-    archiveContact,
-    blockContact,
-    clearChat,
-    deleteMessage,
-    requestAIAssistance,
-    handleAddReaction,
-    handleArchiveConversation,
-    handleRequestAIAssistance,
-    filteredConversations,
-    groupedConversations,
-    activeConversation,
-    setActiveConversation,
-    setChatTypeFilter,
-    setDateRange,
-    setAssigneeFilter,
-    setTagFilter,
-    resetAllFilters,
-    handleSendMessage,
-    handleVoiceMessageSent,
-    handleDeleteConversation,
-    handleAddTag,
-    handleAssignConversation,
-    handleReplyToMessage
+    setReplyTo,
+    replyTo,
+    requestAIAssistance
   } = useConversation();
+  
+  const selectedContact = selectedContactId 
+    ? contacts.find(c => c.id === selectedContactId) 
+    : null;
+    
+  // Get messages for the selected contact
+  const selectedContactMessages = selectedContactId 
+    ? (messages[selectedContactId] || [])
+    : [];
 
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchConversations() {
-      try {
-        setIsLoading(true);
-        const conversations = await getConversations();
-        if (conversations && conversations.length > 0) {
-          setActiveConversation(conversations[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load conversations',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
+  // Create wrapper functions for handleSendMessage and handleVoiceMessage
+  const handleSendMessage = (content: string, file: File | null) => {
+    if (!selectedContactId) return;
+    
+    if (file) {
+      const fileType = file.type.split('/')[0]; 
+      let mediaType: 'image' | 'video' | 'document';
+      
+      if (fileType === 'image') mediaType = 'image';
+      else if (fileType === 'video') mediaType = 'video';
+      else mediaType = 'document';
+      
+      sendAttachment(selectedContactId, file, mediaType, currentDeviceId);
+    } else if (content.trim()) {
+      sendMessage(selectedContactId, content, currentDeviceId);
     }
-
-    fetchConversations();
-  }, [setActiveConversation]);
-
-  const handleOpenContactInfo = () => {
-    toggleSidebar();
   };
   
-  // Add this function for canceling replies
+  const handleVoiceMessage = (durationInSeconds: number) => {
+    if (!selectedContactId) return;
+    sendVoiceMessage(selectedContactId, durationInSeconds, currentDeviceId);
+  };
+  
+  const handleLocationShare = () => {
+    if (!selectedContactId) return;
+    // For demo, use fixed coordinates
+    sendLocation(selectedContactId, 37.7749, -122.4194, currentDeviceId);
+  };
+  
+  const handleReaction = (messageId: string, emoji: string) => {
+    addReaction(messageId, emoji);
+  };
+
+  // Add the cancel reply handler
   const handleCancelReply = () => {
-    // Implementation for canceling replies
-    console.log("Reply canceled");
     setReplyTo(null);
   };
-  
-  // Function to handle location sharing
-  const handleShareLocation = async () => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          if (activeConversation) {
-            sendLocation(activeConversation.contact.id, latitude, longitude, currentDeviceId);
-          }
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          toast({
-            title: "Error",
-            description: "Could not retrieve location.",
-            variant: "destructive",
-          });
-        }
-      );
-    } else {
-      toast({
-        title: "Geolocation not supported",
-        description: "Your browser does not support geolocation.",
-        variant: "destructive",
-      });
-    }
-  };
-  
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 h-full">
+    <div className="flex gap-3 overflow-hidden h-full">
       {/* Contact sidebar */}
-      <div className="md:col-span-1">
-        <ContactSidebar
-          contacts={filteredContacts}
-          onSelectContact={selectContact}
-          selectedContactId={activeConversation?.contact.id || null}
-          isSidebarOpen={isSidebarOpen}
-          onOpenChange={toggleSidebar}
-          onClose={() => toggleSidebar()}
-        />
-      </div>
+      <ContactSidebar />
       
       {/* Main content area */}
-      <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full">
-        {activeConversation ? (
-          <MessagePanel
-            contact={activeConversation.contact}
-            conversation={activeConversation}
-            messages={messages[activeConversation.id] || []}
+      <div className="flex-1 flex rounded-lg overflow-hidden bg-card shadow-sm">
+        {selectedContact ? (
+          <MessagePanel 
+            contact={selectedContact} 
+            messages={selectedContactMessages}
             isTyping={isTyping}
             messagesEndRef={messagesEndRef}
-            onOpenContactInfo={handleOpenContactInfo}
+            onOpenContactInfo={toggleSidebar}
             onSendMessage={handleSendMessage}
-            onVoiceMessageSent={handleVoiceMessageSent}
-            onReaction={handleAddReaction}
-            onReply={handleReplyToMessage}
+            onVoiceMessageSent={handleVoiceMessage}
+            onReaction={handleReaction}
+            onReply={setReplyTo}
             onCancelReply={handleCancelReply}
-            onLocationShare={handleShareLocation}
+            onLocationShare={handleLocationShare}
             deviceId={currentDeviceId}
           />
         ) : (
-          <NoConversation />
+          <EmptyConversation />
         )}
       </div>
       
-      {/* Contact info sidebar */}
-      {activeConversation && (
-        <ContactInfoSidebar
-          conversation={activeConversation}
-          isOpen={isSidebarOpen}
-          onOpenChange={toggleSidebar}
-          onClose={() => toggleSidebar()}
+      {/* Contact info panel (when open) */}
+      {isSidebarOpen && selectedContact && (
+        <ContactInfoPanel contact={selectedContact} />
+      )}
+      
+      {/* AI Assistant panel (when active) */}
+      {isAssistantActive && (
+        <AIAssistantPanel 
+          onRequestAIAssistance={async (prompt: string) => {
+            return await requestAIAssistance(prompt);
+          }}
+          onClose={toggleAssistant}
         />
       )}
     </div>

@@ -225,7 +225,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       timestamp: new Date().toISOString(),
       isOutbound: true,
       status: 'sent',
-      sender: `You`,
+      sender: `You (Device #${deviceId})`,
       type: 'text'
     };
     
@@ -285,7 +285,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
         
         const responseMessage: Message = {
           id: `msg-${Date.now() + 1}`,
-          content: `Thank you for your message. I'll respond as soon as possible.`,
+          content: `This is a response to "${content}" from device #${deviceId}`,
           timestamp: new Date().toISOString(),
           isOutbound: false,
           status: 'delivered',

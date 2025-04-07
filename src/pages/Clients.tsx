@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,42 +12,39 @@ import { useQuery } from '@tanstack/react-query';
 import { getClients } from '@/services/clientService';
 import { toast } from '@/hooks/use-toast';
 import { ConversationProvider } from '@/contexts/ConversationContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Pencil, Download, Upload } from 'lucide-react';
-import ClientsHeader from '@/components/clients/ClientsHeader';
-import ClientForm from '@/components/clients/ClientForm';
 
 const Clients = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isAddClientOpen, setIsAddClientOpen] = useState(false);
   
   const {
     data: clients = [],
     isLoading,
     isError,
-    refetch,
   } = useQuery({
     queryKey: ['clients'],
     queryFn: getClients,
   });
   
   const handleViewClient = (client: Client) => {
-    setSelectedClient(client);
-    setIsDetailsOpen(true);
+    navigate(`/clients/${client.id}`);
   };
   
+  // This function will be used to start a conversation with a client
   const handleMessageClient = async (client: Client): Promise<void> => {
+    // Store client data in sessionStorage to be picked up by the Conversations page
     sessionStorage.setItem('selectedContactId', client.id);
+    
+    // Navigate to conversations page
     navigate('/conversations');
+    
     toast({
       title: 'Conversation opened',
       description: `Chat with ${client.name} started.`,
     });
+    
+    // Return a resolved promise to satisfy the Promise<void> return type
     return Promise.resolve();
   };
   
@@ -57,91 +55,6 @@ const Clients = () => {
     } catch (e) {
       return dateString;
     }
-  };
-  
-  const handleAddClient = () => {
-    setIsAddClientOpen(true);
-  };
-  
-  const handleCloseClientDetails = () => {
-    setIsDetailsOpen(false);
-    setSelectedClient(null);
-  };
-  
-  const handleEditClient = () => {
-    setIsDetailsOpen(false);
-    setIsEditOpen(true);
-  };
-
-  const handleEditComplete = () => {
-    setIsEditOpen(false);
-    refetch();
-  };
-  
-  const handleAddClientComplete = () => {
-    setIsAddClientOpen(false);
-    refetch();
-  };
-  
-  const handleExportClients = () => {
-    try {
-      const clientsData = JSON.stringify(clients, null, 2);
-      const blob = new Blob([clientsData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `clients-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      toast({
-        title: 'Clients exported',
-        description: `${clients.length} clients exported successfully.`,
-      });
-    } catch (error) {
-      toast({
-        title: 'Export failed',
-        description: 'An error occurred while exporting clients.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  const handleImportClients = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const importedClients = JSON.parse(event.target?.result as string);
-          
-          console.log('Imported clients:', importedClients);
-          
-          toast({
-            title: 'Clients imported',
-            description: `${importedClients.length} clients imported successfully.`,
-          });
-        } catch (error) {
-          toast({
-            title: 'Import failed',
-            description: 'The selected file is not a valid clients export.',
-            variant: 'destructive',
-          });
-        }
-      };
-      
-      reader.readAsText(file);
-    };
-    
-    input.click();
   };
   
   if (isError) {
@@ -157,7 +70,12 @@ const Clients = () => {
   
   return (
     <div className="space-y-4">
-      <ClientsHeader onAddClient={handleAddClient} />
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+        <p className="text-muted-foreground">
+          Manage your client database and communication
+        </p>
+      </div>
       
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div className="w-full md:w-1/3">
@@ -167,24 +85,14 @@ const Clients = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleImportClients}>
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline" onClick={handleExportClients}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Tabs defaultValue="all" value={statusFilter} onValueChange={setStatusFilter}>
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="past_due">Past Due</TabsTrigger>
-              <TabsTrigger value="inactive">Inactive</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <Tabs defaultValue="all" value={statusFilter} onValueChange={setStatusFilter} className="w-full md:w-auto">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="past_due">Past Due</TabsTrigger>
+            <TabsTrigger value="inactive">Inactive</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
       
       <Card className="border shadow-sm rounded-lg">
@@ -198,118 +106,11 @@ const Clients = () => {
           formatDate={formatDate}
         />
       </Card>
-      
-      {selectedClient && (
-        <Dialog open={isDetailsOpen} onOpenChange={handleCloseClientDetails}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex justify-between items-center">
-                <span>{selectedClient.name}</span>
-                <Button variant="ghost" size="icon" onClick={handleEditClient} className="h-8 w-8">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                {selectedClient.avatar_url ? (
-                  <img src={selectedClient.avatar_url} alt={selectedClient.name} className="h-16 w-16 rounded-full" />
-                ) : (
-                  <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-xl font-semibold text-gray-500">
-                      {selectedClient.name.substring(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-semibold">{selectedClient.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedClient.company || 'No company'}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Contact Information</h4>
-                <div className="grid grid-cols-[100px_1fr] gap-1">
-                  <span className="text-sm text-muted-foreground">Email:</span>
-                  <span className="text-sm">{selectedClient.email || '—'}</span>
-                  
-                  <span className="text-sm text-muted-foreground">Phone:</span>
-                  <span className="text-sm">{selectedClient.phone || '—'}</span>
-                  
-                  <span className="text-sm text-muted-foreground">Address:</span>
-                  <span className="text-sm">{selectedClient.address || '—'}</span>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Membership Information</h4>
-                <div className="grid grid-cols-[100px_1fr] gap-1">
-                  <span className="text-sm text-muted-foreground">Join Date:</span>
-                  <span className="text-sm">{formatDate(selectedClient.join_date)}</span>
-                  
-                  <span className="text-sm text-muted-foreground">Renewal:</span>
-                  <span className="text-sm">{formatDate(selectedClient.renewal_date)}</span>
-                  
-                  <span className="text-sm text-muted-foreground">Plan:</span>
-                  <span className="text-sm">{selectedClient.plan_details || '—'}</span>
-                </div>
-              </div>
-              
-              {selectedClient.tags && selectedClient.tags.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Tags</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedClient.tags.map((tag, i) => (
-                      <span key={i} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Notes</h4>
-                <p className="text-sm whitespace-pre-line border rounded p-3">
-                  {selectedClient.notes || 'No notes available.'}
-                </p>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button onClick={handleEditClient} className="flex items-center">
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Client
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      <Dialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
-          </DialogHeader>
-          <ClientForm onComplete={handleAddClientComplete} />
-        </DialogContent>
-      </Dialog>
-
-      {selectedClient && (
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Edit Client</DialogTitle>
-            </DialogHeader>
-            <ClientForm client={selectedClient} onComplete={handleEditComplete} />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 };
 
+// Wrap the Clients component with the ConversationProvider
 const ClientsWithConversationProvider = () => {
   return (
     <ConversationProvider>

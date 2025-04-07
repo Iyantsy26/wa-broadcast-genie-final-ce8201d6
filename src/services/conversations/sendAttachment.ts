@@ -24,7 +24,7 @@ export const sendAttachment = async (
     
     const newMessage: Message = {
       id: messageId,
-      content: mediaType === 'video' ? 'Video attachment' : file.name,
+      content: file.name,
       timestamp: timestamp,
       isOutbound: true,
       status: 'sent',
@@ -33,7 +33,7 @@ export const sendAttachment = async (
       media: {
         url: fileUrl,
         type: mediaType,
-        filename: mediaType === 'video' ? '' : file.name,
+        filename: file.name,
         size: file.size
       }
     };

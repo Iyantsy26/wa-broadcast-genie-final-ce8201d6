@@ -8,15 +8,15 @@ import { Star, CheckCheck, Check, Clock, AlertCircle } from 'lucide-react';
 
 interface ContactItemProps {
   contact: Contact;
-  messages?: Message[];
-  isActive?: boolean;
+  messages: Message[];
+  isActive: boolean;
   onClick: () => void;
 }
 
 const ContactItem: React.FC<ContactItemProps> = ({
   contact,
-  messages = [],
-  isActive = false,
+  messages,
+  isActive,
   onClick,
 }) => {
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;

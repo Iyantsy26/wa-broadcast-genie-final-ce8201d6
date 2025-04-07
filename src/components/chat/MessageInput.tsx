@@ -149,9 +149,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
         
         {onRequestAIAssistance && messageInput.trim() && (
           <AIResponseGenerator 
-            currentMessage={messageInput}
-            onResponseGenerated={handleAIAssist}
-            onClose={() => setIsGeneratingResponse(false)}
+            onGenerateResponse={handleAIAssist}
+            disabled={isRecording}
+            isGenerating={isGeneratingResponse}
           />
         )}
         

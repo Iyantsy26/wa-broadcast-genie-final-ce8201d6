@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
@@ -251,8 +252,6 @@ const ConversationPage = () => {
                 )}
                 <CannedResponseSelector 
                   cannedReplies={cannedResponses || []}
-                  onSelectResponse={handleUseCannedReply || (() => {})}
-                  onClose={() => {}}
                   onSelectReply={handleUseCannedReply || (() => {})}
                 />
                 <MessageInput 
@@ -286,6 +285,7 @@ const ConversationPage = () => {
         )}
       </div>
       
+      {/* Dialog for managing canned responses */}
       <CannedResponseManager
         isOpen={showCannedResponseManager}
         onClose={() => setShowCannedResponseManager(false)}
@@ -293,6 +293,7 @@ const ConversationPage = () => {
         onSave={handleSaveCannedResponses}
       />
       
+      {/* Dialog for AI auto-reply settings */}
       <AIAutoReply
         isOpen={showAutoReplySettings}
         onClose={() => setShowAutoReplySettings(false)}

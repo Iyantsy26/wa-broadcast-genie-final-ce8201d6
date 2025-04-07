@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from '@/components/chat/ConversationList';
 import MessagePanel from '@/components/chat/MessagePanel';
@@ -34,20 +34,9 @@ const ChatPage = () => {
     messagesEndRef
   } = useConversation();
 
-  // Add state for replying to messages
-  const [replyingTo, setReplyingTo] = useState(null);
-
   // Extract the messages array for the active conversation
   const activeMessages = activeConversation ? 
     (messages[activeConversation.id] || []) : [];
-
-  const handleReply = (message) => {
-    setReplyingTo(message);
-  };
-
-  const handleCancelReply = () => {
-    setReplyingTo(null);
-  };
 
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">
@@ -92,8 +81,8 @@ const ChatPage = () => {
             messagesEndRef={messagesEndRef}
             isTyping={false}
             onReaction={() => {}}
-            onReply={handleReply}
-            onCancelReply={handleCancelReply}
+            onReply={() => {}}
+            onCancelReply={() => {}}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-white rounded-lg border shadow-sm">
