@@ -55,7 +55,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               <ContactItem
                 key={contact.id}
                 contact={contact}
-                isSelected={contact.id === selectedContactId}
+                isActive={contact.id === selectedContactId}
                 onClick={() => onSelectContact(contact.id)}
               />
             ))
