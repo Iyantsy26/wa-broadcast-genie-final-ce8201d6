@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ import { Pencil, Download, Upload } from 'lucide-react';
 import ClientsHeader from '@/components/clients/ClientsHeader';
 
 const Clients = () => {
-  const navigate = useNavigate';
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -41,18 +40,12 @@ const Clients = () => {
   };
   
   const handleMessageClient = async (client: Client): Promise<void> => {
-    // Store client data in sessionStorage to be picked up by the Conversations page
     sessionStorage.setItem('selectedContactId', client.id);
-    
-    // Navigate to conversations page
     navigate('/conversations');
-    
     toast({
       title: 'Conversation opened',
       description: `Chat with ${client.name} started.`,
     });
-    
-    // Return a resolved promise to satisfy the Promise<void> return type
     return Promise.resolve();
   };
   
@@ -118,7 +111,6 @@ const Clients = () => {
         try {
           const importedClients = JSON.parse(event.target?.result as string);
           
-          // In a real app, we would send this to an API endpoint
           console.log('Imported clients:', importedClients);
           
           toast({
@@ -195,7 +187,6 @@ const Clients = () => {
         />
       </Card>
       
-      {/* Client Details Dialog */}
       {selectedClient && (
         <Dialog open={isDetailsOpen} onOpenChange={handleCloseClientDetails}>
           <DialogContent className="max-w-md">
@@ -209,7 +200,6 @@ const Clients = () => {
             </DialogHeader>
             
             <div className="space-y-4">
-              {/* Client avatar and basic info */}
               <div className="flex items-center space-x-4">
                 {selectedClient.avatar_url ? (
                   <img src={selectedClient.avatar_url} alt={selectedClient.name} className="h-16 w-16 rounded-full" />
@@ -226,7 +216,6 @@ const Clients = () => {
                 </div>
               </div>
               
-              {/* Contact details */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Contact Information</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-1">
@@ -241,7 +230,6 @@ const Clients = () => {
                 </div>
               </div>
               
-              {/* Membership details */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Membership Information</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-1">
@@ -256,7 +244,6 @@ const Clients = () => {
                 </div>
               </div>
               
-              {/* Tags */}
               {selectedClient.tags && selectedClient.tags.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Tags</h4>
@@ -270,7 +257,6 @@ const Clients = () => {
                 </div>
               )}
               
-              {/* Notes */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Notes</h4>
                 <p className="text-sm whitespace-pre-line border rounded p-3">
@@ -291,7 +277,6 @@ const Clients = () => {
   );
 };
 
-// Wrap the Clients component with the ConversationProvider
 const ClientsWithConversationProvider = () => {
   return (
     <ConversationProvider>

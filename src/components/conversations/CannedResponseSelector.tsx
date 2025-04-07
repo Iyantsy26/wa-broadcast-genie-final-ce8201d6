@@ -33,12 +33,12 @@ const CannedResponseSelector: React.FC<CannedResponseSelectorProps> = ({
     {
       id: 'callback',
       title: 'Request Callback',
-      content: 'I'd like to schedule a call to discuss this further. What time works best for you?'
+      content: 'I\'d like to schedule a call to discuss this further. What time works best for you?'
     },
     {
       id: 'away',
       title: 'Away Message',
-      content: 'I'm currently away from my desk. I'll respond to your message as soon as I return.'
+      content: 'I\'m currently away from my desk. I\'ll respond to your message as soon as I return.'
     }
   ];
 
