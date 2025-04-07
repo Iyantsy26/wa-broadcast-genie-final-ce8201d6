@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { MessageSquareDiff } from 'lucide-react';
+import { Bot } from 'lucide-react';
 
 interface AIResponseGeneratorProps {
   onGenerateResponse: () => void;
@@ -11,18 +11,19 @@ interface AIResponseGeneratorProps {
 
 const AIResponseGenerator: React.FC<AIResponseGeneratorProps> = ({ 
   onGenerateResponse, 
-  disabled,
-  isGenerating
+  disabled, 
+  isGenerating 
 }) => {
   return (
     <Button 
-      variant="ghost" 
-      size="icon" 
-      disabled={disabled || isGenerating}
+      variant="outline" 
+      size="icon"
       onClick={onGenerateResponse}
-      title="Get AI assistance with this message"
+      disabled={disabled || isGenerating}
+      title="Generate AI response"
+      className={isGenerating ? 'animate-pulse' : ''}
     >
-      <MessageSquareDiff className="h-5 w-5" />
+      <Bot className="h-5 w-5" />
     </Button>
   );
 };

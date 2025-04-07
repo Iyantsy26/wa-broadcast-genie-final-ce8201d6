@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
 import NoConversation from './NoConversation';
@@ -31,6 +32,8 @@ const ConversationPage = () => {
     dateRange,
     assigneeFilter,
     tagFilter,
+    soundEnabled,
+    wallpaper,
     messagesEndRef,
     setActiveConversation,
     setIsSidebarOpen,
@@ -50,10 +53,20 @@ const ConversationPage = () => {
     handleReplyToMessage,
     handleCancelReply,
     handleUseCannedReply,
-    handleRequestAIAssistance,
-    addContact
+    requestAIAssistance,
+    addContact,
+    toggleSoundEnabled,
+    setWallpaper
   } = useConversation();
 
+  // Sample wallpapers for demonstration
+  const [wallpapers] = useState([
+    null, // Default (no wallpaper)
+    '/backgrounds/chat-bg-1.jpg',
+    '/backgrounds/chat-bg-2.jpg',
+    '/backgrounds/chat-bg-3.jpg'
+  ]);
+  
   // Create a wrapper function for handleAddContact that adapts to expected interface
   const handleAddContact = (name: string, phone: string, type: ChatType) => {
     const newContact: Contact = {
@@ -78,10 +91,20 @@ const ConversationPage = () => {
 
   // Create a wrapper function for AI assistance to return a Promise
   const handleRequestAIAssistancePromise = async (prompt: string): Promise<string> => {
-    if (handleRequestAIAssistance) {
-      handleRequestAIAssistance(); // This function doesn't take parameters now
+    try {
+      return await requestAIAssistance(prompt);
+    } catch (error) {
+      console.error('Error requesting AI assistance:', error);
+      return 'Failed to get AI assistance';
     }
-    return `Response to: ${prompt}`;
+  };
+  
+  // Handle wallpaper change
+  const handleWallpaperChange = (wallpaperUrl: string | null) => {
+    setWallpaper(wallpaperUrl);
+    toast({
+      title: wallpaperUrl ? 'Wallpaper changed' : 'Wallpaper removed',
+    });
   };
 
   return (
@@ -101,6 +124,29 @@ const ConversationPage = () => {
           >
             {aiAssistantActive ? 'Hide AI Assistant' : 'Show AI Assistant'}
           </Button>
+          
+          {/* Sound toggle button */}
+          <Button 
+            variant="outline" 
+            onClick={toggleSoundEnabled}
+            title={soundEnabled ? 'Mute notifications' : 'Unmute notifications'}
+          >
+            {soundEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
+          </Button>
+          
+          {/* Wallpaper selector */}
+          <select 
+            className="rounded border p-2"
+            onChange={(e) => handleWallpaperChange(e.target.value === 'none' ? null : e.target.value)}
+            value={wallpaper || 'none'}
+          >
+            <option value="none">No Wallpaper</option>
+            {wallpapers.filter(wp => wp !== null).map((wp, index) => (
+              <option key={index} value={wp}>
+                Wallpaper {index + 1}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       
@@ -132,7 +178,10 @@ const ConversationPage = () => {
           archiveConversation={handleArchiveConversation}
         />
         
-        <div className="flex-1 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden">
+        <div 
+          className="flex-1 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden"
+          style={wallpaper ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+        >
           {activeConversation ? (
             <>
               <ChatHeader 
@@ -168,6 +217,7 @@ const ConversationPage = () => {
                   onVoiceMessageSent={handleVoiceMessageSent}
                   replyTo={replyTo}
                   onCancelReply={handleCancelReply || (() => {})}
+                  onRequestAIAssistance={handleRequestAIAssistancePromise}
                 />
               </div>
             </>
