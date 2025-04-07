@@ -66,7 +66,8 @@ export const getConversations = async (): Promise<Conversation[]> => {
           name: contactInfo?.name || 'Unknown Contact',
           avatar: contactInfo?.avatar_url,
           phone: isClient ? '' : (contactInfo?.phone || ''),
-          type: isClient ? 'client' : 'lead'
+          type: isClient ? 'client' : 'lead',
+          tags: [] // Add empty tags array to satisfy the type requirement
         },
         lastMessage: {
           content: conv.last_message || '',
@@ -77,7 +78,12 @@ export const getConversations = async (): Promise<Conversation[]> => {
         status: conv.status || 'new',
         chatType: isClient ? 'client' : 'lead',
         tags: conv.tags || [],
-        assignedTo: conv.assigned_to
+        assignedTo: conv.assigned_to,
+        // Add default values for properties used in components
+        isPinned: false,
+        isArchived: false,
+        unreadCount: 0,
+        isEncrypted: false
       };
     });
   } catch (error) {

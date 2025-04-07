@@ -1,186 +1,148 @@
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClients } from '@/services/clientService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Client } from '@/types/conversation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { createConversation } from '@/services/conversationService';
-import { toast } from '@/hooks/use-toast';
-import ClientForm from '@/components/clients/ClientForm';
-import ClientsHeader from '@/components/clients/ClientsHeader';
-import ClientsSearchFilter from '@/components/clients/ClientsSearchFilter';
+import { format } from 'date-fns';
 import ClientsTable from '@/components/clients/ClientsTable';
+import { useQuery } from '@tanstack/react-query';
+import { getClients } from '@/services/clientService';
+import { useConversation } from '@/contexts/ConversationContext';
+import { toast } from '@/hooks/use-toast';
 
 const Clients = () => {
   const navigate = useNavigate();
+  const { selectContact } = useConversation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
-
-  const { 
-    data: clients = [], 
-    isLoading, 
-    error, 
-    refetch 
+  
+  const {
+    data: clients = [],
+    isLoading,
+    isError,
   } = useQuery({
     queryKey: ['clients'],
-    queryFn: getClients
+    queryFn: getClients,
   });
-
-  const handleFormComplete = () => {
-    setIsAddDialogOpen(false);
-    setViewingClient(null);
-    setIsViewDialogOpen(false);
-    refetch();
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const handleMessage = async (client: Client) => {
-    try {
-      const initialMessage = `Hello ${client.name}, how can I help you today?`;
-      const conversationId = await createConversation(client.id, 'client', initialMessage);
-      
-      navigate(`/conversations?id=${conversationId}`);
-      
-      toast({
-        title: "Conversation created",
-        description: `Started a new conversation with ${client.name}`,
-      });
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create conversation with client.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  
   const handleViewClient = (client: Client) => {
-    setViewingClient(client);
-    setIsViewDialogOpen(true);
+    navigate(`/clients/${client.id}`);
   };
-
-  const handleExportClients = () => {
+  
+  const handleMessageClient = async (client: Client) => {
     try {
-      // Get filtered clients for export
-      const filteredClients = clients.filter((client) => {
-        const matchesSearch = 
-          client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (client.company && client.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.phone && client.phone.includes(searchTerm));
-          
-        const matchesStatusFilter = statusFilter === 'all' || 
-          (client.tags && client.tags.includes(statusFilter));
-        
-        return matchesSearch && matchesStatusFilter;
-      });
+      // Create a contact from the client if it doesn't exist
+      const contact = {
+        id: client.id,
+        name: client.name,
+        avatar: client.avatar_url,
+        phone: client.phone || '',
+        type: 'client' as const,
+        isOnline: false,
+        lastSeen: client.join_date || new Date().toISOString(),
+        tags: client.tags || []
+      };
       
-      const clientsToExport = filteredClients.map(client => ({
-        Name: client.name,
-        Company: client.company || '',
-        Email: client.email || '',
-        Phone: client.phone || '',
-        Address: client.address || '',
-        'Join Date': formatDate(client.join_date),
-        'Renewal Date': formatDate(client.renewal_date),
-        'Plan Details': client.plan_details || '',
-        Tags: client.tags ? client.tags.join(', ') : ''
-      }));
-
-      const headers = Object.keys(clientsToExport[0]);
-      const csvContent = 
-        headers.join(',') + 
-        '\n' + 
-        clientsToExport.map(row => 
-          headers.map(header => 
-            JSON.stringify(row[header as keyof typeof row] || '')
-          ).join(',')
-        ).join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'clients.csv');
-      link.click();
-
+      // Select the contact to open the conversation
+      selectContact(client.id);
+      
+      // Navigate to conversations page
+      navigate('/conversations');
+      
       toast({
-        title: "Export successful",
-        description: `Exported ${clientsToExport.length} clients to CSV`,
+        title: 'Conversation opened',
+        description: `Chat with ${client.name} started.`,
       });
     } catch (error) {
-      console.error("Error exporting clients:", error);
+      console.error('Error starting conversation:', error);
       toast({
-        title: "Export failed",
-        description: "Failed to export clients data",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to start conversation',
+        variant: 'destructive',
       });
     }
   };
-
-  if (error) {
+  
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '—';
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch (e) {
+      return dateString;
+    }
+  };
+  
+  if (isError) {
     return (
-      <div className="p-4">
-        <p className="text-red-500">Error loading clients. Please try again later.</p>
+      <div className="p-6">
+        <div className="text-center py-10">
+          <h3 className="text-lg font-semibold mb-2">Error loading clients</h3>
+          <p className="text-muted-foreground">Please try again later</p>
+        </div>
       </div>
     );
   }
-
+  
   return (
-    <div className="space-y-6 p-6">
-      <ClientsHeader onAddClient={() => setIsAddDialogOpen(true)} />
-
-      <ClientsSearchFilter 
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        onExportClients={handleExportClients}
-      />
-
-      <div className="bg-white rounded-lg border shadow">
-        <ClientsTable 
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+        <p className="text-muted-foreground">
+          Manage your client database and communication
+        </p>
+      </div>
+      
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div className="w-full md:w-1/3">
+          <Input
+            placeholder="Search clients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Tabs defaultValue="all" value={statusFilter} onValueChange={setStatusFilter} className="w-full md:w-auto">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="past_due">Past Due</TabsTrigger>
+            <TabsTrigger value="inactive">Inactive</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      
+      <Card className="border shadow-sm rounded-lg">
+        <ClientsTable
           clients={clients}
           isLoading={isLoading}
           searchTerm={searchTerm}
           statusFilter={statusFilter}
           onViewClient={handleViewClient}
-          onMessageClient={handleMessage}
+          onMessageClient={handleMessageClient}
           formatDate={formatDate}
         />
-      </div>
-
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
-          </DialogHeader>
-          <ClientForm onComplete={handleFormComplete} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Client Details</DialogTitle>
-          </DialogHeader>
-          {viewingClient && (
-            <ClientForm 
-              client={viewingClient} 
-              onComplete={handleFormComplete} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      </Card>
     </div>
   );
 };

@@ -127,4 +127,9 @@ export interface Conversation {
   chatType: ChatType;
   tags?: string[];
   assignedTo?: string;
+  // Adding missing properties that are being used in components
+  isEncrypted?: boolean;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  unreadCount?: number;
 }

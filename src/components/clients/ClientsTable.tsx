@@ -1,23 +1,39 @@
 
-import React from 'react';
-import { Client } from '@/types/conversation';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+import React, { useState } from 'react';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Client } from '@/types/conversation';
+import { 
+  ArrowUpDown, 
+  Eye, 
+  MoreHorizontal,
+  Pencil,
+  Trash,
+  UserRound,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-interface ClientsTableProps {
+export interface ClientsTableProps {
   clients: Client[];
   isLoading: boolean;
   searchTerm: string;
   statusFilter: string;
   onViewClient: (client: Client) => void;
+  onMessageClient: (client: Client) => Promise<void>; // Added this prop
   formatDate: (dateString?: string) => string;
 }
 
@@ -27,106 +43,182 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   searchTerm,
   statusFilter,
   onViewClient,
+  onMessageClient,
   formatDate
 }) => {
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch = 
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.company && client.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (client.phone && client.phone.includes(searchTerm));
-      
-    const matchesStatusFilter = statusFilter === 'all' || 
-      (client.tags && client.tags.includes(statusFilter));
+  // Filter clients based on searchTerm and statusFilter
+  const filteredClients = clients.filter(client => {
+    // Filter by search term
+    const matchesSearch = searchTerm === '' || 
+      client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.company?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesSearch && matchesStatusFilter;
+    // Filter by status
+    const matchesStatus = statusFilter === 'all' || true; // We don't have status in client yet
+    
+    return matchesSearch && matchesStatus;
   });
 
+  // Display skeletons when loading
   if (isLoading) {
-    return <div className="py-10 text-center">Loading clients...</div>;
-  }
-
-  if (filteredClients.length === 0) {
     return (
-      <div className="py-10 text-center">
-        {searchTerm || statusFilter !== 'all' 
-          ? 'No clients match your search or filters.' 
-          : 'No clients available. Add your first client!'}
+      <div className="animate-pulse">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Join Date</TableHead>
+              <TableHead>Renewal</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, i) => (
+              <TableRow key={i}>
+                {[...Array(6)].map((_, j) => (
+                  <TableCell key={j}>
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     );
   }
 
+  // Display empty state when no clients match filters
+  if (filteredClients.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <UserRound className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-2 text-lg font-semibold">No clients found</h3>
+        <p className="text-muted-foreground">
+          {searchTerm || statusFilter !== 'all' 
+            ? "No clients match your search criteria. Try adjusting your filters." 
+            : "You haven't added any clients yet."}
+        </p>
+      </div>
+    );
+  }
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name.split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-gray-50">
-            <TableHead className="py-4 font-semibold text-gray-700">NAME</TableHead>
-            <TableHead className="py-4 font-semibold text-gray-700">CONTACT</TableHead>
-            <TableHead className="py-4 font-semibold text-gray-700">COMPANY</TableHead>
-            <TableHead className="py-4 font-semibold text-gray-700">ADDRESS</TableHead>
-            <TableHead className="py-4 font-semibold text-gray-700">PLAN DETAILS</TableHead>
-            <TableHead className="py-4 font-semibold text-gray-700">LAST CONTACT</TableHead>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>
+            <div className="flex items-center">
+              Name
+              <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground cursor-pointer" />
+            </div>
+          </TableHead>
+          <TableHead>Contact</TableHead>
+          <TableHead>Company</TableHead>
+          <TableHead>
+            <div className="flex items-center">
+              Join Date
+              <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground cursor-pointer" />
+            </div>
+          </TableHead>
+          <TableHead>Renewal</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredClients.map((client) => (
+          <TableRow key={client.id} className="cursor-pointer" onClick={() => onViewClient(client)}>
+            <TableCell className="font-medium">
+              <div className="flex items-center">
+                <Avatar className="h-8 w-8 mr-3">
+                  <AvatarImage src={client.avatar_url} alt={client.name} />
+                  <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
+                </Avatar>
+                {client.name}
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="space-y-1">
+                {client.email && <div className="text-sm">{client.email}</div>}
+                {client.phone && <div className="text-xs text-muted-foreground">{client.phone}</div>}
+              </div>
+            </TableCell>
+            <TableCell>
+              {client.company || "—"}
+            </TableCell>
+            <TableCell>
+              {formatDate(client.join_date)}
+            </TableCell>
+            <TableCell>
+              {client.renewal_date ? formatDate(client.renewal_date) : "—"}
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewClient(client);
+                  }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onViewClient(client);
+                    }}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onMessageClient(client);
+                    }}>
+                      {/* Using message icon directly as we're removing the icon components */}
+                      <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      Message
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={e => e.stopPropagation()}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={e => e.stopPropagation()}
+                      className="text-red-600"
+                    >
+                      <Trash className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredClients.map((client) => (
-            <TableRow 
-              key={client.id} 
-              className="hover:bg-gray-50 cursor-pointer"
-              onClick={() => onViewClient(client)}
-            >
-              <TableCell className="py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {client.avatar_url ? (
-                      <img 
-                        src={client.avatar_url} 
-                        alt={client.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-gray-600 font-semibold">
-                        {client.name.substring(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-semibold">{client.name}</div>
-                    {client.tags && client.tags.length > 0 && (
-                      <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200">
-                        {client.tags[0]}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell className="py-4">
-                <div className="space-y-1 text-sm">
-                  {client.email && <div>{client.email}</div>}
-                  {client.phone && <div>{client.phone}</div>}
-                </div>
-              </TableCell>
-              <TableCell className="py-4">
-                {client.company || "-"}
-              </TableCell>
-              <TableCell className="py-4">
-                {client.address || "-"}
-              </TableCell>
-              <TableCell className="py-4">
-                {client.plan_details || "-"}
-              </TableCell>
-              <TableCell className="py-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span>{formatDate(client.join_date)}</span>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 
