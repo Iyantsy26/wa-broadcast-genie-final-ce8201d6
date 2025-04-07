@@ -14,6 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon, Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 import LeadForm from '@/components/leads/LeadForm';
 
 interface LeadsTableProps {
@@ -32,6 +37,17 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string>("09:00 AM");
+
+  const timeOptions = [
+    "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM", 
+    "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+    "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
+    "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM"
+  ];
 
   const filteredLeads = leads.filter((lead) => {
     // Filter by search term
@@ -71,6 +87,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     return format(new Date(dateString), 'MMM dd, yyyy');
   };
 
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+      return format(new Date(dateString), 'hh:mm a');
+    } catch (e) {
+      return '';
+    }
+  };
+
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
     setIsDetailsOpen(true);
@@ -83,6 +108,24 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
 
   const handleEditComplete = () => {
     setIsEditOpen(false);
+  };
+
+  const handleDateUpdate = (leadId: string, date: Date) => {
+    // Here we would update the date in the backend
+    toast({
+      title: "Follow-up date updated",
+      description: `Follow-up scheduled for ${format(date, 'MMM dd, yyyy')} at ${selectedTime}`
+    });
+    setShowDatePicker(null);
+    setSelectedDate(null);
+  };
+
+  const handleFollowupClick = (e: React.MouseEvent, leadId: string, currentDate?: string) => {
+    e.stopPropagation();
+    setShowDatePicker(leadId);
+    if (currentDate) {
+      setSelectedDate(new Date(currentDate));
+    }
   };
 
   if (loading) {
@@ -111,12 +154,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Address</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Last Contact</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Next Follow-up</TableHead>
-              <TableHead className="text-right py-3 px-4"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLeads.map((lead) => (
-              <TableRow key={lead.id} className="border-b hover:bg-gray-50">
+              <TableRow key={lead.id} className="border-b hover:bg-gray-50" onClick={() => handleLeadClick(lead)}>
                 <TableCell className="py-4 px-4">
                   <div className="flex items-center">
                     <Avatar className="w-8 h-8 mr-3">
@@ -129,7 +171,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     <div>
                       <span 
                         className="font-semibold cursor-pointer hover:text-blue-600"
-                        onClick={() => handleLeadClick(lead)}
                       >
                         {lead.name}
                       </span>
@@ -152,17 +193,62 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <TableCell className="py-4 px-4">{lead.company || '-'}</TableCell>
                 <TableCell className="py-4 px-4">{lead.address || '-'}</TableCell>
                 <TableCell className="py-4 px-4">{formatDate(lead.last_contact)}</TableCell>
-                <TableCell className="py-4 px-4">{formatDate(lead.next_followup)}</TableCell>
                 <TableCell className="py-4 px-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600"
-                    onClick={() => handleLeadClick(lead)}
+                  <div 
+                    className="cursor-pointer hover:text-blue-600" 
+                    onClick={(e) => handleFollowupClick(e, lead.id, lead.next_followup)}
                   >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                  </Button>
+                    <div>{lead.next_followup ? formatDate(lead.next_followup) : '-'}</div>
+                    {lead.next_followup_time && (
+                      <div className="text-xs text-gray-500 flex items-center mt-1">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {lead.next_followup_time}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {showDatePicker === lead.id && (
+                    <Popover open={true} onOpenChange={() => setShowDatePicker(null)}>
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
+                        <div className="p-3">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate || undefined}
+                            onSelect={(date) => setSelectedDate(date)}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                          <div className="mt-3 border-t pt-3">
+                            <label className="block text-sm font-medium mb-2">Time</label>
+                            <select 
+                              className="w-full border rounded p-2"
+                              value={selectedTime}
+                              onChange={(e) => setSelectedTime(e.target.value)}
+                            >
+                              {timeOptions.map(time => (
+                                <option key={time} value={time}>{time}</option>
+                              ))}
+                            </select>
+                            <div className="flex justify-end mt-3">
+                              <Button 
+                                onClick={() => setShowDatePicker(null)} 
+                                variant="outline" 
+                                className="mr-2"
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                onClick={() => selectedDate && handleDateUpdate(lead.id, selectedDate)}
+                                disabled={!selectedDate}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

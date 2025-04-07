@@ -135,7 +135,7 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 bg-white z-50">
           <DropdownMenuItem onClick={handleVoiceCall}>
             <Phone className="mr-2 h-4 w-4" />
             Voice call

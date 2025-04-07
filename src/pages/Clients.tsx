@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,15 +7,18 @@ import { Card } from '@/components/ui/card';
 import { Client } from '@/types/conversation';
 import { format } from 'date-fns';
 import ClientsTable from '@/components/clients/ClientsTable';
+import ClientsHeader from '@/components/clients/ClientsHeader';
 import { useQuery } from '@tanstack/react-query';
 import { getClients } from '@/services/clientService';
 import { toast } from '@/hooks/use-toast';
 import { ConversationProvider } from '@/contexts/ConversationContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const Clients = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showAddClientDialog, setShowAddClientDialog] = useState(false);
   
   const {
     data: clients = [],
@@ -31,20 +33,9 @@ const Clients = () => {
     navigate(`/clients/${client.id}`);
   };
   
-  // This function will be used to start a conversation with a client
   const handleMessageClient = async (client: Client): Promise<void> => {
-    // Store client data in sessionStorage to be picked up by the Conversations page
     sessionStorage.setItem('selectedContactId', client.id);
-    
-    // Navigate to conversations page
     navigate('/conversations');
-    
-    toast({
-      title: 'Conversation opened',
-      description: `Chat with ${client.name} started.`,
-    });
-    
-    // Return a resolved promise to satisfy the Promise<void> return type
     return Promise.resolve();
   };
   
@@ -55,6 +46,10 @@ const Clients = () => {
     } catch (e) {
       return dateString;
     }
+  };
+
+  const handleAddClient = () => {
+    setShowAddClientDialog(true);
   };
   
   if (isError) {
@@ -70,12 +65,7 @@ const Clients = () => {
   
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-        <p className="text-muted-foreground">
-          Manage your client database and communication
-        </p>
-      </div>
+      <ClientsHeader onAddClient={handleAddClient} />
       
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div className="w-full md:w-1/3">
@@ -106,11 +96,22 @@ const Clients = () => {
           formatDate={formatDate}
         />
       </Card>
+
+      <Dialog open={showAddClientDialog} onOpenChange={setShowAddClientDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <p>Client form will be implemented here.</p>
+          </div>
+          <Button onClick={() => setShowAddClientDialog(false)}>Close</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// Wrap the Clients component with the ConversationProvider
 const ClientsWithConversationProvider = () => {
   return (
     <ConversationProvider>

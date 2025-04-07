@@ -9,6 +9,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Client } from '@/types/conversation';
 import { 
   ArrowUpDown, 
@@ -33,7 +34,7 @@ export interface ClientsTableProps {
   searchTerm: string;
   statusFilter: string;
   onViewClient: (client: Client) => void;
-  onMessageClient: (client: Client) => Promise<void>; // Added this prop
+  onMessageClient: (client: Client) => Promise<void>; // We'll keep this but won't use it
   formatDate: (dateString?: string) => string;
 }
 
@@ -46,6 +47,9 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   onMessageClient,
   formatDate
 }) => {
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showClientDetails, setShowClientDetails] = useState(false);
+
   // Filter clients based on searchTerm and statusFilter
   const filteredClients = clients.filter(client => {
     // Filter by search term
@@ -59,6 +63,20 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
     
     return matchesSearch && matchesStatus;
   });
+
+  // Handle client click to view details
+  const handleClientClick = (client: Client) => {
+    setSelectedClient(client);
+    setShowClientDetails(true);
+  };
+
+  // Handle edit client
+  const handleEditClient = (e: React.MouseEvent, client: Client) => {
+    e.stopPropagation();
+    // In the future, this will open an edit form
+    // For now we'll just show a toast
+    onViewClient(client);
+  };
 
   // Display skeletons when loading
   if (isLoading) {
@@ -116,109 +134,176 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>
-            <div className="flex items-center">
-              Name
-              <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground cursor-pointer" />
-            </div>
-          </TableHead>
-          <TableHead>Contact</TableHead>
-          <TableHead>Company</TableHead>
-          <TableHead>
-            <div className="flex items-center">
-              Join Date
-              <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground cursor-pointer" />
-            </div>
-          </TableHead>
-          <TableHead>Renewal</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {filteredClients.map((client) => (
-          <TableRow key={client.id} className="cursor-pointer" onClick={() => onViewClient(client)}>
-            <TableCell className="font-medium">
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>
               <div className="flex items-center">
-                <Avatar className="h-8 w-8 mr-3">
-                  <AvatarImage src={client.avatar_url} alt={client.name} />
-                  <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
-                </Avatar>
-                {client.name}
+                Name
+                <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground cursor-pointer" />
               </div>
-            </TableCell>
-            <TableCell>
-              <div className="space-y-1">
-                {client.email && <div className="text-sm">{client.email}</div>}
-                {client.phone && <div className="text-xs text-muted-foreground">{client.phone}</div>}
+            </TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead>
+              <div className="flex items-center">
+                Join Date
+                <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground cursor-pointer" />
               </div>
-            </TableCell>
-            <TableCell>
-              {client.company || "—"}
-            </TableCell>
-            <TableCell>
-              {formatDate(client.join_date)}
-            </TableCell>
-            <TableCell>
-              {client.renewal_date ? formatDate(client.renewal_date) : "—"}
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewClient(client);
-                  }}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onViewClient(client);
-                    }}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onMessageClient(client);
-                    }}>
-                      {/* Using message icon directly as we're removing the icon components */}
-                      <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                      Message
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={e => e.stopPropagation()}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={e => e.stopPropagation()}
-                      className="text-red-600"
-                    >
-                      <Trash className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </TableCell>
+            </TableHead>
+            <TableHead>Renewal</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {filteredClients.map((client) => (
+            <TableRow key={client.id} className="cursor-pointer" onClick={() => handleClientClick(client)}>
+              <TableCell className="font-medium">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-3">
+                    <AvatarImage src={client.avatar_url} alt={client.name} />
+                    <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
+                  </Avatar>
+                  {client.name}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  {client.email && <div className="text-sm">{client.email}</div>}
+                  {client.phone && <div className="text-xs text-muted-foreground">{client.phone}</div>}
+                </div>
+              </TableCell>
+              <TableCell>
+                {client.company || "—"}
+              </TableCell>
+              <TableCell>
+                {formatDate(client.join_date)}
+              </TableCell>
+              <TableCell>
+                {client.renewal_date ? formatDate(client.renewal_date) : "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleEditClient(e, client)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white z-50">
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleClientClick(client);
+                      }}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClient(e, client);
+                      }}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={e => e.stopPropagation()}
+                        className="text-red-600"
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Client Details Dialog */}
+      {selectedClient && (
+        <Dialog open={showClientDetails} onOpenChange={setShowClientDetails}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Client Details</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="flex items-center mb-6">
+                <Avatar className="h-16 w-16 mr-4">
+                  <AvatarImage src={selectedClient.avatar_url} alt={selectedClient.name} />
+                  <AvatarFallback>{getInitials(selectedClient.name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-2xl font-semibold">{selectedClient.name}</h3>
+                  <p className="text-gray-500">{selectedClient.company || "No company"}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Email</h4>
+                  <p>{selectedClient.email || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Phone</h4>
+                  <p>{selectedClient.phone || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Join Date</h4>
+                  <p>{formatDate(selectedClient.join_date)}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Renewal Date</h4>
+                  <p>{selectedClient.renewal_date ? formatDate(selectedClient.renewal_date) : "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Address</h4>
+                  <p>{selectedClient.address || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Referred By</h4>
+                  <p>{selectedClient.referred_by || "—"}</p>
+                </div>
+              </div>
+
+              {selectedClient.notes && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-500">Notes</h4>
+                  <p className="mt-1 text-gray-700">{selectedClient.notes}</p>
+                </div>
+              )}
+
+              {selectedClient.tags && selectedClient.tags.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-500">Tags</h4>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedClient.tags.map((tag, idx) => (
+                      <Badge key={idx} variant="outline">{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowClientDetails(false)}>Close</Button>
+              <Button onClick={(e) => handleEditClient(e, selectedClient)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Client
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 };
 
