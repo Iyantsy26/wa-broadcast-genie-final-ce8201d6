@@ -34,6 +34,10 @@ const ChatPage = () => {
     messagesEndRef
   } = useConversation();
 
+  // Extract the messages array for the active conversation
+  const activeMessages = activeConversation ? 
+    (messages[activeConversation.id] || []) : [];
+
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
@@ -47,19 +51,19 @@ const ChatPage = () => {
 
       <div className="flex flex-1 gap-4 h-[calc(100vh-13rem)] overflow-hidden">
         <ConversationList 
-          conversations={filteredConversations}
-          groupedConversations={groupedConversations}
+          conversations={filteredConversations || []}
+          groupedConversations={groupedConversations || {}}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
-          chatTypeFilter={chatTypeFilter}
+          chatTypeFilter={chatTypeFilter || 'all'}
           setChatTypeFilter={setChatTypeFilter}
-          searchTerm={searchTerm}
+          searchTerm={searchTerm || ''}
           setSearchTerm={setSearchTerm}
           dateRange={dateRange}
           setDateRange={setDateRange}
-          assigneeFilter={assigneeFilter}
+          assigneeFilter={assigneeFilter || ''}
           setAssigneeFilter={setAssigneeFilter}
-          tagFilter={tagFilter}
+          tagFilter={tagFilter || ''}
           setTagFilter={setTagFilter}
           resetAllFilters={resetAllFilters}
           pinConversation={() => {}}
@@ -69,7 +73,7 @@ const ChatPage = () => {
         {activeConversation ? (
           <MessagePanel 
             conversation={activeConversation}
-            messages={messages}
+            messages={activeMessages}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
             onSendMessage={handleSendMessage}
             onVoiceMessageSent={handleVoiceMessageSent}
