@@ -16,8 +16,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash,
-  UserRound,
-  MessageSquare
+  UserRound
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -44,7 +43,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   searchTerm,
   statusFilter,
   onViewClient,
-  onMessageClient,
   formatDate
 }) => {
   // Filter clients based on searchTerm and statusFilter
@@ -135,7 +133,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             </div>
           </TableHead>
           <TableHead>Renewal</TableHead>
-          <TableHead className="text-right">Message</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -164,18 +161,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             </TableCell>
             <TableCell>
               {client.renewal_date ? formatDate(client.renewal_date) : "—"}
-            </TableCell>
-            <TableCell className="text-right">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMessageClient(client);
-                }}
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
             </TableCell>
           </TableRow>
         ))}

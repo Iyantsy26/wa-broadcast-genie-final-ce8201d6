@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ import { ConversationProvider } from '@/contexts/ConversationContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Pencil, Download, Upload } from 'lucide-react';
 import ClientsHeader from '@/components/clients/ClientsHeader';
+import ClientForm from '@/components/clients/ClientForm';
 
 const Clients = () => {
   const navigate = useNavigate();
@@ -22,13 +22,14 @@ const Clients = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
   
   const {
     data: clients = [],
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ['clients'],
     queryFn: getClients,
@@ -37,7 +38,6 @@ const Clients = () => {
   const handleViewClient = (client: Client) => {
     setSelectedClient(client);
     setIsDetailsOpen(true);
-    setIsEditing(false);
   };
   
   const handleMessageClient = async (client: Client): Promise<void> => {
@@ -69,7 +69,18 @@ const Clients = () => {
   };
   
   const handleEditClient = () => {
-    setIsEditing(true);
+    setIsDetailsOpen(false);
+    setIsEditOpen(true);
+  };
+
+  const handleEditComplete = () => {
+    setIsEditOpen(false);
+    refetch();
+  };
+  
+  const handleAddClientComplete = () => {
+    setIsAddClientOpen(false);
+    refetch();
   };
   
   const handleExportClients = () => {
@@ -201,7 +212,6 @@ const Clients = () => {
             </DialogHeader>
             
             <div className="space-y-4">
-              {/* Client avatar and basic info */}
               <div className="flex items-center space-x-4">
                 {selectedClient.avatar_url ? (
                   <img src={selectedClient.avatar_url} alt={selectedClient.name} className="h-16 w-16 rounded-full" />
@@ -218,7 +228,6 @@ const Clients = () => {
                 </div>
               </div>
               
-              {/* Contact details */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Contact Information</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-1">
@@ -233,7 +242,6 @@ const Clients = () => {
                 </div>
               </div>
               
-              {/* Membership details */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Membership Information</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-1">
@@ -248,7 +256,6 @@ const Clients = () => {
                 </div>
               </div>
               
-              {/* Tags */}
               {selectedClient.tags && selectedClient.tags.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Tags</h4>
@@ -262,7 +269,6 @@ const Clients = () => {
                 </div>
               )}
               
-              {/* Notes */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">Notes</h4>
                 <p className="text-sm whitespace-pre-line border rounded p-3">
@@ -272,10 +278,31 @@ const Clients = () => {
             </div>
             
             <DialogFooter>
-              <Button onClick={() => handleMessageClient(selectedClient)}>
-                Message Client
+              <Button onClick={handleEditClient} className="flex items-center">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Client
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <Dialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+          </DialogHeader>
+          <ClientForm onComplete={handleAddClientComplete} />
+        </DialogContent>
+      </Dialog>
+
+      {selectedClient && (
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Edit Client</DialogTitle>
+            </DialogHeader>
+            <ClientForm client={selectedClient} onComplete={handleEditComplete} />
           </DialogContent>
         </Dialog>
       )}

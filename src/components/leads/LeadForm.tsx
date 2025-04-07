@@ -5,7 +5,7 @@ import { Form } from '@/components/ui/form';
 import { Lead } from '@/types/conversation';
 import { createLead, updateLead, uploadLeadAvatar } from '@/services/leadService';
 import { toast } from '@/hooks/use-toast';
-import { set } from 'date-fns';
+import { set, format } from 'date-fns';
 
 // Import form components
 import LeadAvatar from './LeadAvatar';
@@ -30,6 +30,13 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
     }
   }
 
+  // Extract time from next_followup if it exists
+  let nextFollowupTime = '09:00';
+  if (lead?.next_followup) {
+    const nextFollowupDate = new Date(lead.next_followup);
+    nextFollowupTime = format(nextFollowupDate, 'HH:mm');
+  }
+
   const defaultValues: FormValues = {
     name: lead?.name || '',
     company: lead?.company || '',
@@ -41,7 +48,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onComplete }) => {
     referrer_name: lead?.referrer_name || '',
     last_contact: lead?.last_contact ? new Date(lead.last_contact) : undefined,
     next_followup: lead?.next_followup ? new Date(lead.next_followup) : undefined,
-    next_followup_time: lead?.next_followup ? new Date(lead.next_followup).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '09:00',
+    next_followup_time: nextFollowupTime,
     notes: lead?.notes || '',
   };
 

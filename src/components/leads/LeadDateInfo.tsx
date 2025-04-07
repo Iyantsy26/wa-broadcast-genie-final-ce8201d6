@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -16,6 +16,9 @@ interface LeadDateInfoProps {
 }
 
 const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
+  const [isLastContactOpen, setIsLastContactOpen] = useState(false);
+  const [isNextFollowupOpen, setIsNextFollowupOpen] = useState(false);
+
   return (
     <>
       <FormField
@@ -24,7 +27,7 @@ const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
         render={({ field }) => (
           <FormItem className="flex flex-col">
             <FormLabel>Last Contact</FormLabel>
-            <Popover>
+            <Popover open={isLastContactOpen} onOpenChange={setIsLastContactOpen}>
               <PopoverTrigger asChild>
                 <FormControl>
                   <Button
@@ -47,7 +50,10 @@ const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
                 <Calendar
                   mode="single"
                   selected={field.value}
-                  onSelect={field.onChange}
+                  onSelect={(date) => {
+                    field.onChange(date);
+                    setIsLastContactOpen(false);
+                  }}
                   initialFocus
                   className={cn("p-3 pointer-events-auto")}
                 />
@@ -65,7 +71,7 @@ const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Next Follow-up</FormLabel>
-              <Popover>
+              <Popover open={isNextFollowupOpen} onOpenChange={setIsNextFollowupOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -76,7 +82,14 @@ const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
                       )}
                     >
                       {field.value ? (
-                        format(field.value, "PPP")
+                        <div className="flex flex-col items-start">
+                          <span>{format(field.value, "PPP")}</span>
+                          {form.watch("next_followup_time") && (
+                            <span className="text-xs text-muted-foreground">
+                              {form.watch("next_followup_time")}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -88,7 +101,10 @@ const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={field.onChange}
+                    onSelect={(date) => {
+                      field.onChange(date);
+                      setIsNextFollowupOpen(false);
+                    }}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                   />
@@ -111,7 +127,17 @@ const LeadDateInfo: React.FC<LeadDateInfoProps> = ({ form, timeOptions }) => {
                   <select
                     className="w-full rounded-md border border-input bg-background px-3 py-2"
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      // Make sure we have a date selected
+                      const currentDate = form.getValues("next_followup");
+                      if (!currentDate) {
+                        // If no date is selected, default to today
+                        form.setValue("next_followup", new Date());
+                      }
+                    }}
                   >
+                    <option value="">Select time</option>
                     {timeOptions.map(time => (
                       <option key={time} value={time}>
                         {time}
