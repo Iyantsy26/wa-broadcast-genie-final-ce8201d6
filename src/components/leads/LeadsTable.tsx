@@ -5,6 +5,7 @@ import { Lead } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
