@@ -7,14 +7,18 @@ import { X } from 'lucide-react';
 interface CannedResponseSelectorProps {
   onSelectResponse: (responseText: string) => void;
   onClose: () => void;
+  onSelectReply?: (replyId: string) => void;
+  cannedReplies?: Array<{id: string, title: string, content: string}>;
 }
 
 const CannedResponseSelector: React.FC<CannedResponseSelectorProps> = ({
   onSelectResponse,
-  onClose
+  onClose,
+  onSelectReply,
+  cannedReplies
 }) => {
-  // Sample canned responses
-  const cannedResponses = [
+  // Sample canned responses if none are provided
+  const cannedResponses = cannedReplies || [
     {
       id: 'greeting',
       title: 'Greeting',
@@ -42,6 +46,15 @@ const CannedResponseSelector: React.FC<CannedResponseSelectorProps> = ({
     }
   ];
 
+  const handleSelectResponse = (response: {id: string, content: string}) => {
+    if (onSelectReply) {
+      onSelectReply(response.id);
+    } else {
+      onSelectResponse(response.content);
+    }
+    onClose();
+  };
+
   return (
     <Card className="p-3 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex justify-between items-center mb-2">
@@ -56,7 +69,7 @@ const CannedResponseSelector: React.FC<CannedResponseSelectorProps> = ({
           <div 
             key={response.id} 
             className="p-2 bg-muted rounded-md hover:bg-muted/70 cursor-pointer"
-            onClick={() => onSelectResponse(response.content)}
+            onClick={() => handleSelectResponse(response)}
           >
             <div className="font-medium text-sm">{response.title}</div>
             <div className="text-xs text-muted-foreground truncate">{response.content}</div>

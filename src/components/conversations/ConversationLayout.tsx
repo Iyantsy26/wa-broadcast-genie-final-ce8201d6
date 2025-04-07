@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import ContactSidebar from './ContactSidebar';
 import MessagePanel from './MessagePanel';
@@ -68,8 +69,7 @@ const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDevi
     handleDeleteConversation,
     handleAddTag,
     handleAssignConversation,
-    handleReplyToMessage,
-    handleLocationShare
+    handleReplyToMessage
   } = useConversation();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +105,7 @@ const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDevi
   const handleCancelReply = () => {
     // Implementation for canceling replies
     console.log("Reply canceled");
+    setReplyTo(null);
   };
   
   // Function to handle location sharing
@@ -113,7 +114,9 @@ const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDevi
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          sendLocation(activeConversation?.contact.id || '', latitude, longitude, currentDeviceId);
+          if (activeConversation) {
+            sendLocation(activeConversation.contact.id, latitude, longitude, currentDeviceId);
+          }
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -136,20 +139,23 @@ const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDevi
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 h-full">
       {/* Contact sidebar */}
-      <ContactSidebar
-        contacts={filteredContacts}
-        onSelectContact={selectContact}
-        selectedContactId={null}
-        isSidebarOpen={isSidebarOpen}
-        onOpenChange={setIsSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+      <div className="md:col-span-1">
+        <ContactSidebar
+          filteredContacts={filteredContacts}
+          onSelectContact={selectContact}
+          selectedContactId={activeConversation?.contact.id || null}
+          isSidebarOpen={isSidebarOpen}
+          onOpenChange={toggleSidebar}
+          onClose={() => toggleSidebar()}
+        />
+      </div>
       
       {/* Main content area */}
       <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full">
         {activeConversation ? (
           <MessagePanel
             contact={activeConversation.contact}
+            conversation={activeConversation}
             messages={messages[activeConversation.id] || []}
             isTyping={isTyping}
             messagesEndRef={messagesEndRef}
@@ -168,12 +174,14 @@ const ConversationLayout: React.FC<{ currentDeviceId: string }> = ({ currentDevi
       </div>
       
       {/* Contact info sidebar */}
-      <ContactInfoSidebar
-        conversation={activeConversation}
-        isOpen={isSidebarOpen}
-        onOpenChange={setIsSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+      {activeConversation && (
+        <ContactInfoSidebar
+          conversation={activeConversation}
+          isOpen={isSidebarOpen}
+          onOpenChange={toggleSidebar}
+          onClose={() => toggleSidebar()}
+        />
+      )}
     </div>
   );
 };
