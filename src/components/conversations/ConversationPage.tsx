@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ConversationList from './ConversationList';
@@ -80,7 +79,7 @@ const ConversationPage = () => {
   // Create a wrapper function for AI assistance to return a Promise
   const handleRequestAIAssistancePromise = async (prompt: string): Promise<string> => {
     if (handleRequestAIAssistance) {
-      handleRequestAIAssistance(prompt); // Pass the prompt parameter
+      handleRequestAIAssistance(); // This function doesn't take parameters now
     }
     return `Response to: ${prompt}`;
   };

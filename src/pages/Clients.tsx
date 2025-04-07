@@ -5,36 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Client } from '@/types/conversation';
 import { format } from 'date-fns';
 import ClientsTable from '@/components/clients/ClientsTable';
 import { useQuery } from '@tanstack/react-query';
 import { getClients } from '@/services/clientService';
-import { useConversation } from '@/contexts/ConversationContext';
 import { toast } from '@/hooks/use-toast';
+import { ConversationProvider } from '@/contexts/ConversationContext';
 
 const Clients = () => {
   const navigate = useNavigate();
-  const { selectContact } = useConversation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
@@ -51,38 +31,18 @@ const Clients = () => {
     navigate(`/clients/${client.id}`);
   };
   
-  const handleMessageClient = async (client: Client) => {
-    try {
-      // Create a contact from the client if it doesn't exist
-      const contact = {
-        id: client.id,
-        name: client.name,
-        avatar: client.avatar_url,
-        phone: client.phone || '',
-        type: 'client' as const,
-        isOnline: false,
-        lastSeen: client.join_date || new Date().toISOString(),
-        tags: client.tags || []
-      };
-      
-      // Select the contact to open the conversation
-      selectContact(client.id);
-      
-      // Navigate to conversations page
-      navigate('/conversations');
-      
-      toast({
-        title: 'Conversation opened',
-        description: `Chat with ${client.name} started.`,
-      });
-    } catch (error) {
-      console.error('Error starting conversation:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to start conversation',
-        variant: 'destructive',
-      });
-    }
+  // This function will be used to start a conversation with a client
+  const handleMessageClient = (client: Client) => {
+    // Store client data in sessionStorage to be picked up by the Conversations page
+    sessionStorage.setItem('selectedContactId', client.id);
+    
+    // Navigate to conversations page
+    navigate('/conversations');
+    
+    toast({
+      title: 'Conversation opened',
+      description: `Chat with ${client.name} started.`,
+    });
   };
   
   const formatDate = (dateString?: string) => {
@@ -147,4 +107,13 @@ const Clients = () => {
   );
 };
 
-export default Clients;
+// Wrap the Clients component with the ConversationProvider
+const ClientsWithConversationProvider = () => {
+  return (
+    <ConversationProvider>
+      <Clients />
+    </ConversationProvider>
+  );
+};
+
+export default ClientsWithConversationProvider;
