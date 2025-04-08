@@ -24,6 +24,16 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     ? contacts.find(c => c.id === selectedContactId) 
     : null;
 
+  // Create a function that returns a Promise<string> as required by the AIAssistantPanel
+  const handleRequestAIAssistance = async (prompt: string): Promise<string> => {
+    console.log('AI assistance requested with prompt:', prompt);
+    // This would typically call an API or service
+    // to generate AI-powered responses
+    
+    // For now, just return a mock response
+    return Promise.resolve(`AI response to: ${prompt}`);
+  };
+
   return (
     <div className="flex gap-3 overflow-hidden h-full">
       {/* Contact sidebar */}
@@ -49,11 +59,7 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
       {/* AI Assistant panel (when active) */}
       {isAssistantActive && (
         <AIAssistantPanel 
-          onRequestAIAssistance={() => {
-            console.log('AI assistance requested');
-            // This would typically call an API or service
-            // to generate AI-powered responses
-          }}
+          onRequestAIAssistance={handleRequestAIAssistance}
           onClose={() => toggleAssistant()}
         />
       )}
