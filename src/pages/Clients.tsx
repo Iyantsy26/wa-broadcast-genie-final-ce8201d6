@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { getClients } from '@/services/clientService';
 import { toast } from '@/hooks/use-toast';
 import { ConversationProvider } from '@/contexts/ConversationContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ClientForm from '@/components/clients/ClientForm';
 
 const Clients = () => {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ const Clients = () => {
     data: clients = [],
     isLoading,
     isError,
+    refetch
   } = useQuery({
     queryKey: ['clients'],
     queryFn: getClients,
@@ -50,6 +53,16 @@ const Clients = () => {
 
   const handleAddClient = () => {
     setShowAddClientDialog(true);
+  };
+
+  const handleAddClientComplete = () => {
+    setShowAddClientDialog(false);
+    // Refresh the clients list
+    refetch();
+    toast({
+      title: "Client added successfully",
+      description: "The new client has been added to your list.",
+    });
   };
   
   if (isError) {
@@ -98,14 +111,11 @@ const Clients = () => {
       </Card>
 
       <Dialog open={showAddClientDialog} onOpenChange={setShowAddClientDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
           </DialogHeader>
-          <div className="py-6">
-            <p>Client form will be implemented here.</p>
-          </div>
-          <Button onClick={() => setShowAddClientDialog(false)}>Close</Button>
+          <ClientForm onComplete={handleAddClientComplete} />
         </DialogContent>
       </Dialog>
     </div>
