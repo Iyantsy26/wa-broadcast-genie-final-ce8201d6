@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Client } from '@/types/conversation';
 import { 
@@ -9,9 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MessageSquare, MoreHorizontal } from 'lucide-react';
 
 export interface ClientsTableProps {
   clients: Client[];
@@ -29,7 +28,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   searchTerm,
   statusFilter,
   onViewClient,
-  onMessageClient,
   formatDate,
 }) => {
   return (
@@ -41,25 +39,24 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
           <TableHead>Join Date</TableHead>
           <TableHead>Renewal</TableHead>
           <TableHead>Tags</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {isLoading ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-8">
+            <TableCell colSpan={5} className="text-center py-8">
               Loading clients...
             </TableCell>
           </TableRow>
         ) : clients.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-8">
+            <TableCell colSpan={5} className="text-center py-8">
               {searchTerm || statusFilter ? "No clients match your filters" : "No clients found"}
             </TableCell>
           </TableRow>
         ) : (
           clients.map((client) => (
-            <TableRow key={client.id}>
+            <TableRow key={client.id} className="cursor-pointer hover:bg-gray-50" onClick={() => onViewClient(client)}>
               <TableCell>
                 <div className="flex items-center gap-3">
                   <Avatar>
@@ -103,24 +100,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
                   ) : (
                     <span className="text-muted-foreground text-sm">No tags</span>
                   )}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => onViewClient(client)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => onMessageClient(client)}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
                 </div>
               </TableCell>
             </TableRow>

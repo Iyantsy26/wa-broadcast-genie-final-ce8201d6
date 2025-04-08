@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Edit } from 'lucide-react';
 import { Lead } from '@/types/conversation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -111,12 +110,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Address</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Last Contact</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider py-3 px-4">Next Follow-up</TableHead>
-              <TableHead className="text-right py-3 px-4"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLeads.map((lead) => (
-              <TableRow key={lead.id} className="border-b hover:bg-gray-50">
+              <TableRow key={lead.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleLeadClick(lead)}>
                 <TableCell className="py-4 px-4">
                   <div className="flex items-center">
                     <Avatar className="w-8 h-8 mr-3">
@@ -127,10 +125,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                       )}
                     </Avatar>
                     <div>
-                      <span 
-                        className="font-semibold cursor-pointer hover:text-blue-600"
-                        onClick={() => handleLeadClick(lead)}
-                      >
+                      <span className="font-semibold hover:text-blue-600">
                         {lead.name}
                       </span>
                       {lead.status && (
@@ -153,17 +148,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <TableCell className="py-4 px-4">{lead.address || '-'}</TableCell>
                 <TableCell className="py-4 px-4">{formatDate(lead.last_contact)}</TableCell>
                 <TableCell className="py-4 px-4">{formatDate(lead.next_followup)}</TableCell>
-                <TableCell className="py-4 px-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-blue-600"
-                    onClick={() => handleLeadClick(lead)}
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                  </Button>
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -245,7 +229,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
 
               <div className="flex justify-end mt-6">
                 <Button onClick={handleEditClick} className="flex items-center">
-                  <Edit className="mr-2 h-4 w-4" />
                   Edit Lead
                 </Button>
               </div>

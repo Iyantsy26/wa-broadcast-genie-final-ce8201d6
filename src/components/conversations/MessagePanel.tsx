@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import { Contact, Message } from '@/types/conversation';
 import ConversationHeader from './ConversationHeader';
@@ -9,21 +9,46 @@ import MessageInputBar from './MessageInputBar';
 interface MessagePanelProps {
   contact: Contact;
   deviceId: string;
+  wallpaper?: string | null;
+  soundEnabled?: boolean;
+  disappearingMessages?: {
+    enabled: boolean;
+    timeout: number;
+  };
+  onClearChat?: (contactId: string) => void;
+  onToggleStar?: (contactId: string) => void;
+  onToggleMute?: (contactId: string, isMuted: boolean) => void;
+  onToggleDisappearing?: (enabled: boolean) => void;
+  onSetDisappearingTimeout?: (hours: number) => void;
 }
 
-const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
+const MessagePanel: React.FC<MessagePanelProps> = ({ 
+  contact, 
+  deviceId,
+  wallpaper,
+  soundEnabled = true,
+  disappearingMessages = { enabled: false, timeout: 24 },
+  onClearChat,
+  onToggleStar,
+  onToggleMute,
+  onToggleDisappearing,
+  onSetDisappearingTimeout
+}) => {
   const {
     messages,
     isTyping,
     replyTo,
-    wallpaper,
     messagesEndRef,
     toggleSidebar,
     sendMessage,
     sendVoiceMessage,
     setReplyTo,
-    addReaction
+    addReaction,
+    deleteMessage
   } = useConversation();
+  
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeAttachmentType, setActiveAttachmentType] = useState<string | null>(null);
   
   const contactMessages = messages[contact.id] || [];
   
@@ -33,7 +58,18 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
     : {};
   
   const handleSendMessage = (message: string) => {
-    sendMessage(contact.id, message, deviceId);
+    if (selectedFile) {
+      // Handle file attachment
+      console.log('Sending message with attachment:', selectedFile.name);
+      // In a real implementation, you would upload the file and get a URL
+      const fileUrl = URL.createObjectURL(selectedFile);
+      // Then send the message with the file URL
+      // sendMessageWithAttachment(contact.id, message, fileUrl, activeAttachmentType, deviceId);
+      setSelectedFile(null);
+      setActiveAttachmentType(null);
+    } else {
+      sendMessage(contact.id, message, deviceId);
+    }
   };
 
   const handleSendVoiceMessage = (durationInSeconds: number) => {
@@ -47,6 +83,48 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
   const handleReply = (message: Message) => {
     setReplyTo(message);
   };
+  
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+  };
+  
+  const handleForwardMessage = (messageId: string, contactIds: string[]) => {
+    // Implement message forwarding logic here
+    console.log('Forwarding message', messageId, 'to contacts', contactIds);
+  };
+  
+  const handleShareLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const locationMessage = `My location: https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
+        sendMessage(contact.id, locationMessage, deviceId);
+      }, (error) => {
+        console.error('Error getting location:', error);
+      });
+    } else {
+      console.error('Geolocation is not supported by this browser.');
+    }
+  };
+
+  // Clean up disappearing messages
+  useEffect(() => {
+    if (disappearingMessages.enabled) {
+      const now = new Date();
+      const timeoutMs = disappearingMessages.timeout * 60 * 60 * 1000; // Convert hours to milliseconds
+      
+      const expiredMessageIds = contactMessages
+        .filter(msg => {
+          const msgDate = new Date(msg.timestamp);
+          return (now.getTime() - msgDate.getTime()) > timeoutMs;
+        })
+        .map(msg => msg.id);
+      
+      // Delete expired messages
+      expiredMessageIds.forEach(id => {
+        deleteMessage(id);
+      });
+    }
+  }, [contactMessages, disappearingMessages, deleteMessage]);
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -55,6 +133,9 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
         contact={contact} 
         onInfoClick={toggleSidebar}
         deviceId={deviceId}
+        onToggleStar={onToggleStar ? () => onToggleStar(contact.id) : undefined}
+        onToggleMute={onToggleMute ? (isMuted) => onToggleMute(contact.id, isMuted) : undefined}
+        onClearChat={onClearChat ? () => onClearChat(contact.id) : undefined}
       />
       
       {/* Message list */}
@@ -69,6 +150,9 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
           messagesEndRef={messagesEndRef}
           onReaction={handleReaction}
           onReply={handleReply}
+          onForward={handleForwardMessage}
+          disappearingEnabled={disappearingMessages.enabled}
+          disappearingTimeout={disappearingMessages.timeout}
         />
       </div>
       
@@ -79,6 +163,13 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
         onSendMessage={handleSendMessage}
         onSendVoiceMessage={handleSendVoiceMessage}
         deviceId={deviceId}
+        onFileSelect={handleFileSelect}
+        selectedFile={selectedFile}
+        onRemoveFile={() => setSelectedFile(null)}
+        activeAttachmentType={activeAttachmentType}
+        setActiveAttachmentType={setActiveAttachmentType}
+        onShareLocation={handleShareLocation}
+        soundEnabled={soundEnabled}
       />
     </div>
   );
