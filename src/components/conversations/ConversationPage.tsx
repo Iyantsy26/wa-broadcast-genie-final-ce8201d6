@@ -60,7 +60,7 @@ const ConversationPage = () => {
     ? messagesMap[activeConversation.contact.id] 
     : [];
 
-  // Wrap the handleAddContact to match the expected signature in AddContactButton
+  // Create wrapper for adding a contact that matches the expected signature
   const handleAddContactWrapper = (name: string, phone: string, type: 'client' | 'lead' | 'team') => {
     // Create a Contact object from the parameters
     const newContact: Contact = {
@@ -144,9 +144,9 @@ const ConversationPage = () => {
               />
               <MessageList 
                 messages={messages}
-                contactName={activeConversation.contact.name}
-                messagesEndRef={messagesEndRef}
+                contact={activeConversation.contact}
                 isTyping={isTyping}
+                messagesEndRef={messagesEndRef}
                 onReaction={handleAddReaction}
                 onReply={handleReplyToMessage}
               />

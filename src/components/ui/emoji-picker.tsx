@@ -18,8 +18,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Smile className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="h-6 w-6 bg-white rounded-full shadow flex items-center justify-center p-0">
+          <Smile className="h-3 w-3" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2">

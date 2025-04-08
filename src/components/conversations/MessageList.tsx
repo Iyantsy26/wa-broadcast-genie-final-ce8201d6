@@ -10,13 +10,17 @@ interface MessageListProps {
   contact: Contact;
   isTyping: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  onReaction: (messageId: string, emoji: string) => void;
+  onReply: (message: Message) => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
   contact,
   isTyping,
-  messagesEndRef
+  messagesEndRef,
+  onReaction,
+  onReply
 }) => {
   // Group messages by date
   const messagesByDate = useMemo(() => {
@@ -85,6 +89,8 @@ const MessageList: React.FC<MessageListProps> = ({
                 contact={contact}
                 isSequential={isSequential}
                 isLast={!nextMessage || nextMessage.isOutbound !== message.isOutbound}
+                onReaction={onReaction}
+                onReply={onReply}
               />
             );
           })}
