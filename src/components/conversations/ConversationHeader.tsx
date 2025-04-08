@@ -1,6 +1,10 @@
 
 import React from 'react';
 import { Contact, Conversation } from '@/types/conversation';
+import { DeviceAccount } from '@/services/deviceService';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface ConversationHeaderProps {
   contact: Contact;
@@ -23,6 +27,39 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   onToggleMute,
   onClearChat
 }) => {
+  const [deviceName, setDeviceName] = useState<string>(`Device #${deviceId}`);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function fetchDeviceInfo() {
+      if (!deviceId) return;
+      
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('device_accounts')
+          .select('name')
+          .eq('id', deviceId)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching device info:', error);
+          return;
+        }
+        
+        if (data) {
+          setDeviceName(data.name);
+        }
+      } catch (error) {
+        console.error('Error in fetchDeviceInfo:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchDeviceInfo();
+  }, [deviceId]);
+
   const getStatusIndicator = (isOnline?: boolean) => {
     return (
       <div 
@@ -55,7 +92,15 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
           <div className="flex items-center gap-1.5 text-sm text-gray-500">
             {getStatusIndicator(contact.isOnline)}
             <span>
-              {contact.isOnline ? 'Online' : 'Offline'} • Device #{deviceId}
+              {contact.isOnline ? 'Online' : 'Offline'} • 
+              {loading ? (
+                <span className="ml-1 inline-flex items-center">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" /> 
+                  Loading device...
+                </span>
+              ) : (
+                <span> {deviceName}</span>
+              )}
             </span>
           </div>
         </div>

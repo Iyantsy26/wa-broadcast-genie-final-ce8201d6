@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ContactSidebar from './ContactSidebar';
 import MessagePanel from './MessagePanel';
 import ContactInfoPanel from './ContactInfoPanel';
 import AIAssistantPanel from './AIAssistantPanel';
 import EmptyConversation from './EmptyConversation';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface ConversationLayoutProps {
   currentDeviceId: string;
@@ -41,9 +43,78 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     // This would typically call an API or service
     // to generate AI-powered responses
     
-    // For now, just return a mock response
-    return Promise.resolve(`AI response to: ${prompt}`);
+    try {
+      // For now, just return a mock response
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      return `AI response to: ${prompt}`;
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+      return "Sorry, I couldn't generate a response at this time.";
+    }
   };
+  
+  // Track device connection status
+  useEffect(() => {
+    if (!currentDeviceId) return;
+    
+    const checkDeviceStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('device_accounts')
+          .select('status')
+          .eq('id', currentDeviceId)
+          .single();
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.status !== 'connected') {
+          toast({
+            title: "Device disconnected",
+            description: "The selected WhatsApp device is not connected. Please reconnect it to continue messaging.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error checking device status:", error);
+      }
+    };
+    
+    checkDeviceStatus();
+    
+    // Set up real-time listener for device status changes
+    const channel = supabase
+      .channel('device-status')
+      .on('postgres_changes', 
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'device_accounts',
+          filter: `id=eq.${currentDeviceId}`
+        },
+        (payload) => {
+          const status = payload.new?.status;
+          if (status === 'disconnected') {
+            toast({
+              title: "Device disconnected",
+              description: "Your WhatsApp device has been disconnected. Please reconnect it to continue messaging.",
+              variant: "destructive",
+            });
+          } else if (status === 'connected') {
+            toast({
+              title: "Device connected",
+              description: "Your WhatsApp device is now connected.",
+            });
+          }
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentDeviceId, toast]);
   
   const changeWallpaper = (wallpaperUrl: string | null) => {
     setWallpaper(wallpaperUrl);
