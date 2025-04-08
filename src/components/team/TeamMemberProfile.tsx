@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -49,7 +50,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import type { TeamMember, WhatsAppAccount } from "@/services/teamService";
+import type { TeamMember } from "@/services/teamService";
 import { getWhatsAppAccounts, updateWhatsAppPermissions } from '@/services/teamService';
 import {
   AlertDialog,
@@ -72,6 +73,13 @@ interface TeamMemberProfileProps {
   onActivate?: (id: string) => void;
   onDeactivate?: (id: string) => void;
   onDelete?: (id: string) => void;
+}
+
+interface WhatsAppAccount {
+  id: string;
+  account_name: string;
+  phone_number: string;
+  status: string;
 }
 
 const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
@@ -103,6 +111,7 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
       const accounts = await getWhatsAppAccounts();
       setWhatsappAccounts(accounts);
       
+      // When accounts are loaded, set the selected accounts based on member data
       if (member && accounts.length > 0) {
         const selectedIds = accounts
           .filter(acc => member.whatsappAccounts.includes(acc.account_name))
@@ -257,6 +266,7 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
           </DialogHeader>
 
           <div className="flex flex-col md:flex-row gap-6">
+            {/* Profile sidebar */}
             <div className="w-full md:w-1/3">
               <div className="flex flex-col items-center text-center mb-4">
                 <Avatar className="h-24 w-24 mb-2">
@@ -352,6 +362,7 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
               </div>
             </div>
 
+            {/* Main content */}
             <div className="flex-1">
               <Tabs defaultValue="accounts">
                 <TabsList className="mb-4">
@@ -371,7 +382,7 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
                       )}
                     </CardHeader>
                     <CardContent>
-                      {member.whatsappAccounts && member.whatsappAccounts.length > 0 ? (
+                      {member.whatsappAccounts.length > 0 ? (
                         <div className="space-y-3">
                           {member.whatsappAccounts.map((account, index) => (
                             <div key={index} className="flex items-center justify-between p-2 rounded-md bg-accent/30">
@@ -400,11 +411,11 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
                         <TableBody>
                           <TableRow>
                             <TableCell className="font-medium">Joined</TableCell>
-                            <TableCell>{formatDate(member.last_active)}</TableCell>
+                            <TableCell>{formatDate(member.lastActive)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell className="font-medium">Last Active</TableCell>
-                            <TableCell>{formatDate(member.last_active)}</TableCell>
+                            <TableCell>{formatDate(member.lastActive)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell className="font-medium">Status</TableCell>
@@ -456,6 +467,7 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
         </DialogContent>
       </Dialog>
       
+      {/* Edit WhatsApp Permissions Dialog */}
       <Dialog open={isEditPermissionsOpen} onOpenChange={setIsEditPermissionsOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -501,6 +513,7 @@ const TeamMemberProfile: React.FC<TeamMemberProfileProps> = ({
         </DialogContent>
       </Dialog>
       
+      {/* Delete Confirmation Dialog */}
       {onDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>

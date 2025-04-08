@@ -1,6 +1,6 @@
 
 export type MessageStatus = 'sent' | 'read' | 'delivered' | 'error' | 'sending';
-export type MessageType = 'text' | 'image' | 'video' | 'document' | 'voice' | 'location';
+export type MessageType = 'text' | 'image' | 'video' | 'document' | 'voice';
 export type ChatType = 'team' | 'client' | 'lead';
 
 export interface ReplyTo {
@@ -38,12 +38,6 @@ export interface Message {
   replyTo?: ReplyTo;
   reactions?: Reaction[];
   viaWhatsApp?: boolean;
-  isExpired?: boolean;
-  isForwarded?: boolean;
-  location?: {
-    latitude: number;
-    longitude: number;
-  };
 }
 
 export interface Contact {
@@ -87,7 +81,6 @@ export interface Lead {
   notes?: string;
   last_contact?: string;
   next_followup?: string;
-  next_followup_time?: string;
   created_at: string;
   initials?: string;
 }
@@ -134,8 +127,4 @@ export interface Conversation {
   chatType: ChatType;
   tags?: string[];
   assignedTo?: string;
-  isEncrypted?: boolean;
-  isPinned?: boolean;
-  isArchived?: boolean;
-  unreadCount?: number;
 }

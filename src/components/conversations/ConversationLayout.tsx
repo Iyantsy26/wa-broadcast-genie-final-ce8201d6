@@ -15,69 +15,14 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
   const {
     selectedContactId,
     contacts,
-    messages,
     isSidebarOpen,
     isAssistantActive,
-    isTyping,
-    messagesEndRef,
-    toggleSidebar,
-    toggleAssistant,
-    sendMessage,
-    sendVoiceMessage,
-    sendAttachment,
-    sendLocation,
-    addReaction,
-    setReplyTo,
-    replyTo,
-    requestAIAssistance
+    toggleAssistant
   } = useConversation();
   
   const selectedContact = selectedContactId 
     ? contacts.find(c => c.id === selectedContactId) 
     : null;
-    
-  // Get messages for the selected contact
-  const selectedContactMessages = selectedContactId 
-    ? (messages[selectedContactId] || [])
-    : [];
-
-  // Create wrapper functions for handleSendMessage and handleVoiceMessage
-  const handleSendMessage = (content: string, file: File | null) => {
-    if (!selectedContactId) return;
-    
-    if (file) {
-      const fileType = file.type.split('/')[0]; 
-      let mediaType: 'image' | 'video' | 'document';
-      
-      if (fileType === 'image') mediaType = 'image';
-      else if (fileType === 'video') mediaType = 'video';
-      else mediaType = 'document';
-      
-      sendAttachment(selectedContactId, file, mediaType, currentDeviceId);
-    } else if (content.trim()) {
-      sendMessage(selectedContactId, content, currentDeviceId);
-    }
-  };
-  
-  const handleVoiceMessage = (durationInSeconds: number) => {
-    if (!selectedContactId) return;
-    sendVoiceMessage(selectedContactId, durationInSeconds, currentDeviceId);
-  };
-  
-  const handleLocationShare = () => {
-    if (!selectedContactId) return;
-    // For demo, use fixed coordinates
-    sendLocation(selectedContactId, 37.7749, -122.4194, currentDeviceId);
-  };
-  
-  const handleReaction = (messageId: string, emoji: string) => {
-    addReaction(messageId, emoji);
-  };
-
-  // Add the cancel reply handler
-  const handleCancelReply = () => {
-    setReplyTo(null);
-  };
 
   return (
     <div className="flex gap-3 overflow-hidden h-full">
@@ -89,16 +34,6 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
         {selectedContact ? (
           <MessagePanel 
             contact={selectedContact} 
-            messages={selectedContactMessages}
-            isTyping={isTyping}
-            messagesEndRef={messagesEndRef}
-            onOpenContactInfo={toggleSidebar}
-            onSendMessage={handleSendMessage}
-            onVoiceMessageSent={handleVoiceMessage}
-            onReaction={handleReaction}
-            onReply={setReplyTo}
-            onCancelReply={handleCancelReply}
-            onLocationShare={handleLocationShare}
             deviceId={currentDeviceId}
           />
         ) : (
@@ -114,10 +49,12 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
       {/* AI Assistant panel (when active) */}
       {isAssistantActive && (
         <AIAssistantPanel 
-          onRequestAIAssistance={async (prompt: string) => {
-            return await requestAIAssistance(prompt);
+          onRequestAIAssistance={() => {
+            console.log('AI assistance requested');
+            // This would typically call an API or service
+            // to generate AI-powered responses
           }}
-          onClose={toggleAssistant}
+          onClose={() => toggleAssistant()}
         />
       )}
     </div>

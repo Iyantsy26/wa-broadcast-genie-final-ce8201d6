@@ -34,10 +34,6 @@ const ChatPage = () => {
     messagesEndRef
   } = useConversation();
 
-  // Extract the messages array for the active conversation
-  const activeMessages = activeConversation ? 
-    (messages[activeConversation.id] || []) : [];
-
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
@@ -51,19 +47,19 @@ const ChatPage = () => {
 
       <div className="flex flex-1 gap-4 h-[calc(100vh-13rem)] overflow-hidden">
         <ConversationList 
-          conversations={filteredConversations || []}
-          groupedConversations={groupedConversations || {}}
+          conversations={filteredConversations}
+          groupedConversations={groupedConversations}
           activeConversation={activeConversation}
           setActiveConversation={setActiveConversation}
-          chatTypeFilter={chatTypeFilter || 'all'}
+          chatTypeFilter={chatTypeFilter}
           setChatTypeFilter={setChatTypeFilter}
-          searchTerm={searchTerm || ''}
+          searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           dateRange={dateRange}
           setDateRange={setDateRange}
-          assigneeFilter={assigneeFilter || ''}
+          assigneeFilter={assigneeFilter}
           setAssigneeFilter={setAssigneeFilter}
-          tagFilter={tagFilter || ''}
+          tagFilter={tagFilter}
           setTagFilter={setTagFilter}
           resetAllFilters={resetAllFilters}
           pinConversation={() => {}}
@@ -72,17 +68,14 @@ const ChatPage = () => {
         
         {activeConversation ? (
           <MessagePanel 
-            contact={activeConversation.contact}
             conversation={activeConversation}
-            messages={activeMessages}
+            messages={messages}
             onOpenContactInfo={() => setIsSidebarOpen(true)}
             onSendMessage={handleSendMessage}
             onVoiceMessageSent={handleVoiceMessageSent}
             messagesEndRef={messagesEndRef}
             isTyping={false}
             onReaction={() => {}}
-            onReply={() => {}}
-            onCancelReply={() => {}}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-white rounded-lg border shadow-sm">

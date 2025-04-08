@@ -13,21 +13,13 @@ import {
   Archive,
   Tag,
   UserPlus,
-  Trash2,
-  Star,
-  BellOff,
-  Bell,
-  Phone,
-  Video,
-  Search,
-  Flag
+  Trash2
 } from 'lucide-react';
 import DeleteConversationDialog from './dialogs/DeleteConversationDialog';
 import ArchiveConversationDialog from './dialogs/ArchiveConversationDialog';
 import AddTagDialog from './dialogs/AddTagDialog';
 import AssignConversationDialog from './dialogs/AssignConversationDialog';
 import { Conversation } from '@/types/conversation';
-import { toast } from '@/hooks/use-toast';
 
 interface HeaderActionsProps {
   conversation: Conversation;
@@ -48,8 +40,6 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isStarred, setIsStarred] = useState(false);
 
   // Only open one dialog at a time
   const closeAllDialogs = () => {
@@ -78,54 +68,6 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
     closeAllDialogs();
     setShowAssignDialog(true);
   };
-  
-  const handleToggleMute = () => {
-    setIsMuted(!isMuted);
-    toast({
-      title: isMuted ? 'Conversation unmuted' : 'Conversation muted',
-      description: isMuted 
-        ? 'You will now receive notifications from this contact' 
-        : 'You will no longer receive notifications from this contact',
-    });
-  };
-  
-  const handleToggleStar = () => {
-    setIsStarred(!isStarred);
-    toast({
-      title: isStarred ? 'Conversation unstarred' : 'Conversation starred',
-      description: isStarred 
-        ? 'The conversation has been removed from your starred list' 
-        : 'The conversation has been added to your starred list',
-    });
-  };
-  
-  const handleVideoCall = () => {
-    toast({
-      title: 'Starting video call',
-      description: `Initiating video call with ${conversation.contact.name}...`,
-    });
-  };
-  
-  const handleVoiceCall = () => {
-    toast({
-      title: 'Starting voice call',
-      description: `Calling ${conversation.contact.name}...`,
-    });
-  };
-  
-  const handleReport = () => {
-    toast({
-      title: 'Report submitted',
-      description: 'Thank you for your report. We will review it shortly.',
-    });
-  };
-  
-  const handleSearch = () => {
-    toast({
-      title: 'Search conversation',
-      description: 'Search functionality will be available soon.',
-    });
-  };
 
   return (
     <>
@@ -135,37 +77,7 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-white z-50">
-          <DropdownMenuItem onClick={handleVoiceCall}>
-            <Phone className="mr-2 h-4 w-4" />
-            Voice call
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleVideoCall}>
-            <Video className="mr-2 h-4 w-4" />
-            Video call
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSearch}>
-            <Search className="mr-2 h-4 w-4" />
-            Search in conversation
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleToggleMute}>
-            {isMuted ? (
-              <>
-                <Bell className="mr-2 h-4 w-4" />
-                Unmute notifications
-              </>
-            ) : (
-              <>
-                <BellOff className="mr-2 h-4 w-4" />
-                Mute notifications
-              </>
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleToggleStar}>
-            <Star className="mr-2 h-4 w-4" fill={isStarred ? "currentColor" : "none"} />
-            {isStarred ? "Unstar conversation" : "Star conversation"}
-          </DropdownMenuItem>
+        <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={openArchiveDialog}>
             <Archive className="mr-2 h-4 w-4" />
             Archive conversation
@@ -177,10 +89,6 @@ const HeaderActions: React.FC<HeaderActionsProps> = ({
           <DropdownMenuItem onClick={openAssignDialog}>
             <UserPlus className="mr-2 h-4 w-4" />
             Assign to team member
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleReport}>
-            <Flag className="mr-2 h-4 w-4" />
-            Report conversation
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem 

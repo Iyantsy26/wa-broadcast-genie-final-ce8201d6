@@ -1,64 +1,61 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
-import { Contact, Message, Conversation } from '@/types/conversation';
+import { Contact } from '@/types/conversation';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import MessageInputBar from './MessageInputBar';
 
 interface MessagePanelProps {
-  contact?: Contact;
-  conversation?: Conversation;
-  messages: Message[];
-  isTyping: boolean;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
-  onOpenContactInfo: () => void;
-  onSendMessage: (content: string, file: File | null) => void;
-  onVoiceMessageSent: (durationInSeconds: number) => void;
-  onReaction: (messageId: string, emoji: string) => void;
-  onReply: (message: Message) => void;
-  onCancelReply: () => void; // Added this prop
-  onLocationShare?: () => void;
+  contact: Contact;
   deviceId: string;
 }
 
-const MessagePanel: React.FC<MessagePanelProps> = ({ 
-  contact, 
-  conversation,
-  messages, 
-  isTyping, 
-  messagesEndRef,
-  onOpenContactInfo,
-  onSendMessage,
-  onVoiceMessageSent,
-  onReaction,
-  onReply,
-  onCancelReply, // Added this parameter
-  onLocationShare,
-  deviceId
-}) => {
-  // If conversation is provided, use its contact data
-  const displayContact = contact || (conversation ? conversation.contact : null);
+const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
+  const {
+    messages,
+    isTyping,
+    replyTo,
+    wallpaper,
+    messagesEndRef,
+    toggleSidebar,
+    sendMessage,
+    sendVoiceMessage,
+    setReplyTo,
+  } = useConversation();
   
-  if (!displayContact) {
-    console.error('MessagePanel: No contact provided');
-    return <div>Missing contact information</div>;
-  }
+  const contactMessages = messages[contact.id] || [];
+  
+  // Set background style if wallpaper is set
+  const backgroundStyle = wallpaper
+    ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : {};
+  
+  const handleSendMessage = (message: string) => {
+    sendMessage(contact.id, message, deviceId);
+  };
+
+  const handleSendVoiceMessage = (durationInSeconds: number) => {
+    sendVoiceMessage(contact.id, durationInSeconds, deviceId);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Conversation header */}
       <ConversationHeader 
-        contact={displayContact} 
-        onInfoClick={onOpenContactInfo}
+        contact={contact} 
+        onInfoClick={toggleSidebar}
         deviceId={deviceId}
       />
       
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto bg-slate-50">
+      <div 
+        className="flex-1 overflow-y-auto bg-slate-50" 
+        style={backgroundStyle}
+      >
         <MessageList 
-          messages={messages}
-          contact={displayContact}
+          messages={contactMessages}
+          contact={contact}
           isTyping={isTyping}
           messagesEndRef={messagesEndRef}
         />
@@ -66,12 +63,10 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
       
       {/* Message input */}
       <MessageInputBar
-        onSendMessage={onSendMessage}
-        onSendVoiceMessage={onVoiceMessageSent}
-        onReaction={onReaction}
-        onReply={onReply}
-        onCancelReply={onCancelReply}
-        onLocationShare={onLocationShare}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+        onSendMessage={handleSendMessage}
+        onSendVoiceMessage={handleSendVoiceMessage}
         deviceId={deviceId}
       />
     </div>

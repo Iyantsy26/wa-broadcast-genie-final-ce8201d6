@@ -1,8 +1,5 @@
 
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Info, Phone, Video, MoreVertical } from 'lucide-react';
 import { Contact } from '@/types/conversation';
 
 interface ConversationHeaderProps {
@@ -11,47 +8,59 @@ interface ConversationHeaderProps {
   deviceId: string;
 }
 
-const ConversationHeader: React.FC<ConversationHeaderProps> = ({
+const ConversationHeader: React.FC<ConversationHeaderProps> = ({ 
   contact,
   onInfoClick,
   deviceId
 }) => {
+  const getStatusIndicator = (isOnline?: boolean) => {
+    return (
+      <div 
+        className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}
+      ></div>
+    );
+  };
+
   return (
-    <div className="p-3 border-b flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Avatar>
-          <AvatarImage src={contact.avatar} />
-          <AvatarFallback className="bg-primary/10 text-primary">
-            {contact.name.split(' ').map(n => n[0]).join('')}
-          </AvatarFallback>
-        </Avatar>
-        
+    <div className="flex justify-between items-center p-4 border-b">
+      <div className="flex items-center gap-3">
+        <div 
+          className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer" 
+          onClick={onInfoClick}
+        >
+          {contact.avatar ? (
+            <img 
+              src={contact.avatar} 
+              alt={contact.name} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-gray-600 font-semibold">
+              {contact.name.substring(0, 2).toUpperCase()}
+            </span>
+          )}
+        </div>
         <div>
-          <div className="font-medium flex items-center">
-            {contact.name}
-            {contact.isOnline && (
-              <span className="h-2 w-2 bg-green-500 rounded-full ml-2"></span>
-            )}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {contact.isOnline ? 'Online' : 'Last seen recently'} • Device #{deviceId}
+          <h2 className="font-semibold">{contact.name}</h2>
+          <div className="flex items-center gap-1.5 text-sm text-gray-500">
+            {getStatusIndicator(contact.isOnline)}
+            <span>
+              {contact.isOnline ? 'Online' : 'Offline'} • Device #{deviceId}
+            </span>
           </div>
         </div>
       </div>
-      
-      <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon">
-          <Phone className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon">
-          <Video className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onInfoClick}>
-          <Info className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+      <div>
+        <button 
+          className="p-2 hover:bg-gray-100 rounded-full"
+          onClick={onInfoClick}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" />
+          </svg>
+        </button>
       </div>
     </div>
   );
