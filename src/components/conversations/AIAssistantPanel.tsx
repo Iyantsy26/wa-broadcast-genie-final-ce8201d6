@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Send, Mic, PaperClip, Smile } from 'lucide-react';
+import { X, Send, Mic, Paperclip, Smile } from 'lucide-react';
 import { EmojiPicker } from '@/components/ui/emoji-picker';
 import FileUploader from '@/components/conversations/inputs/FileUploader';
 import FilePreview from '@/components/conversations/inputs/FilePreview';

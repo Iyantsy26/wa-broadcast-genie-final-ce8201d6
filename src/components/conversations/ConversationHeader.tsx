@@ -7,7 +7,10 @@ interface ConversationHeaderProps {
   onInfoClick: () => void;
   deviceId: string;
   conversation?: Conversation;
-  onOpenContactInfo?: () => void; // Added this prop
+  onOpenContactInfo?: () => void;
+  onToggleStar?: () => void;
+  onToggleMute?: (isMuted: boolean) => void;
+  onClearChat?: () => void;
 }
 
 const ConversationHeader: React.FC<ConversationHeaderProps> = ({ 
@@ -15,7 +18,10 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   onInfoClick,
   deviceId,
   conversation,
-  onOpenContactInfo // Added this prop
+  onOpenContactInfo,
+  onToggleStar,
+  onToggleMute,
+  onClearChat
 }) => {
   const getStatusIndicator = (isOnline?: boolean) => {
     return (
@@ -30,7 +36,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
       <div className="flex items-center gap-3">
         <div 
           className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer" 
-          onClick={onInfoClick || onOpenContactInfo} // Use either of these callbacks
+          onClick={onInfoClick || onOpenContactInfo} 
         >
           {contact.avatar ? (
             <img 

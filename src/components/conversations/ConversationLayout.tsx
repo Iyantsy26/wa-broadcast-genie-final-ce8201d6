@@ -108,8 +108,8 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
           onToggleStar={() => toggleContactStarStatus(selectedContact.id)}
           onToggleMute={(isMuted) => toggleContactMute(selectedContact.id, isMuted)}
           onClearChat={() => clearChat(selectedContact.id)}
-          onToggleDisappearing={(enabled) => toggleDisappearingMessages(enabled)}
-          onSetDisappearingTimeout={(hours) => setDisappearingTimeout(hours)}
+          onToggleDisappearing={toggleDisappearingMessages}
+          onSetDisappearingTimeout={setDisappearingTimeout}
         />
       )}
       

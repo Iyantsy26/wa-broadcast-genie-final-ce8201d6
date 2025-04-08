@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -23,10 +22,22 @@ import { format } from 'date-fns';
 
 interface ContactInfoPanelProps {
   contact: Contact;
+  onChangeWallpaper?: (wallpaperUrl: string | null) => void;
+  onToggleStar?: () => void;
+  onToggleMute?: (isMuted: boolean) => void;
+  onClearChat?: () => void;
+  onToggleDisappearing?: (enabled: boolean) => void;
+  onSetDisappearingTimeout?: (hours: number) => void;
 }
 
 const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
-  contact
+  contact,
+  onChangeWallpaper,
+  onToggleStar,
+  onToggleMute,
+  onClearChat,
+  onToggleDisappearing,
+  onSetDisappearingTimeout
 }) => {
   const {
     messages,
@@ -38,14 +49,12 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   
   const contactMessages = messages[contact.id] || [];
   
-  // Count media items
   const mediaCount = {
     images: contactMessages.filter(m => m.type === 'image').length,
     documents: contactMessages.filter(m => m.type === 'document').length,
     videos: contactMessages.filter(m => m.type === 'video').length
   };
   
-  // Get contact type color
   const getTypeColor = () => {
     switch (contact.type) {
       case 'team':
@@ -59,9 +68,32 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     }
   };
   
+  const handleToggleStar = () => {
+    if (onToggleStar) {
+      onToggleStar();
+    } else {
+      toggleContactStar(contact.id);
+    }
+  };
+  
+  const handleToggleMute = (muted: boolean) => {
+    if (onToggleMute) {
+      onToggleMute(muted);
+    } else {
+      muteContact(contact.id, muted);
+    }
+  };
+  
+  const handleClearChat = () => {
+    if (onClearChat) {
+      onClearChat();
+    } else {
+      clearChat(contact.id);
+    }
+  };
+  
   return (
     <div className="w-72 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
-      {/* Header */}
       <div className="flex justify-between items-center p-3 border-b">
         <h3 className="font-semibold">Contact Info</h3>
         <Button variant="ghost" size="icon" onClick={toggleSidebar}>
@@ -71,7 +103,6 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       
       <ScrollArea className="flex-1">
         <div className="p-4">
-          {/* Contact profile */}
           <div className="flex flex-col items-center text-center mb-6">
             <Avatar className="h-20 w-20 mb-3">
               <AvatarImage src={contact.avatar} />
@@ -100,7 +131,6 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               )}
             </div>
             
-            {/* Contact actions */}
             <div className="flex gap-2">
               {contact.type !== 'team' && (
                 <>
@@ -117,7 +147,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 variant={contact.isStarred ? "default" : "outline"}
                 size="icon" 
                 title={contact.isStarred ? "Remove from starred" : "Add to starred"}
-                onClick={() => toggleContactStar(contact.id)}
+                onClick={handleToggleStar}
               >
                 <Star className={`h-4 w-4 ${contact.isStarred ? 'fill-primary-foreground' : ''}`} />
               </Button>
@@ -126,7 +156,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
                 variant="outline" 
                 size="icon" 
                 title={contact.isMuted ? "Unmute notifications" : "Mute notifications"}
-                onClick={() => muteContact(contact.id, !contact.isMuted)}
+                onClick={() => handleToggleMute(!contact.isMuted)}
               >
                 {contact.isMuted ? (
                   <Bell className="h-4 w-4" />
@@ -139,7 +169,6 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           
           <Separator className="my-4" />
           
-          {/* Media links */}
           <div className="mb-4">
             <h4 className="text-sm font-medium mb-3">Media & Files</h4>
             <div className="grid grid-cols-3 gap-2">
@@ -162,7 +191,6 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           
           <Separator className="my-4" />
           
-          {/* Additional info */}
           {contact.role && (
             <div className="mb-4">
               <h4 className="text-sm font-medium mb-2">Role</h4>
@@ -179,7 +207,6 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             </div>
           )}
           
-          {/* Contact tags */}
           {contact.tags && contact.tags.length > 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-medium mb-2">Tags</h4>
@@ -193,14 +220,13 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           
           <Separator className="my-4" />
           
-          {/* Danger zone */}
           <div>
             <h4 className="text-sm font-medium text-destructive mb-3">Danger Zone</h4>
             <div className="space-y-2">
               <Button 
                 variant="outline" 
                 className="w-full text-destructive border-destructive/20 hover:bg-destructive/10"
-                onClick={() => clearChat(contact.id)}
+                onClick={handleClearChat}
               >
                 <Trash className="h-4 w-4 mr-2" />
                 Clear conversation

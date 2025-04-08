@@ -12,6 +12,9 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onReaction: (messageId: string, emoji: string) => void;
   onReply: (message: Message) => void;
+  onForward?: (messageId: string, contactIds: string[]) => void;
+  disappearingEnabled?: boolean;
+  disappearingTimeout?: number;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -20,7 +23,10 @@ const MessageList: React.FC<MessageListProps> = ({
   isTyping,
   messagesEndRef,
   onReaction,
-  onReply
+  onReply,
+  onForward,
+  disappearingEnabled,
+  disappearingTimeout
 }) => {
   // Group messages by date
   const messagesByDate = useMemo(() => {
