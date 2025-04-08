@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TeamMember {
@@ -87,6 +88,7 @@ export const addTeamMember = async (member: Partial<TeamMember>): Promise<TeamMe
       department_id: member.department_id,
       position: member.position,
       status: member.status || 'pending',
+      whatsapp_accounts: member.whatsappAccounts || [], // Added this line to properly map whatsappAccounts
     })
     .select(`
       *,
@@ -118,17 +120,24 @@ export const addTeamMember = async (member: Partial<TeamMember>): Promise<TeamMe
 };
 
 export const updateTeamMember = async (id: string, member: Partial<TeamMember>): Promise<TeamMember> => {
+  const updateData: any = {
+    name: member.name,
+    email: member.email,
+    phone: member.phone,
+    role: member.role,
+    department_id: member.department_id,
+    position: member.position,
+    status: member.status,
+  };
+  
+  // Only add whatsappAccounts to the update if it's provided
+  if (member.whatsappAccounts !== undefined) {
+    updateData.whatsapp_accounts = member.whatsappAccounts;
+  }
+
   const { data, error } = await supabase
     .from('team_members')
-    .update({
-      name: member.name,
-      email: member.email,
-      phone: member.phone,
-      role: member.role,
-      department_id: member.department_id,
-      position: member.position,
-      status: member.status,
-    })
+    .update(updateData)
     .eq('id', id)
     .select(`
       *,

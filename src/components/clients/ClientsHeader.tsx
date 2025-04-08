@@ -64,8 +64,8 @@ const ClientsHeader: React.FC<ClientsHeaderProps> = ({ onAddClient }) => {
                 renewal_date: row.renewal_date || "",
                 notes: row.notes || "",
                 plan_details: row.plan_details || "",
-                referred_by: row.referred_by || "",
-                status: row.status || "active"
+                referred_by: row.referred_by || ""
+                // Removed the status property as it doesn't exist in the Client type
               };
               
               await createClient(client);
