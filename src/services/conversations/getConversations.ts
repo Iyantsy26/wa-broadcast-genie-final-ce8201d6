@@ -1,87 +1,84 @@
 
-import { Conversation } from '@/types/conversation';
+import { Conversation, Contact } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
+import { getLeads } from '../leadService';
+import { getClients } from '../clientService';
 
 export const getConversations = async (): Promise<Conversation[]> => {
   try {
-    const { data: conversations, error } = await supabase
-      .from('conversations')
-      .select(`
-        id,
-        client_id,
-        lead_id,
-        last_message,
-        last_message_timestamp,
-        status,
-        created_at,
-        updated_at,
-        tags,
-        assigned_to
-      `)
-      .order('last_message_timestamp', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching conversations:', error);
-      throw error;
-    }
-
-    let clients = {};
-    let leads = {};
-
-    if (conversations?.some(c => c.client_id)) {
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, name, avatar_url');
-      
-      if (clientsData) {
-        clients = clientsData.reduce((acc, client) => {
-          acc[client.id] = client;
-          return acc;
-        }, {});
-      }
-    }
-
-    if (conversations?.some(c => c.lead_id)) {
-      const { data: leadsData } = await supabase
-        .from('leads')
-        .select('id, name, avatar_url, phone');
-      
-      if (leadsData) {
-        leads = leadsData.reduce((acc, lead) => {
-          acc[lead.id] = lead;
-          return acc;
-        }, {});
-      }
-    }
-
-    return (conversations || []).map(conv => {
-      const isClient = !!conv.client_id;
-      const contactId = isClient ? conv.client_id : conv.lead_id;
-      const contactInfo = isClient ? clients[contactId] : leads[contactId];
+    const leads = await getLeads();
+    const clients = await getClients();
+    
+    // Create lead conversations
+    const leadConversations = leads.map(lead => {
+      const contact: Contact = {
+        id: lead.id,
+        name: lead.name,
+        avatar: lead.avatar_url,
+        phone: lead.phone || '',
+        type: 'lead',
+        isOnline: Math.random() > 0.7, // Random online status for demo
+        lastSeen: lead.last_contact || new Date().toISOString(),
+        tags: lead.status ? [lead.status] : []
+      };
       
       return {
-        id: conv.id,
-        contact: {
-          id: contactId,
-          name: contactInfo?.name || 'Unknown Contact',
-          avatar: contactInfo?.avatar_url,
-          phone: isClient ? '' : (contactInfo?.phone || ''),
-          type: isClient ? 'client' : 'lead'
-        },
+        id: `lead-conversation-${lead.id}`,
+        contact,
         lastMessage: {
-          content: conv.last_message || '',
-          timestamp: conv.last_message_timestamp || conv.created_at,
+          content: 'This is the last message from this lead',
+          timestamp: new Date().toISOString(),
           isOutbound: false,
           isRead: true
         },
-        status: conv.status || 'new',
-        chatType: isClient ? 'client' : 'lead',
-        tags: conv.tags || [],
-        assignedTo: conv.assigned_to
+        status: 'open',
+        chatType: 'lead',
+        tags: lead.status ? [lead.status] : [],
+        assignedTo: '',
+        isEncrypted: false,
+        isPinned: false,
+        isArchived: false,
+        unreadCount: 0
       };
     });
+    
+    // Create client conversations
+    const clientConversations = clients.map(client => {
+      const contact: Contact = {
+        id: client.id,
+        name: client.name,
+        avatar: client.avatar_url,
+        phone: client.phone || '',
+        type: 'client',
+        isOnline: Math.random() > 0.7, // Random online status for demo
+        lastSeen: new Date().toISOString(),
+        tags: client.tags || []
+      };
+      
+      return {
+        id: `client-conversation-${client.id}`,
+        contact,
+        lastMessage: {
+          content: 'This is the last message from this client',
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          isRead: true
+        },
+        status: 'open',
+        chatType: 'client',
+        tags: client.tags || [],
+        assignedTo: '',
+        isEncrypted: false,
+        isPinned: false,
+        isArchived: false,
+        unreadCount: 0
+      };
+    });
+    
+    // Combine and return all conversations
+    return [...leadConversations, ...clientConversations];
   } catch (error) {
-    console.error('Error in getConversations:', error);
+    console.error('Error fetching conversations:', error);
     return [];
   }
 };

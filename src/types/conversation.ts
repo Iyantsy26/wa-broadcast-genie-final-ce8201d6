@@ -127,4 +127,8 @@ export interface Conversation {
   chatType: ChatType;
   tags?: string[];
   assignedTo?: string;
+  isEncrypted?: boolean;
+  isPinned?: boolean;
+  isArchived?: boolean;
+  unreadCount?: number;
 }
