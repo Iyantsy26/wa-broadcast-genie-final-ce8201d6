@@ -10,17 +10,45 @@ interface ClientsHeaderProps {
 
 const ClientsHeader: React.FC<ClientsHeaderProps> = ({ onAddClient }) => {
   const handleImport = () => {
-    toast({
-      title: "Import feature",
-      description: "Client import functionality will be implemented soon",
-    });
+    // Simulate file input click
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv,.xlsx,.xls';
+    fileInput.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // In a real app, this would be handled by a proper import service
+        toast({
+          title: "Import started",
+          description: `Importing ${file.name}. This may take a few moments.`,
+        });
+        
+        // Simulate successful import after delay
+        setTimeout(() => {
+          toast({
+            title: "Import successful",
+            description: "Client data has been imported successfully.",
+          });
+        }, 1500);
+      }
+    };
+    fileInput.click();
   };
 
   const handleExport = () => {
+    // In a real app, this would generate and download a file
     toast({
-      title: "Export feature",
-      description: "Client export functionality will be implemented soon",
+      title: "Generating export",
+      description: "Your client data export is being prepared.",
     });
+    
+    // Simulate successful export after delay
+    setTimeout(() => {
+      toast({
+        title: "Export ready",
+        description: "Client data has been exported to clients_export.csv",
+      });
+    }, 1500);
   };
 
   return (

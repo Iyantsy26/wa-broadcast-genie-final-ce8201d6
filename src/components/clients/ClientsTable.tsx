@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -14,17 +13,9 @@ import { Client } from '@/types/conversation';
 import { 
   ArrowUpDown, 
   Eye, 
-  MoreHorizontal,
   Pencil,
-  Trash,
   UserRound,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -71,10 +62,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   };
 
   // Handle edit client
-  const handleEditClient = (e: React.MouseEvent, client: Client) => {
-    e.stopPropagation();
-    // In the future, this will open an edit form
-    // For now we'll just show a toast
+  const handleEditClient = (client: Client) => {
     onViewClient(client);
   };
 
@@ -153,7 +141,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
               </div>
             </TableHead>
             <TableHead>Renewal</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -182,47 +169,6 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
               </TableCell>
               <TableCell>
                 {client.renewal_date ? formatDate(client.renewal_date) : "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => handleEditClient(e, client)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white z-50">
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleClientClick(client);
-                      }}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClient(e, client);
-                      }}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={e => e.stopPropagation()}
-                        className="text-red-600"
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -295,7 +241,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowClientDetails(false)}>Close</Button>
-              <Button onClick={(e) => handleEditClient(e, selectedClient)}>
+              <Button onClick={() => handleEditClient(selectedClient)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit Client
               </Button>
