@@ -52,19 +52,20 @@ const ClientsHeader: React.FC<ClientsHeaderProps> = ({ onAddClient }) => {
             if (!row.name) continue; // Skip rows without names
             
             try {
-              // Map CSV columns to client fields
-              const client: Partial<Client> = {
-                name: row.name || "Unknown",
-                email: row.email || undefined,
-                phone: row.phone || undefined,
-                company: row.company || undefined,
-                address: row.address || undefined,
-                tags: row.tags ? row.tags.split(',').map((tag: string) => tag.trim()) : undefined,
-                join_date: row.join_date || undefined,
-                renewal_date: row.renewal_date || undefined,
-                notes: row.notes || undefined,
-                plan_details: row.plan_details || undefined,
-                referred_by: row.referred_by || undefined
+              // Map CSV columns to client fields and ensure required fields
+              const client: Omit<Client, "id"> = {
+                name: row.name || "Unknown", // Required field
+                email: row.email || "",
+                phone: row.phone || "",
+                company: row.company || "",
+                address: row.address || "",
+                tags: row.tags ? row.tags.split(',').map((tag: string) => tag.trim()) : [],
+                join_date: row.join_date || new Date().toISOString().split('T')[0],
+                renewal_date: row.renewal_date || "",
+                notes: row.notes || "",
+                plan_details: row.plan_details || "",
+                referred_by: row.referred_by || "",
+                status: row.status || "active"
               };
               
               await createClient(client);

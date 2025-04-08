@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TeamMember {
@@ -13,6 +12,9 @@ export interface TeamMember {
   status: string;
   last_active?: string;
   department?: string; // Department name for display
+  whatsappAccounts: string[]; // Array of WhatsApp account names
+  company?: string;
+  address?: string;
 }
 
 export interface Department {
@@ -28,6 +30,13 @@ export interface Role {
   name: string;
   description: string;
   permissions: string[];
+}
+
+export interface WhatsAppAccount {
+  id: string;
+  account_name: string;
+  phone_number: string;
+  status: string;
 }
 
 export const getTeamMembers = async (): Promise<TeamMember[]> => {
@@ -56,7 +65,10 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
       avatar: item.avatar,
       status: item.status,
       last_active: item.last_active,
-      department: item.departments?.name
+      department: item.departments?.name,
+      whatsappAccounts: item.whatsapp_accounts || [],
+      company: item.company,
+      address: item.address
     }));
   } catch (error) {
     console.error("Error in getTeamMembers:", error);
@@ -98,7 +110,10 @@ export const addTeamMember = async (member: Partial<TeamMember>): Promise<TeamMe
     avatar: data.avatar,
     status: data.status,
     last_active: data.last_active,
-    department: data.departments?.name
+    department: data.departments?.name,
+    whatsappAccounts: data.whatsapp_accounts || [],
+    company: data.company,
+    address: data.address
   };
 };
 
@@ -137,7 +152,10 @@ export const updateTeamMember = async (id: string, member: Partial<TeamMember>):
     avatar: data.avatar,
     status: data.status,
     last_active: data.last_active,
-    department: data.departments?.name
+    department: data.departments?.name,
+    whatsappAccounts: data.whatsapp_accounts || [],
+    company: data.company,
+    address: data.address
   };
 };
 
@@ -177,7 +195,6 @@ export const deleteTeamMember = async (id: string): Promise<void> => {
   }
 };
 
-// Department functions
 export const getDepartments = async (): Promise<Department[]> => {
   try {
     const { data, error } = await supabase
@@ -246,7 +263,7 @@ export const updateDepartment = async (id: string, department: Partial<Departmen
     id: data.id,
     name: data.name,
     description: data.description,
-    memberCount: 0, // This will be updated when we fetch departments again
+    memberCount: 0,
     leadName: undefined
   };
 };
@@ -263,9 +280,7 @@ export const deleteDepartment = async (id: string): Promise<void> => {
   }
 };
 
-// Role functions
 export const getRoles = async (): Promise<Role[]> => {
-  // This is a mock function for now - in a real app, this would fetch from the database
   return [
     {
       id: '1',
@@ -309,7 +324,6 @@ export const getRoles = async (): Promise<Role[]> => {
 };
 
 export const updateRolePermissions = async (roleId: string, permissions: string[]): Promise<Role> => {
-  // This would be implemented in a real app with a database call
   console.log('Update role', roleId, 'with permissions:', permissions);
   return {
     id: roleId,
@@ -317,4 +331,57 @@ export const updateRolePermissions = async (roleId: string, permissions: string[
     description: 'Updated description',
     permissions
   };
+};
+
+export const getWhatsAppAccounts = async (): Promise<WhatsAppAccount[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('whatsapp_accounts')
+      .select('*')
+      .order('account_name');
+    
+    if (error) {
+      console.error("Error fetching WhatsApp accounts:", error);
+      throw new Error(error.message);
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error in getWhatsAppAccounts:", error);
+    return [];
+  }
+};
+
+export const updateWhatsAppPermissions = async (teamMemberId: string, accountIds: string[]): Promise<void> => {
+  try {
+    const { data: accounts, error: fetchError } = await supabase
+      .from('whatsapp_accounts')
+      .select('id, account_name')
+      .in('id', accountIds);
+    
+    if (fetchError) {
+      console.error("Error fetching WhatsApp accounts for permissions:", fetchError);
+      throw new Error(fetchError.message);
+    }
+
+    const accountNames = accounts.map((account: any) => account.account_name);
+
+    const { error: updateError } = await supabase
+      .from('team_members')
+      .update({ 
+        whatsapp_accounts: accountNames,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', teamMemberId);
+      
+    if (updateError) {
+      console.error("Error updating team member WhatsApp permissions:", updateError);
+      throw new Error(updateError.message);
+    }
+
+    console.log(`Updated WhatsApp access for team member ${teamMemberId}`);
+  } catch (error) {
+    console.error("Error in updateWhatsAppPermissions:", error);
+    throw error;
+  }
 };
