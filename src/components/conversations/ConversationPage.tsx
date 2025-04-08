@@ -12,7 +12,7 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
-import { ChatType, Contact } from '@/types/conversation';
+import { ChatType, Contact, Message } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
@@ -78,7 +78,7 @@ const ConversationPage = () => {
     console.log('Pin conversation not implemented:', conversationId);
   };
 
-  // Create wrapper for AI assistance that returns a Promise
+  // Create wrapper for AI assistance that returns a Promise and accepts a prompt
   const handleRequestAIAssistancePromise = async (prompt: string): Promise<string> => {
     handleRequestAIAssistance();
     return Promise.resolve(`AI response to: ${prompt}`);
@@ -139,8 +139,6 @@ const ConversationPage = () => {
                 contact={activeConversation.contact}
                 onInfoClick={() => setIsSidebarOpen(true)}
                 deviceId={selectedDevice}
-                conversation={activeConversation}
-                onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
                 messages={messages}

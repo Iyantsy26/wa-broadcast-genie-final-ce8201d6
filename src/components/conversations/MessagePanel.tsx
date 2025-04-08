@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
-import { Contact } from '@/types/conversation';
+import { Contact, Message } from '@/types/conversation';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import MessageInputBar from './MessageInputBar';
@@ -22,6 +22,7 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
     sendMessage,
     sendVoiceMessage,
     setReplyTo,
+    addReaction
   } = useConversation();
   
   const contactMessages = messages[contact.id] || [];
@@ -37,6 +38,14 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
 
   const handleSendVoiceMessage = (durationInSeconds: number) => {
     sendVoiceMessage(contact.id, durationInSeconds, deviceId);
+  };
+
+  const handleReaction = (messageId: string, emoji: string) => {
+    addReaction(messageId, emoji);
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyTo(message);
   };
 
   return (
@@ -58,6 +67,8 @@ const MessagePanel: React.FC<MessagePanelProps> = ({ contact, deviceId }) => {
           contact={contact}
           isTyping={isTyping}
           messagesEndRef={messagesEndRef}
+          onReaction={handleReaction}
+          onReply={handleReply}
         />
       </div>
       
