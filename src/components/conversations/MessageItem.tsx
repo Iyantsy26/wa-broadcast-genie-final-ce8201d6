@@ -2,340 +2,186 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Message, Contact } from '@/types/conversation';
+import { Check, CheckCheck, Clock, X, MoreHorizontal, Reply, Trash2, Copy } from 'lucide-react';
 import { useConversation } from '@/contexts/ConversationContext';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Smile,
-  Reply,
-  MoreHorizontal,
-  CheckCheck,
-  Check,
-  Clock,
-  AlertCircle,
-  Play,
-  FileText,
-  Image as ImageIcon,
-  Film,
-  Forward,
-  Copy,
-  Trash,
-  Star
-} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
+import { EmojiPicker } from '../ui/emoji-picker';
 
 interface MessageItemProps {
   message: Message;
   contact: Contact;
-  isSequential: boolean;
-  isLast: boolean;
+  isSequential?: boolean;
+  isLast?: boolean;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({
   message,
   contact,
-  isSequential,
-  isLast
+  isSequential = false,
+  isLast = false
 }) => {
-  const { addReaction, deleteMessage, setReplyTo } = useConversation();
-  const [showActions, setShowActions] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const { 
+    addReaction, 
+    deleteMessage, 
+    handleReplyToMessage 
+  } = useConversation();
   
-  const commonEmojis = ['👍', '❤️', '😊', '🙏', '👏', '🎉', '😂', '🔥'];
-  
-  // Get message status icon
   const getStatusIcon = () => {
-    if (!message.isOutbound) return null;
-    
     switch (message.status) {
       case 'sending':
-        return <Clock className="h-3 w-3 text-muted-foreground" />;
+        return <Clock className="h-3 w-3" />;
       case 'sent':
-        return <Check className="h-3 w-3 text-muted-foreground" />;
+        return <Check className="h-3 w-3" />;
       case 'delivered':
-        return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
+        return <CheckCheck className="h-3 w-3" />;
       case 'read':
-        return <CheckCheck className="h-3 w-3 text-primary" />;
-      case 'error':
-        return <AlertCircle className="h-3 w-3 text-destructive" />;
+        return <CheckCheck className="h-3 w-3 text-blue-500" />;
       default:
         return null;
     }
   };
   
-  // Format time
-  const formatTime = (timestamp: string) => {
-    return format(new Date(timestamp), 'HH:mm');
+  const handleReactionSelect = (emoji: string) => {
+    addReaction(message.id, emoji);
+    setShowReactionPicker(false);
+  };
+
+  const handleDeleteClick = () => {
+    deleteMessage(message.id);
   };
   
-  // Format message content based on type
-  const renderMessageContent = () => {
-    switch (message.type) {
-      case 'text':
-        return <p className="whitespace-pre-wrap">{message.content}</p>;
-      case 'image':
-        return (
-          <div>
-            {message.media && (
-              <div className="mt-1 mb-2">
-                <img 
-                  src={message.media.url} 
-                  alt="Image attachment" 
-                  className="rounded-md max-w-full max-h-60 object-cover"
-                />
-              </div>
-            )}
-            {message.content && <p>{message.content}</p>}
-          </div>
-        );
-      case 'video':
-        return (
-          <div>
-            {message.media && (
-              <div className="mt-1 mb-2">
-                <video 
-                  src={message.media.url} 
-                  controls
-                  className="rounded-md max-w-full max-h-60"
-                />
-              </div>
-            )}
-            {message.content && <p>{message.content}</p>}
-          </div>
-        );
-      case 'document':
-        return (
-          <div className="flex items-center p-2 bg-muted/50 rounded-md">
-            <div className="mr-3 p-2 bg-muted rounded">
-              <FileText className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">
-                {message.media?.filename || "Document"}
-              </p>
-              {message.media?.size && (
-                <p className="text-xs text-muted-foreground">
-                  {(message.media.size / (1024 * 1024)).toFixed(2)} MB
-                </p>
-              )}
-            </div>
-          </div>
-        );
-      case 'voice':
-        return (
-          <div className="flex items-center p-3 bg-muted/50 rounded-md">
-            <button className="h-8 w-8 mr-3 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-              <Play className="h-4 w-4" />
-            </button>
-            <div className="flex-1">
-              <div className="h-1 w-full bg-muted rounded-full">
-                <div className="h-1 w-1/3 bg-primary rounded-full"></div>
-              </div>
-              <div className="flex justify-between text-xs mt-1">
-                <span>0:00</span>
-                <span>{message.media?.duration || 0}s</span>
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return <p>{message.content}</p>;
-    }
+  const handleReplyClick = () => {
+    handleReplyToMessage(message);
   };
   
-  // Render reply to content if present
-  const renderReplyTo = () => {
-    if (!message.replyTo) return null;
+  const handleCopyClick = () => {
+    navigator.clipboard.writeText(message.content);
+  };
+  
+  const formattedTime = format(new Date(message.timestamp), 'h:mm a');
+  
+  // Determine message container styles
+  const containerStyles = message.isOutbound
+    ? 'flex justify-end mb-2'
+    : 'flex mb-2';
     
-    let replyContent = message.replyTo.content;
-    const replyType = message.replyTo.type;
+  // Determine message bubble styles
+  const bubbleStyles = message.isOutbound
+    ? 'bg-blue-500 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg max-w-[70%]'
+    : 'bg-white border rounded-tl-lg rounded-tr-lg rounded-br-lg max-w-[70%]';
     
-    if (replyType === 'image') {
-      replyContent = '📷 Image';
-    } else if (replyType === 'video') {
-      replyContent = '🎥 Video';
-    } else if (replyType === 'document') {
-      replyContent = '📎 Document';
-    } else if (replyType === 'voice') {
-      replyContent = '🎤 Voice message';
-    }
-    
-    return (
-      <div className={`mb-1 p-2 rounded-md ${message.isOutbound ? 'bg-primary/20' : 'bg-muted'}`}>
-        <div className="text-xs font-semibold">
-          {message.replyTo.isOutbound ? 'You' : message.replyTo.sender}
+  return (
+    <div className={containerStyles}>
+      {/* Reply preview */}
+      {message.replyTo && (
+        <div className="flex flex-col">
+          <div className="text-xs text-gray-500">
+            Replying to {message.replyTo.isOutbound ? 'yourself' : contact.name}
+          </div>
+          <div className="text-sm bg-gray-100 p-1 rounded">
+            {message.replyTo.content}
+          </div>
         </div>
-        <div className="text-xs truncate">
-          {replyContent}
+      )}
+      
+      {/* Message content */}
+      <div className={`p-3 ${bubbleStyles}`}>
+        {/* Message type specific content */}
+        {message.type === 'text' && <p>{message.content}</p>}
+        {message.type === 'image' && message.media && (
+          <div className="mb-2">
+            <img 
+              src={message.media.url} 
+              alt="Attachment" 
+              className="rounded-md max-w-full"
+            />
+            <p>{message.content}</p>
+          </div>
+        )}
+        {message.type === 'voice' && message.media && (
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-gray-100 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </div>
+            <div>
+              <div>Voice message</div>
+              <div className="text-xs text-gray-500">{message.media.duration}s</div>
+            </div>
+          </div>
+        )}
+        
+        {/* Message footer with time and status */}
+        <div className="flex justify-end items-center gap-1 mt-1">
+          <span className="text-xs opacity-70">{formattedTime}</span>
+          {message.isOutbound && getStatusIcon()}
         </div>
       </div>
-    );
-  };
-  
-  // Get borderRadius based on message sequence
-  const getBorderRadius = () => {
-    if (message.isOutbound) {
-      return isSequential
-        ? 'rounded-tr-md rounded-tl-2xl rounded-bl-2xl'
-        : 'rounded-2xl rounded-br-md';
-    } else {
-      return isSequential
-        ? 'rounded-tl-md rounded-tr-2xl rounded-br-2xl'
-        : 'rounded-2xl rounded-bl-md';
-    }
-  };
-  
-  return (
-    <div 
-      className={`group flex ${message.isOutbound ? 'justify-end' : 'justify-start'}`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
-    >
-      {/* Avatar for received messages */}
-      {!message.isOutbound && !isSequential && (
-        <Avatar className="h-8 w-8 mr-2 mt-1">
-          <AvatarImage src={contact.avatar} />
-          <AvatarFallback className="text-xs">
-            {contact.name.split(' ')
-              .map(n => n[0])
-              .join('')}
-          </AvatarFallback>
-        </Avatar>
-      )}
       
-      {/* Message spacer for sequential messages */}
-      {!message.isOutbound && isSequential && <div className="w-8 mr-2" />}
-      
-      {/* Message actions that appear on hover */}
-      {showActions && (
-        <div className={`flex items-center self-end mb-2 ${message.isOutbound ? 'mr-2' : 'ml-2 order-1'}`}>
-          <div className="flex bg-background border rounded-full shadow-sm">
-            {/* Reply button */}
-            <button 
-              className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded-full"
-              onClick={() => setReplyTo(message)}
-              title="Reply"
-            >
-              <Reply className="h-3 w-3" />
+      {/* Message actions */}
+      <div className="relative self-center ml-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 rounded-full hover:bg-gray-100">
+              <MoreHorizontal className="h-4 w-4" />
             </button>
-            
-            {/* Emoji reaction */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button 
-                  className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded-full"
-                  title="Add reaction"
-                >
-                  <Smile className="h-3 w-3" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-1" side={message.isOutbound ? 'top' : 'top'}>
-                <div className="flex gap-1">
-                  {commonEmojis.map(emoji => (
-                    <button
-                      key={emoji}
-                      className="h-8 w-8 flex items-center justify-center hover:bg-muted rounded"
-                      onClick={() => addReaction(message.id, emoji)}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            {/* More actions dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button 
-                  className="h-6 w-6 flex items-center justify-center hover:bg-muted rounded-full"
-                  title="More actions"
-                >
-                  <MoreHorizontal className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" side="top">
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(message.content)}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setReplyTo(message)}>
-                  <Reply className="mr-2 h-4 w-4" />
-                  Reply
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Forward className="mr-2 h-4 w-4" />
-                  Forward
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Star className="mr-2 h-4 w-4" />
-                  Star
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive" 
-                  onClick={() => deleteMessage(message.id)}
-                >
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      )}
-      
-      {/* Message bubble */}
-      <div className="max-w-[75%]">
-        {/* Reply preview if this message is replying to another one */}
-        {renderReplyTo()}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleReplyClick}>
+              <Reply className="h-4 w-4 mr-2" />
+              Reply
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowReactionPicker(true)}>
+              <span className="mr-2">😀</span>
+              Add reaction
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCopyClick}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copy text
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="text-red-600" 
+              onClick={handleDeleteClick}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         
-        {/* Message bubble */}
-        <div
-          className={`relative px-4 py-2 text-sm ${getBorderRadius()} ${
-            message.isOutbound 
-              ? 'bg-primary text-primary-foreground ml-2' 
-              : 'bg-background border mr-2'
-          }`}
-        >
-          {/* Sender name for received messages */}
-          {!message.isOutbound && !isSequential && (
-            <div className="font-medium text-xs mb-1 text-primary">
-              {message.sender}
+        {/* Reaction picker dropdown */}
+        {showReactionPicker && (
+          <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg p-2 z-10">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs font-medium">Add reaction</span>
+              <button 
+                onClick={() => setShowReactionPicker(false)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
-          )}
-          
-          {/* Message content */}
-          {renderMessageContent()}
-          
-          {/* Timestamp and status */}
-          <div className="text-[10px] mt-1 flex items-center justify-end gap-1 opacity-70">
-            {formatTime(message.timestamp)}
-            {getStatusIcon()}
-          </div>
-        </div>
-        
-        {/* Reactions */}
-        {message.reactions && message.reactions.length > 0 && (
-          <div className={`flex mt-1 ${message.isOutbound ? 'justify-end' : 'justify-start'}`}>
-            <div className="flex -space-x-1 bg-background border rounded-full shadow-sm px-1 py-0.5">
-              {message.reactions.map((reaction, index) => (
-                <div 
-                  key={index}
-                  className="text-xs w-5 h-5 flex items-center justify-center" 
-                  title={`${reaction.userName} reacted with ${reaction.emoji}`}
+            <div className="flex gap-1">
+              {['👍', '❤️', '😂', '😮', '😢', '👏'].map((emoji) => (
+                <button
+                  key={emoji}
+                  className="p-1 hover:bg-gray-100 rounded"
+                  onClick={() => handleReactionSelect(emoji)}
                 >
-                  {reaction.emoji}
-                </div>
+                  {emoji}
+                </button>
               ))}
             </div>
           </div>

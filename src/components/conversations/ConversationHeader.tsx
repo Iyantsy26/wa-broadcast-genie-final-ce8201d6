@@ -1,17 +1,19 @@
 
 import React from 'react';
-import { Contact } from '@/types/conversation';
+import { Contact, Conversation } from '@/types/conversation';
 
 interface ConversationHeaderProps {
   contact: Contact;
   onInfoClick: () => void;
   deviceId: string;
+  conversation?: Conversation;
 }
 
 const ConversationHeader: React.FC<ConversationHeaderProps> = ({ 
   contact,
   onInfoClick,
-  deviceId
+  deviceId,
+  conversation
 }) => {
   const getStatusIndicator = (isOnline?: boolean) => {
     return (

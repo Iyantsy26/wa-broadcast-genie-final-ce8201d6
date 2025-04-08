@@ -1,5 +1,5 @@
 
-import { Conversation, Contact } from '@/types/conversation';
+import { Conversation, Contact, ChatType } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 import { getLeads } from '../leadService';
 import { getClients } from '../clientService';
@@ -16,7 +16,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         name: lead.name,
         avatar: lead.avatar_url,
         phone: lead.phone || '',
-        type: 'lead',
+        type: 'lead' as ChatType,
         isOnline: Math.random() > 0.7, // Random online status for demo
         lastSeen: lead.last_contact || new Date().toISOString(),
         tags: lead.status ? [lead.status] : []
@@ -32,7 +32,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
           isRead: true
         },
         status: 'open',
-        chatType: 'lead',
+        chatType: 'lead' as ChatType,
         tags: lead.status ? [lead.status] : [],
         assignedTo: '',
         isEncrypted: false,
@@ -49,7 +49,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         name: client.name,
         avatar: client.avatar_url,
         phone: client.phone || '',
-        type: 'client',
+        type: 'client' as ChatType,
         isOnline: Math.random() > 0.7, // Random online status for demo
         lastSeen: new Date().toISOString(),
         tags: client.tags || []
@@ -65,7 +65,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
           isRead: true
         },
         status: 'open',
-        chatType: 'client',
+        chatType: 'client' as ChatType,
         tags: client.tags || [],
         assignedTo: '',
         isEncrypted: false,

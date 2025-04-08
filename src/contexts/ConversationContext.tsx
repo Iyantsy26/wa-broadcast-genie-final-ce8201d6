@@ -1,11 +1,11 @@
-
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { Contact, Message, MessageStatus, ChatType } from '@/types/conversation';
+import { DateRange } from 'react-day-picker';
+import { Contact, Message, MessageStatus, ChatType, Conversation } from '@/types/conversation';
 import { getLeads } from '@/services/leadService';
 import { getClients } from '@/services/clientService';
 import { toast } from '@/hooks/use-toast';
 
-type MessageMap = Record<string, Message[]>;
+export type MessageMap = Record<string, Message[]>;
 
 interface ConversationContextType {
   contacts: Contact[];
@@ -20,6 +20,20 @@ interface ConversationContextType {
   contactFilter: ChatType | 'all';
   searchTerm: string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  
+  filteredConversations: Conversation[];
+  groupedConversations: Record<string, Conversation[]>;
+  activeConversation: Conversation | null;
+  isReplying: boolean;
+  replyToMessage: Message | null;
+  cannedReplies: { id: string; title: string; content: string }[];
+  selectedDevice: string;
+  aiAssistantActive: boolean;
+  chatTypeFilter: ChatType | 'all';
+  dateRange: DateRange | undefined;
+  assigneeFilter: string | undefined;
+  tagFilter: string | undefined;
+  
   selectContact: (contactId: string) => void;
   toggleSidebar: () => void;
   toggleAssistant: () => void;
@@ -36,6 +50,33 @@ interface ConversationContextType {
   setContactFilter: (filter: ChatType | 'all') => void;
   setSearchTerm: (term: string) => void;
   addContact: (contact: Contact) => void;
+  
+  setActiveConversation: (conversation: Conversation) => void;
+  setIsSidebarOpen: (isOpen: boolean) => void;
+  setSelectedDevice: (deviceId: string) => void;
+  setAiAssistantActive: (isActive: boolean) => void;
+  setChatTypeFilter: (filter: ChatType | 'all') => void;
+  setDateRange: (range: DateRange | undefined) => void;
+  setAssigneeFilter: (assignee: string | undefined) => void;
+  setTagFilter: (tag: string | undefined) => void;
+  resetAllFilters: () => void;
+  handleSendMessage: (content: string, file: File | null, replyToMessageId?: string) => void;
+  handleVoiceMessageSent: (durationInSeconds: number) => void;
+  handleDeleteConversation: (conversationId: string) => void;
+  handleArchiveConversation: (conversationId: string, isArchived: boolean) => void;
+  handleAddTag: (conversationId: string, tag: string) => void;
+  handleAssignConversation: (conversationId: string, assignee: string) => void;
+  handleAddReaction: (messageId: string, emoji: string) => void;
+  handleReplyToMessage: (message: Message) => void;
+  handleCancelReply: () => void;
+  handleUseCannedReply: (replyContent: string) => void;
+  handleRequestAIAssistance: () => void;
+  handleAddContact: (contact: Contact) => void;
+  toggleContactStar: (contactId: string) => void;
+  muteContact: (contactId: string, isMuted: boolean) => void;
+  clearChat: (contactId: string) => void;
+  addReaction: (messageId: string, emoji: string) => void;
+  deleteMessage: (messageId: string) => void;
 }
 
 interface ConversationProviderProps {
@@ -59,14 +100,29 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   const [searchTerm, setSearchTerm] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Load contacts from the API
+  
+  const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
+  const [groupedConversations, setGroupedConversations] = useState<Record<string, Conversation[]>>({});
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [cannedReplies, setCannedReplies] = useState<{ id: string; title: string; content: string }[]>([
+    { id: '1', title: 'Greeting', content: 'Hello! How can I help you today?' },
+    { id: '2', title: 'Thank you', content: 'Thank you for your message. We appreciate your business.' },
+    { id: '3', title: 'Closing', content: 'Let me know if you have any other questions!' },
+  ]);
+  const [selectedDevice, setSelectedDevice] = useState('1');
+  const [aiAssistantActive, setAiAssistantActive] = useState(false);
+  const [chatTypeFilter, setChatTypeFilter] = useState<ChatType | 'all'>('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [assigneeFilter, setAssigneeFilter] = useState<string | undefined>(undefined);
+  const [tagFilter, setTagFilter] = useState<string | undefined>(undefined);
+  
   useEffect(() => {
     const fetchContacts = async () => {
       try {
         setIsLoading(true);
         
-        // Fetch leads
         const leads = await getLeads();
         const leadContacts: Contact[] = leads.map(lead => ({
           id: lead.id,
@@ -79,7 +135,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
           tags: lead.status ? [lead.status] : []
         }));
         
-        // Fetch clients
         const clients = await getClients();
         const clientContacts: Contact[] = clients.map(client => ({
           id: client.id,
@@ -92,11 +147,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
           tags: client.tags || []
         }));
 
-        // Here you would fetch team members and convert them to contacts
-        // For now we'll use an empty array
         const teamContacts: Contact[] = [];
 
-        // Combine all contacts
         const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
         setContacts(allContacts);
         setFilteredContacts(allContacts);
@@ -117,7 +169,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       }
     };
 
-    // Only fetch if we don't have contacts already (from initialContacts)
     if (initialContacts.length === 0) {
       fetchContacts();
     }
@@ -127,7 +178,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     setSelectedContactId(contactId);
     setIsSidebarOpen(false);
     
-    // If we don't have messages for this contact yet, initialize an empty array
     if (!messages[contactId]) {
       setMessages(prev => ({
         ...prev,
@@ -160,16 +210,13 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       [contactId]: [...(prev[contactId] || []), newMessage]
     }));
     
-    // Scroll to bottom when message is sent
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
     
-    // Simulate typing response after sending a message
     setTimeout(() => {
       setIsTyping(true);
       
-      // After typing for a while, send a response
       setTimeout(() => {
         setIsTyping(false);
         
@@ -188,12 +235,11 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
           [contactId]: [...(prev[contactId] || []), responseMessage]
         }));
         
-        // Scroll to bottom when response is received
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
-      }, 2000); // Time spent "typing"
-    }, 1000); // Delay before typing starts
+      }, 2000);
+    }, 1000);
   };
 
   const sendVoiceMessage = (contactId: string, durationInSeconds: number, deviceId: string) => {
@@ -217,7 +263,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
       [contactId]: [...(prev[contactId] || []), newMessage]
     }));
     
-    // Scroll to bottom when message is sent
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -231,24 +276,19 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
   ) => {
     let filtered = contacts;
     
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(contact =>
         contact.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
-    // Filter by type
     if (type !== 'all') {
       filtered = filtered.filter(contact => contact.type === type);
     }
     
-    // Filter by online status
     if (isOnlineOnly) {
       filtered = filtered.filter(contact => contact.isOnline);
     }
-    
-    // We would filter by unread here if we had that data
     
     setFilteredContacts(filtered);
     setSearchTerm(searchQuery);
@@ -264,7 +304,151 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
 
-  const value = {
+  const handleSendMessage = (content: string, file: File | null, replyToMessageId?: string) => {
+    if (activeConversation && content.trim()) {
+      sendMessage(activeConversation.contact.id, content, selectedDevice);
+      setReplyToMessage(null);
+      setIsReplying(false);
+    }
+  };
+
+  const handleVoiceMessageSent = (durationInSeconds: number) => {
+    if (activeConversation) {
+      sendVoiceMessage(activeConversation.contact.id, durationInSeconds, selectedDevice);
+    }
+  };
+
+  const handleDeleteConversation = (conversationId: string) => {
+    console.log('Delete conversation:', conversationId);
+  };
+
+  const handleArchiveConversation = (conversationId: string, isArchived: boolean) => {
+    console.log('Archive conversation:', conversationId, isArchived);
+  };
+
+  const handleAddTag = (conversationId: string, tag: string) => {
+    console.log('Add tag:', conversationId, tag);
+  };
+
+  const handleAssignConversation = (conversationId: string, assignee: string) => {
+    console.log('Assign conversation:', conversationId, assignee);
+  };
+
+  const handleAddReaction = (messageId: string, emoji: string) => {
+    console.log('Add reaction:', messageId, emoji);
+    addReaction(messageId, emoji);
+  };
+
+  const handleReplyToMessage = (message: Message) => {
+    setReplyToMessage(message);
+    setIsReplying(true);
+  };
+
+  const handleCancelReply = () => {
+    setReplyToMessage(null);
+    setIsReplying(false);
+  };
+
+  const handleUseCannedReply = (replyContent: string) => {
+    if (activeConversation) {
+      sendMessage(activeConversation.contact.id, replyContent, selectedDevice);
+    }
+  };
+
+  const handleRequestAIAssistance = () => {
+    console.log('AI assistance requested');
+    toast({
+      title: 'AI Assistant',
+      description: 'Generating a response...',
+    });
+    setTimeout(() => {
+      if (activeConversation) {
+        sendMessage(
+          activeConversation.contact.id,
+          'This is an AI-generated response to help with your query.',
+          selectedDevice
+        );
+      }
+    }, 2000);
+  };
+
+  const handleAddContact = (contact: Contact) => {
+    addContact(contact);
+  };
+
+  const resetAllFilters = () => {
+    setChatTypeFilter('all');
+    setSearchTerm('');
+    setDateRange(undefined);
+    setAssigneeFilter(undefined);
+    setTagFilter(undefined);
+  };
+
+  const toggleContactStar = (contactId: string) => {
+    setContacts(contacts.map(contact => 
+      contact.id === contactId 
+        ? { ...contact, isStarred: !contact.isStarred }
+        : contact
+    ));
+  };
+
+  const muteContact = (contactId: string, isMuted: boolean) => {
+    setContacts(contacts.map(contact => 
+      contact.id === contactId 
+        ? { ...contact, isMuted }
+        : contact
+    ));
+  };
+
+  const clearChat = (contactId: string) => {
+    setMessages(prev => ({
+      ...prev,
+      [contactId]: []
+    }));
+    toast({
+      title: 'Chat cleared',
+      description: 'All messages have been removed from this conversation',
+    });
+  };
+
+  const addReaction = (messageId: string, emoji: string) => {
+    if (!selectedContactId) return;
+    
+    setMessages(prev => {
+      const contactMessages = prev[selectedContactId] || [];
+      return {
+        ...prev,
+        [selectedContactId]: contactMessages.map(msg => 
+          msg.id === messageId ? {
+            ...msg,
+            reactions: [
+              ...(msg.reactions || []),
+              { 
+                emoji, 
+                userId: 'current-user', 
+                userName: 'You',
+                timestamp: new Date().toISOString()
+              }
+            ]
+          } : msg
+        )
+      };
+    });
+  };
+
+  const deleteMessage = (messageId: string) => {
+    if (!selectedContactId) return;
+    
+    setMessages(prev => {
+      const contactMessages = prev[selectedContactId] || [];
+      return {
+        ...prev,
+        [selectedContactId]: contactMessages.filter(msg => msg.id !== messageId)
+      };
+    });
+  };
+
+  const value: ConversationContextType = {
     contacts,
     filteredContacts,
     selectedContactId,
@@ -277,6 +461,20 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     contactFilter,
     searchTerm,
     messagesEndRef,
+    
+    filteredConversations,
+    groupedConversations,
+    activeConversation,
+    isReplying,
+    replyToMessage,
+    cannedReplies,
+    selectedDevice,
+    aiAssistantActive,
+    chatTypeFilter,
+    dateRange,
+    assigneeFilter,
+    tagFilter,
+    
     selectContact,
     toggleSidebar,
     toggleAssistant,
@@ -287,7 +485,36 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     filterContacts,
     setContactFilter,
     setSearchTerm,
-    addContact
+    addContact,
+    
+    setActiveConversation,
+    setIsSidebarOpen,
+    setSelectedDevice,
+    setAiAssistantActive,
+    setChatTypeFilter,
+    setDateRange,
+    setAssigneeFilter,
+    setTagFilter,
+    resetAllFilters,
+    handleSendMessage,
+    handleVoiceMessageSent,
+    handleDeleteConversation,
+    handleArchiveConversation,
+    handleAddTag,
+    handleAssignConversation,
+    handleAddReaction,
+    handleReplyToMessage,
+    handleCancelReply,
+    handleUseCannedReply,
+    handleRequestAIAssistance,
+    handleAddContact,
+    
+    toggleContactStar,
+    muteContact,
+    clearChat,
+    
+    addReaction,
+    deleteMessage
   };
 
   return (
