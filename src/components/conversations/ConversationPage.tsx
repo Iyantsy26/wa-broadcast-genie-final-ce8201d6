@@ -12,14 +12,14 @@ import AIAssistantPanel from './AIAssistantPanel';
 import CannedResponseSelector from './CannedResponseSelector';
 import AddContactButton from './AddContactButton';
 import { Button } from "@/components/ui/button";
-import { ChatType } from '@/types/conversation';
+import { ChatType, Contact } from '@/types/conversation';
 
 const ConversationPage = () => {
   const {
     filteredConversations,
     groupedConversations,
     activeConversation,
-    messages,
+    messages: messagesMap,
     isSidebarOpen,
     isTyping,
     isReplying,
@@ -55,9 +55,33 @@ const ConversationPage = () => {
     handleAddContact
   } = useConversation();
 
+  // Convert MessageMap to Message[] for active conversation
+  const messages = activeConversation && messagesMap[activeConversation.contact.id] 
+    ? messagesMap[activeConversation.contact.id] 
+    : [];
+
+  // Wrap the handleAddContact to match the expected signature in AddContactButton
+  const handleAddContactWrapper = (name: string, phone: string, type: 'client' | 'lead' | 'team') => {
+    // Create a Contact object from the parameters
+    const newContact: Contact = {
+      id: `new-${Date.now()}`,
+      name,
+      phone,
+      type,
+      tags: []
+    };
+    handleAddContact(newContact);
+  };
+
   // Define dummy pinConversation function to satisfy the interface
   const pinConversation = (conversationId: string) => {
     console.log('Pin conversation not implemented:', conversationId);
+  };
+
+  // Create wrapper for AI assistance that returns a Promise
+  const handleRequestAIAssistancePromise = async (prompt: string): Promise<string> => {
+    handleRequestAIAssistance();
+    return Promise.resolve(`AI response to: ${prompt}`);
   };
 
   return (
@@ -70,7 +94,7 @@ const ConversationPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AddContactButton onAddContact={handleAddContact} />
+          <AddContactButton onAddContact={handleAddContactWrapper} />
           <Button 
             variant="outline" 
             onClick={() => setAiAssistantActive(!aiAssistantActive)}
@@ -112,11 +136,14 @@ const ConversationPage = () => {
           {activeConversation ? (
             <>
               <ConversationHeader 
+                contact={activeConversation.contact}
+                onInfoClick={() => setIsSidebarOpen(true)}
+                deviceId={selectedDevice}
                 conversation={activeConversation}
                 onOpenContactInfo={() => setIsSidebarOpen(true)}
               />
               <MessageList 
-                messages={messages} 
+                messages={messages}
                 contactName={activeConversation.contact.name}
                 messagesEndRef={messagesEndRef}
                 isTyping={isTyping}
@@ -144,7 +171,7 @@ const ConversationPage = () => {
                   onVoiceMessageSent={handleVoiceMessageSent}
                   replyTo={replyToMessage}
                   onCancelReply={handleCancelReply}
-                  onRequestAIAssistance={handleRequestAIAssistance}
+                  onRequestAIAssistance={handleRequestAIAssistancePromise}
                 />
               </div>
             </>
@@ -164,7 +191,7 @@ const ConversationPage = () => {
         
         {aiAssistantActive && (
           <AIAssistantPanel 
-            onRequestAIAssistance={handleRequestAIAssistance}
+            onRequestAIAssistance={handleRequestAIAssistancePromise}
             onClose={() => setAiAssistantActive(false)}
           />
         )}

@@ -10,7 +10,7 @@ const ChatPage = () => {
     filteredConversations,
     groupedConversations,
     activeConversation,
-    messages,
+    messages: messagesMap,
     isSidebarOpen,
     chatTypeFilter,
     searchTerm,
@@ -33,6 +33,11 @@ const ChatPage = () => {
     handleAssignConversation,
     messagesEndRef
   } = useConversation();
+
+  // Convert MessageMap to Message[] for active conversation
+  const messages = activeConversation && messagesMap[activeConversation.contact.id] 
+    ? messagesMap[activeConversation.contact.id] 
+    : [];
 
   return (
     <div className="space-y-4 h-full flex flex-col animate-fade-in">

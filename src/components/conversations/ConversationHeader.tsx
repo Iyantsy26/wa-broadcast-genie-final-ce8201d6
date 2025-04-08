@@ -7,13 +7,15 @@ interface ConversationHeaderProps {
   onInfoClick: () => void;
   deviceId: string;
   conversation?: Conversation;
+  onOpenContactInfo?: () => void; // Added this prop
 }
 
 const ConversationHeader: React.FC<ConversationHeaderProps> = ({ 
   contact,
   onInfoClick,
   deviceId,
-  conversation
+  conversation,
+  onOpenContactInfo // Added this prop
 }) => {
   const getStatusIndicator = (isOnline?: boolean) => {
     return (
@@ -28,7 +30,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
       <div className="flex items-center gap-3">
         <div 
           className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer" 
-          onClick={onInfoClick}
+          onClick={onInfoClick || onOpenContactInfo} // Use either of these callbacks
         >
           {contact.avatar ? (
             <img 
@@ -55,7 +57,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
       <div>
         <button 
           className="p-2 hover:bg-gray-100 rounded-full"
-          onClick={onInfoClick}
+          onClick={onInfoClick || onOpenContactInfo}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="1" />

@@ -39,7 +39,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         isPinned: false,
         isArchived: false,
         unreadCount: 0
-      };
+      } as Conversation;
     });
     
     // Create client conversations
@@ -72,7 +72,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         isPinned: false,
         isArchived: false,
         unreadCount: 0
-      };
+      } as Conversation;
     });
     
     // Combine and return all conversations

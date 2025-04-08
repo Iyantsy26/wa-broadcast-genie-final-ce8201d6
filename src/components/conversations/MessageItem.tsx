@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Message, Contact } from '@/types/conversation';
@@ -27,11 +26,19 @@ const MessageItem: React.FC<MessageItemProps> = ({
   isLast = false
 }) => {
   const [showReactionPicker, setShowReactionPicker] = useState(false);
-  const { 
-    addReaction, 
-    deleteMessage, 
-    handleReplyToMessage 
-  } = useConversation();
+  const context = useConversation();
+  
+  const addReaction = context.addReaction || ((messageId: string, emoji: string) => {
+    console.log('Adding reaction', messageId, emoji);
+  });
+  
+  const deleteMessage = context.deleteMessage || ((messageId: string) => {
+    console.log('Deleting message', messageId);
+  });
+  
+  const handleReplyToMessage = context.handleReplyToMessage || ((message: Message) => {
+    console.log('Replying to message', message);
+  });
   
   const getStatusIcon = () => {
     switch (message.status) {
@@ -67,19 +74,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
   
   const formattedTime = format(new Date(message.timestamp), 'h:mm a');
   
-  // Determine message container styles
   const containerStyles = message.isOutbound
     ? 'flex justify-end mb-2'
     : 'flex mb-2';
     
-  // Determine message bubble styles
   const bubbleStyles = message.isOutbound
     ? 'bg-blue-500 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg max-w-[70%]'
     : 'bg-white border rounded-tl-lg rounded-tr-lg rounded-br-lg max-w-[70%]';
     
   return (
     <div className={containerStyles}>
-      {/* Reply preview */}
       {message.replyTo && (
         <div className="flex flex-col">
           <div className="text-xs text-gray-500">
@@ -91,9 +95,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
       )}
       
-      {/* Message content */}
       <div className={`p-3 ${bubbleStyles}`}>
-        {/* Message type specific content */}
         {message.type === 'text' && <p>{message.content}</p>}
         {message.type === 'image' && message.media && (
           <div className="mb-2">
@@ -122,14 +124,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
         
-        {/* Message footer with time and status */}
         <div className="flex justify-end items-center gap-1 mt-1">
           <span className="text-xs opacity-70">{formattedTime}</span>
           {message.isOutbound && getStatusIcon()}
         </div>
       </div>
       
-      {/* Message actions */}
       <div className="relative self-center ml-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -161,7 +161,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
         
-        {/* Reaction picker dropdown */}
         {showReactionPicker && (
           <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg p-2 z-10">
             <div className="flex justify-between items-center mb-1">
