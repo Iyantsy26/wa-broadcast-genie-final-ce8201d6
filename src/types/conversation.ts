@@ -1,3 +1,4 @@
+
 export type MessageStatus = 'sent' | 'read' | 'delivered' | 'error' | 'sending';
 export type MessageType = 'text' | 'image' | 'video' | 'document' | 'voice' | 'location';
 export type ChatType = 'team' | 'client' | 'lead';
@@ -86,6 +87,7 @@ export interface Lead {
   notes?: string;
   last_contact?: string;
   next_followup?: string;
+  next_followup_time?: string;
   created_at: string;
   initials?: string;
 }
