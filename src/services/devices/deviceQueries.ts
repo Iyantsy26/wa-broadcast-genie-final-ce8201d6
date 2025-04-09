@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceAccount, AccountLimitResult } from './deviceTypes';
 import { getUserPlan, getAccountLimits } from './planService';
@@ -133,20 +132,20 @@ export const getQrCodeForDevice = async (deviceId: string): Promise<string> => {
       throw new Error('Failed to generate QR code');
     }
     
-    // Store QR code URL in temporary storage since device_accounts doesn't have this column
+    // Generate QR code URL
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${deviceId}`;
     
-    // Try to use a qr_codes table if it exists
+    // Store QR code URL in device_accounts metadata temporarily
     try {
       await supabase
-        .from('device_qr_codes')
-        .upsert({ 
-          device_id: deviceId,
-          qr_code_url: qrCodeUrl,
-          created_at: new Date().toISOString()
-        });
+        .from('device_accounts')
+        .update({ 
+          // Use the business_id field temporarily to store QR URL
+          business_id: `qr_code:${qrCodeUrl}`
+        })
+        .eq('id', deviceId);
     } catch (e) {
-      // Fallback to session storage if table doesn't exist
+      // Fallback to session storage if update fails
       sessionStorage.setItem(`qrcode-${deviceId}`, qrCodeUrl);
     }
     

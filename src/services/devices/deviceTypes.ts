@@ -10,9 +10,6 @@ export interface DeviceAccount {
   plan_tier?: 'starter' | 'professional' | 'enterprise';
   organization_id?: string;
   created_at?: string;
-  qr_code_url?: string;
-  verification_code?: string;
-  verification_sent_at?: string;
 }
 
 export interface AccountLimitResult {

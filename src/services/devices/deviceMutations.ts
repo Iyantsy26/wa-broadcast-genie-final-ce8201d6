@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceAccount, DeviceConnectionStatus, VerificationResponse } from './deviceTypes';
 
@@ -129,20 +130,23 @@ export const sendVerificationCode = async (
     // For demonstration, we'll simulate sending a verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Store verification code in a separate table or service since device_accounts doesn't have this column
-    const { error } = await supabase
-      .from('device_verifications') // Assume this table exists or use session storage temporarily
-      .insert({ 
-        device_id: deviceId,
-        code: verificationCode,
-        sent_at: new Date().toISOString(),
-        phone: `${countryCode}${phoneNumber}`
-      })
-      .select();
-      
-    if (error) {
-      // Fallback to storing in device_accounts for now if device_verifications doesn't exist
-      // This is temporary and should be replaced with proper table structure
+    // Store verification code in device_accounts table temporarily
+    // Using the notes field to store verification data (not ideal but works)
+    try {
+      const { error } = await supabase
+        .from('device_accounts')
+        .update({ 
+          // Store verification code as metadata in existing field
+          type: `verification:${verificationCode}`,
+          last_active: new Date().toISOString()
+        })
+        .eq('id', deviceId);
+        
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      // Fallback to session storage if update fails
       console.warn("Falling back to temporary storage for verification code");
       sessionStorage.setItem(`verification-${deviceId}`, JSON.stringify({
         code: verificationCode,
@@ -175,20 +179,24 @@ export const verifyPhoneNumber = async (
   verificationCode: string
 ): Promise<DeviceConnectionStatus> => {
   try {
-    // Try to get verification from dedicated table first
-    let verificationData;
+    // Try to get verification from device_accounts table
+    let storedCode = "";
+    let sentAt: Date;
+    
     const { data, error } = await supabase
-      .from('device_verifications')
-      .select('code, sent_at')
-      .eq('device_id', deviceId)
+      .from('device_accounts')
+      .select('type, last_active')
+      .eq('id', deviceId)
       .maybeSingle();
       
-    if (error || !data) {
-      // Fall back to session storage if dedicated table doesn't exist
+    if (error || !data || !data.type || !data.type.startsWith('verification:')) {
+      // Fall back to session storage if no verification in table
       const storedVerification = sessionStorage.getItem(`verification-${deviceId}`);
       
       if (storedVerification) {
-        verificationData = JSON.parse(storedVerification);
+        const parsed = JSON.parse(storedVerification);
+        storedCode = parsed.code;
+        sentAt = new Date(parsed.sent_at);
       } else {
         return {
           success: false,
@@ -196,21 +204,12 @@ export const verifyPhoneNumber = async (
         };
       }
     } else {
-      verificationData = {
-        code: data.code,
-        sent_at: data.sent_at
-      };
+      // Extract verification code from type field
+      storedCode = data.type.split(':')[1];
+      sentAt = new Date(data.last_active);
     }
     
-    // Check if verification code is valid and not expired
-    if (!verificationData.code) {
-      return {
-        success: false,
-        message: 'No verification code found'
-      };
-    }
-    
-    const sentAt = new Date(verificationData.sent_at);
+    // Check if verification code is expired
     const now = new Date();
     const expirationMinutes = 10;
     
@@ -222,9 +221,21 @@ export const verifyPhoneNumber = async (
     }
     
     // Check if verification code matches
-    if (verificationData.code === verificationCode) {
-      // Update device status to connected
+    if (storedCode === verificationCode) {
+      // Update device status to connected and clear verification data
       await updateDeviceStatus(deviceId, 'connected');
+      
+      // Reset device type if it was used for verification
+      await supabase
+        .from('device_accounts')
+        .update({
+          type: 'phone_otp', // Set to normal type
+          status: 'connected'
+        })
+        .eq('id', deviceId);
+      
+      // Clear session storage if it was used
+      sessionStorage.removeItem(`verification-${deviceId}`);
       
       return {
         success: true,

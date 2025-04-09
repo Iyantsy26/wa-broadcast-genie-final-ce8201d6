@@ -159,7 +159,7 @@ export const deleteOrganizationBranding = async (id: string): Promise<boolean> =
 };
 
 // Fix the addPlan function with proper type handling
-export const addPlan = async (plan: Omit<Plan, "id">): Promise<Plan> => {
+export const addPlan = async (plan: Omit<Plan, "id" | "created_at" | "updated_at">): Promise<Plan> => {
   try {
     // Ensure 'name' is included in the plan object
     if (!plan.name) {
