@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Organization, OrganizationBranding, Plan, TeamMember } from "../devices/deviceTypes";
-import { Json } from "@supabase/supabase-js";
+import { Json } from "@/integrations/supabase/types";
 
 /**
  * Add a new organization
