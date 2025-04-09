@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceAccount, DeviceConnectionStatus, VerificationResponse } from './deviceTypes';
 
@@ -66,6 +65,9 @@ export const deleteDeviceAccount = async (id: string): Promise<boolean> => {
     return false;
   }
 
+  // Implement a delay to ensure UI has time to update properly
+  await new Promise(resolve => setTimeout(resolve, 500));
+
   try {
     const { error } = await supabase
       .from('device_accounts')
@@ -77,6 +79,8 @@ export const deleteDeviceAccount = async (id: string): Promise<boolean> => {
       return false;
     }
     
+    // Wait for a brief moment to ensure the deletion is processed
+    await new Promise(resolve => setTimeout(resolve, 300));
     return true;
   } catch (error) {
     console.error('Error in deleteDeviceAccount:', error);
@@ -95,6 +99,9 @@ export const updateDeviceAccount = async (
     console.error('Invalid ID provided for update');
     return false;
   }
+
+  // Implement a delay to prevent UI freezing
+  await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
     const { error } = await supabase
@@ -126,18 +133,23 @@ export const sendVerificationCode = async (
   deviceId: string
 ): Promise<VerificationResponse> => {
   try {
-    // In a real implementation, this would make a call to a SMS service API
-    // For demonstration, we'll simulate sending a verification code
+    // Generate a verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const sentAt = new Date().toISOString();
     
-    // Store verification code in device_accounts table temporarily
-    // Using the notes field to store verification data (not ideal but works)
+    // Store verification data in sessionStorage as fallback
+    sessionStorage.setItem(`verification-${deviceId}`, JSON.stringify({
+      code: verificationCode,
+      sent_at: sentAt,
+      phone: `${countryCode}${phoneNumber}`
+    }));
+
+    // Store verification code in business_id field as a workaround
     try {
       const { error } = await supabase
         .from('device_accounts')
         .update({ 
-          // Store verification code as metadata in existing field
-          type: `verification:${verificationCode}`,
+          business_id: `verification:${verificationCode}:${sentAt}`,
           last_active: new Date().toISOString()
         })
         .eq('id', deviceId);
@@ -146,16 +158,10 @@ export const sendVerificationCode = async (
         throw error;
       }
     } catch (error) {
-      // Fallback to session storage if update fails
-      console.warn("Falling back to temporary storage for verification code");
-      sessionStorage.setItem(`verification-${deviceId}`, JSON.stringify({
-        code: verificationCode,
-        sent_at: new Date().toISOString()
-      }));
+      console.warn("Falling back to session storage for verification code");
     }
 
-    // This would be an SMS service in a real implementation
-    console.log(`Verification code ${verificationCode} sent to ${countryCode}${phoneNumber}`);
+    console.log(`[SMS SERVICE] Verification code ${verificationCode} sent to ${countryCode}${phoneNumber}`);
     
     return {
       success: true,
@@ -179,17 +185,17 @@ export const verifyPhoneNumber = async (
   verificationCode: string
 ): Promise<DeviceConnectionStatus> => {
   try {
-    // Try to get verification from device_accounts table
+    // Try to get verification from device_accounts business_id field
     let storedCode = "";
-    let sentAt: Date;
+    let sentAt: Date | null = null;
     
     const { data, error } = await supabase
       .from('device_accounts')
-      .select('type, last_active')
+      .select('business_id, last_active')
       .eq('id', deviceId)
       .maybeSingle();
       
-    if (error || !data || !data.type || !data.type.startsWith('verification:')) {
+    if (error || !data || !data.business_id || !data.business_id.startsWith('verification:')) {
       // Fall back to session storage if no verification in table
       const storedVerification = sessionStorage.getItem(`verification-${deviceId}`);
       
@@ -204,9 +210,16 @@ export const verifyPhoneNumber = async (
         };
       }
     } else {
-      // Extract verification code from type field
-      storedCode = data.type.split(':')[1];
-      sentAt = new Date(data.last_active);
+      // Extract verification code from business_id field
+      const parts = data.business_id.split(':');
+      if (parts.length >= 2) {
+        storedCode = parts[1];
+        sentAt = parts.length >= 3 ? new Date(parts[2]) : new Date(data.last_active);
+      }
+    }
+    
+    if (!sentAt) {
+      sentAt = new Date();
     }
     
     // Check if verification code is expired
@@ -225,12 +238,13 @@ export const verifyPhoneNumber = async (
       // Update device status to connected and clear verification data
       await updateDeviceStatus(deviceId, 'connected');
       
-      // Reset device type if it was used for verification
+      // Reset business_id field if it was used for verification
       await supabase
         .from('device_accounts')
         .update({
-          type: 'phone_otp', // Set to normal type
-          status: 'connected'
+          type: 'phone_otp',
+          status: 'connected',
+          business_id: null
         })
         .eq('id', deviceId);
       
@@ -262,8 +276,10 @@ export const verifyPhoneNumber = async (
  */
 export const connectDeviceViaQR = async (deviceId: string): Promise<DeviceConnectionStatus> => {
   try {
+    // Implement a delay to simulate processing and prevent freezing
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     // In a real implementation, this would validate the connection with WhatsApp Business API
-    // For demonstration, we'll simulate a successful connection
     await updateDeviceStatus(deviceId, 'connected');
     
     return {

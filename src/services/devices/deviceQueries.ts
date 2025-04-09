@@ -124,24 +124,20 @@ export const subscribeToDeviceById = (deviceId: string, callback: (payload: any)
  */
 export const getQrCodeForDevice = async (deviceId: string): Promise<string> => {
   try {
+    // Generate a unique identifier for this QR code session
+    const sessionId = `${deviceId}-${Date.now()}`;
+    
     // In a real implementation, this would make a call to WhatsApp Business API
     // For now, simulate with a real QR code generation service
-    const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${deviceId}&format=svg`);
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${sessionId}&format=svg`;
     
-    if (!response.ok) {
-      throw new Error('Failed to generate QR code');
-    }
-    
-    // Generate QR code URL
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${deviceId}`;
-    
-    // Store QR code URL in device_accounts metadata temporarily
+    // Store QR code URL in business_id field temporarily
     try {
       await supabase
         .from('device_accounts')
         .update({ 
-          // Use the business_id field temporarily to store QR URL
-          business_id: `qr_code:${qrCodeUrl}`
+          business_id: `qr_code:${qrCodeUrl}`,
+          last_active: new Date().toISOString()
         })
         .eq('id', deviceId);
     } catch (e) {

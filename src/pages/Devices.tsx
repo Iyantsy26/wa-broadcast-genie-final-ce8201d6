@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { Plus, AlertCircle } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { 
   DeviceAccount,
   getDeviceAccounts,
@@ -13,7 +14,8 @@ import {
   checkAccountLimit,
   getUserPlan,
   updateDeviceAccount,
-  subscribeToDeviceChanges
+  subscribeToDeviceChanges,
+  upgradePlan
 } from '@/services/deviceService';
 
 // Import components
@@ -24,7 +26,17 @@ import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
 import EditDeviceDialog from '@/components/devices/EditDeviceDialog';
 import WebWhatsAppSheet from '@/components/devices/WebWhatsAppSheet';
 import DeviceGuideDialog from '@/components/devices/DeviceGuideDialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import SuperAdminSmsVerification from '@/components/admin/SuperAdminSmsVerification';
 
+// Plan configuration
 const planFeatures = {
   starter: {
     name: "Starter",
@@ -58,10 +70,16 @@ const Devices = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deviceToEdit, setDeviceToEdit] = useState<DeviceAccount | null>(null);
   const [deleteDeviceName, setDeleteDeviceName] = useState('this device');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState(false);
+  const [targetPlan, setTargetPlan] = useState<'professional' | 'enterprise'>('professional');
+  const [upgradeSuccessful, setUpgradeSuccessful] = useState(false);
 
   useEffect(() => {
     fetchDeviceAccounts();
     fetchUserPlanInfo();
+    checkAdminStatus();
 
     // Set up real-time listener for device account changes
     const cleanup = subscribeToDeviceChanges((payload) => {
@@ -72,12 +90,55 @@ const Devices = () => {
     return cleanup;
   }, []);
 
+  const checkAdminStatus = async () => {
+    try {
+      // Try to get the user session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setIsAdmin(false);
+        return;
+      }
+      
+      // Check if user has admin role
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('role, is_super_admin')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      } else if (data) {
+        setIsAdmin(data.role === 'admin' || data.role === 'super_admin' || data.is_super_admin === true);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error in checkAdminStatus:', error);
+      setIsAdmin(false);
+    }
+  };
+
   const fetchUserPlanInfo = async () => {
     try {
-      const plan = await getUserPlan();
+      // Default to starter plan if there's an error
+      let plan: 'starter' | 'professional' | 'enterprise';
+      try {
+        plan = await getUserPlan();
+      } catch (error) {
+        console.error("Error fetching user plan info:", error);
+        plan = 'starter';
+      }
       setUserPlan(plan);
       
-      const limits = await checkAccountLimit();
+      let limits = { canAdd: true, currentCount: 0, limit: getAccountLimits(plan) };
+      try {
+        limits = await checkAccountLimit();
+      } catch (error) {
+        console.error("Error checking account limits:", error);
+      }
       setAccountLimit(limits);
     } catch (error) {
       console.error("Error fetching user plan info:", error);
@@ -112,6 +173,8 @@ const Devices = () => {
   const handleConnect = async (accountId: string) => {
     try {
       setLoading(true);
+      // Add a delay to prevent UI freezing
+      await new Promise(resolve => setTimeout(resolve, 500));
       await updateDeviceStatus(accountId, 'connected');
       toast({
         title: "Device reconnected",
@@ -129,18 +192,14 @@ const Devices = () => {
     }
   };
 
-  const handleAddAccount = async (type: 'browser_qr' | 'browser_web' | 'phone_otp' | 'new_business' | 'business_api') => {
+  const handleAddAccount = async (type: 'browser_qr' | 'browser_web' | 'phone_otp' | 'business_api') => {
     try {
       setLoading(true);
       
       const { canAdd, currentCount, limit } = await checkAccountLimit();
       
       if (!canAdd) {
-        toast({
-          title: "Plan limit reached",
-          description: `You can only connect ${limit} devices on your current plan. Please upgrade to add more.`,
-          variant: "destructive",
-        });
+        setUpgradeDialogOpen(true);
         return;
       }
       
@@ -181,6 +240,9 @@ const Devices = () => {
 
   const handleDisconnect = async (accountId: string) => {
     try {
+      // Add a delay to prevent UI freezing
+      setLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 300));
       await updateDeviceStatus(accountId, 'disconnected');
       toast({
         title: "Device disconnected",
@@ -193,6 +255,8 @@ const Devices = () => {
         description: "Failed to disconnect WhatsApp device",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,6 +272,8 @@ const Devices = () => {
     
     try {
       setLoading(true);
+      // Add a delay to prevent UI freezing
+      await new Promise(resolve => setTimeout(resolve, 500));
       const success = await deleteDeviceAccount(accountToDelete);
       
       if (success) {
@@ -216,7 +282,10 @@ const Devices = () => {
           description: "Successfully removed WhatsApp device.",
         });
         
-        // No need to manually update the accounts list, the real-time listener will handle it
+        // Force a refresh in case the real-time listener doesn't catch it
+        setTimeout(() => {
+          fetchDeviceAccounts();
+        }, 500);
       } else {
         toast({
           title: "Error",
@@ -246,6 +315,8 @@ const Devices = () => {
   const handleEditAccount = async (id: string, updates: Partial<DeviceAccount>) => {
     try {
       setLoading(true);
+      // Add a delay to prevent UI freezing
+      await new Promise(resolve => setTimeout(resolve, 500));
       const success = await updateDeviceAccount(id, updates);
       
       if (success) {
@@ -257,7 +328,8 @@ const Devices = () => {
         setEditDialogOpen(false);
         setDeviceToEdit(null);
         
-        // No need to manually update the accounts list, the real-time listener will handle it
+        // Force refresh to ensure UI is updated
+        fetchDeviceAccounts();
       } else {
         toast({
           title: "Error",
@@ -282,6 +354,36 @@ const Devices = () => {
     handleAddAccount('browser_web');
   };
 
+  const handleUpgradePlan = async () => {
+    setUpgradingPlan(true);
+    try {
+      const result = await upgradePlan(targetPlan);
+      if (result) {
+        setUpgradeSuccessful(true);
+        fetchUserPlanInfo();
+        toast({
+          title: "Plan upgraded",
+          description: `Your plan has been successfully upgraded to ${planFeatures[targetPlan].name}.`,
+        });
+      } else {
+        toast({
+          title: "Upgrade failed",
+          description: "Failed to upgrade your plan. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error upgrading plan:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while upgrading your plan",
+        variant: "destructive",
+      });
+    } finally {
+      setUpgradingPlan(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -294,6 +396,10 @@ const Devices = () => {
         
         <div className="flex gap-2">
           <DeviceGuideDialog />
+          
+          {isAdmin && (
+            <SuperAdminSmsVerification />
+          )}
           
           <AddDeviceDialog
             open={dialogOpen}
@@ -313,6 +419,7 @@ const Devices = () => {
         userPlan={userPlan}
         accountLimit={accountLimit}
         planFeatures={planFeatures}
+        onUpgrade={() => setUpgradeDialogOpen(true)}
       />
 
       <DeviceList
@@ -348,6 +455,124 @@ const Devices = () => {
         loading={loading}
         device={deviceToEdit}
       />
+
+      {/* Plan Upgrade Dialog */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade Your Plan</DialogTitle>
+            <DialogDescription>
+              {upgradeSuccessful 
+                ? "Your plan has been successfully upgraded!"
+                : "Upgrade to a higher plan to add more WhatsApp devices."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!upgradeSuccessful ? (
+            <>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center space-x-4">
+                    <div 
+                      className={`border rounded-lg p-4 flex-1 cursor-pointer ${
+                        targetPlan === 'professional' 
+                          ? 'border-purple-500 bg-purple-50 ring-1 ring-purple-500' 
+                          : 'hover:border-purple-200'
+                      }`}
+                      onClick={() => setTargetPlan('professional')}
+                    >
+                      <h3 className="font-medium text-center">Professional</h3>
+                      <p className="text-2xl font-bold text-center mt-2">
+                        $29<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                      </p>
+                      <div className="text-center mt-2 text-sm">Up to 10 devices</div>
+                    </div>
+                    
+                    <div 
+                      className={`border rounded-lg p-4 flex-1 cursor-pointer ${
+                        targetPlan === 'enterprise' 
+                          ? 'border-green-500 bg-green-50 ring-1 ring-green-500' 
+                          : 'hover:border-green-200'
+                      }`}
+                      onClick={() => setTargetPlan('enterprise')}
+                    >
+                      <h3 className="font-medium text-center">Enterprise</h3>
+                      <p className="text-2xl font-bold text-center mt-2">
+                        $49<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                      </p>
+                      <div className="text-center mt-2 text-sm">Up to 20 devices</div>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-md bg-amber-50 p-4 border border-amber-100">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                      <div className="text-sm text-amber-800">
+                        For demo purposes, the plan upgrade is simulated and no actual payment will be processed.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setUpgradeDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpgradePlan}
+                  disabled={upgradingPlan}
+                >
+                  {upgradingPlan ? 'Processing...' : `Upgrade to ${planFeatures[targetPlan].name}`}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="py-6 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-green-100 p-3 mb-4">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-6 w-6 text-green-600" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M5 13l4 4L19 7" 
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium mb-2">
+                  Upgraded to {planFeatures[targetPlan].name}
+                </h3>
+                <p className="text-center text-muted-foreground">
+                  You can now add up to {planFeatures[targetPlan].devices} WhatsApp devices.
+                </p>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setUpgradeDialogOpen(false);
+                    setUpgradeSuccessful(false);
+                    setDialogOpen(true);
+                  }}
+                >
+                  Add Device
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

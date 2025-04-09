@@ -48,6 +48,10 @@ const PhoneVerificationTab = ({
 }: PhoneVerificationTabProps) => {
   const [resendCooldown, setResendCooldown] = useState(0);
   
+  // Debug flag - for testing only, display verification code in browser
+  const [debugMode] = useState(process.env.NODE_ENV === 'development');
+  const [debugVerificationCode, setDebugVerificationCode] = useState<string>('');
+  
   // Handle sending verification code with real functionality
   const handleSendVerification = async () => {
     if (!phoneNumber || !deviceId) {
@@ -58,6 +62,8 @@ const PhoneVerificationTab = ({
     setVerifying(true);
     
     try {
+      await onSendVerificationCode();
+      
       const result = await sendVerificationCode(phoneNumber, countryCode, deviceId);
       
       if (result.success) {
@@ -65,6 +71,21 @@ const PhoneVerificationTab = ({
         // Start cooldown timer for resend
         setResendCooldown(60);
         toast.success(result.message);
+        
+        // For development/testing purposes, extract and display verification code
+        if (debugMode) {
+          // Extract verification code from console logs (hack for demo/testing)
+          const verificationLog = console.logs?.find(log => 
+            log.includes("[SMS SERVICE] Verification code") && log.includes(phoneNumber)
+          );
+          
+          if (verificationLog) {
+            const match = verificationLog.match(/Verification code (\d+) sent/);
+            if (match && match[1]) {
+              setDebugVerificationCode(match[1]);
+            }
+          }
+        }
       } else {
         toast.error(result.message || "Failed to send verification code");
       }
@@ -174,6 +195,16 @@ const PhoneVerificationTab = ({
           Enter your WhatsApp phone number. A verification code will be sent to verify your device.
         </AlertDescription>
       </Alert>
+      
+      {/* Debug verification code display for development only */}
+      {debugMode && debugVerificationCode && (
+        <Alert className="mb-4 bg-yellow-50 border-yellow-500">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
+            Development mode: Your verification code is <span className="font-bold">{debugVerificationCode}</span>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {codeSent ? (
         <div className="space-y-4">
