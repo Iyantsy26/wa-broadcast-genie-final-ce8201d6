@@ -19,11 +19,11 @@ export interface Broadcast {
 
 export const fetchBroadcasts = async (): Promise<Broadcast[]> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { data, error } = await (supabase
-      .from('broadcasts') as any)
+    // Type assertion with explicit generic to bypass TypeScript's strict table checking
+    const { data, error } = await supabase
+      .from('broadcasts')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as { data: Broadcast[] | null; error: any };
 
     if (error) {
       throw error;
@@ -39,9 +39,9 @@ export const fetchBroadcasts = async (): Promise<Broadcast[]> => {
 
 export const addBroadcast = async (broadcast: Omit<Broadcast, 'id'>): Promise<Broadcast | null> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { data, error } = await (supabase
-      .from('broadcasts') as any)
+    // Type assertion with explicit generic to bypass TypeScript's strict table checking
+    const { data, error } = await supabase
+      .from('broadcasts')
       .insert({
         name: broadcast.name,
         status: broadcast.status,
@@ -54,7 +54,7 @@ export const addBroadcast = async (broadcast: Omit<Broadcast, 'id'>): Promise<Br
         scheduled: broadcast.scheduled || ''
       })
       .select()
-      .single();
+      .single() as { data: Broadcast | null; error: any };
 
     if (error) {
       throw error;
@@ -71,11 +71,11 @@ export const addBroadcast = async (broadcast: Omit<Broadcast, 'id'>): Promise<Br
 
 export const updateBroadcast = async (id: string, updates: Partial<Broadcast>): Promise<boolean> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { error } = await (supabase
-      .from('broadcasts') as any)
+    // Type assertion to bypass TypeScript's strict table checking
+    const { error } = await supabase
+      .from('broadcasts')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id) as { data: any; error: any };
 
     if (error) {
       throw error;
@@ -92,11 +92,11 @@ export const updateBroadcast = async (id: string, updates: Partial<Broadcast>): 
 
 export const deleteBroadcast = async (id: string): Promise<boolean> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { error } = await (supabase
-      .from('broadcasts') as any)
+    // Type assertion to bypass TypeScript's strict table checking
+    const { error } = await supabase
+      .from('broadcasts')
       .delete()
-      .eq('id', id);
+      .eq('id', id) as { data: any; error: any };
 
     if (error) {
       throw error;

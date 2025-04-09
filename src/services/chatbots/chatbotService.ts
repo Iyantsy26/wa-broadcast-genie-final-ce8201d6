@@ -17,11 +17,11 @@ export interface Chatbot {
 
 export const fetchChatbots = async (): Promise<Chatbot[]> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { data, error } = await (supabase
-      .from('chatbots') as any)
+    // Type assertion with explicit generic to bypass TypeScript's strict table checking
+    const { data, error } = await supabase
+      .from('chatbots')
       .select('*')
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false }) as { data: Chatbot[] | null; error: any };
 
     if (error) {
       throw error;
@@ -37,12 +37,12 @@ export const fetchChatbots = async (): Promise<Chatbot[]> => {
 
 export const getChatbot = async (id: string): Promise<Chatbot | null> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { data, error } = await (supabase
-      .from('chatbots') as any)
+    // Type assertion with explicit generic to bypass TypeScript's strict table checking
+    const { data, error } = await supabase
+      .from('chatbots')
       .select('*')
       .eq('id', id)
-      .single();
+      .single() as { data: Chatbot | null; error: any };
 
     if (error) {
       throw error;
@@ -58,9 +58,9 @@ export const getChatbot = async (id: string): Promise<Chatbot | null> => {
 
 export const addChatbot = async (chatbot: Omit<Chatbot, 'id' | 'created_at' | 'updated_at' | 'version'>): Promise<Chatbot | null> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { data, error } = await (supabase
-      .from('chatbots') as any)
+    // Type assertion with explicit generic to bypass TypeScript's strict table checking
+    const { data, error } = await supabase
+      .from('chatbots')
       .insert({
         name: chatbot.name,
         description: chatbot.description || '',
@@ -71,7 +71,7 @@ export const addChatbot = async (chatbot: Omit<Chatbot, 'id' | 'created_at' | 'u
         device_id: chatbot.device_id
       })
       .select()
-      .single();
+      .single() as { data: Chatbot | null; error: any };
 
     if (error) {
       throw error;
@@ -91,15 +91,15 @@ export const updateChatbot = async (id: string, updates: Partial<Chatbot>): Prom
     // Increment version if flow is updated
     const versionUpdate = updates.flow ? { version: (updates.version || 1) + 1 } : {};
     
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { error } = await (supabase
-      .from('chatbots') as any)
+    // Type assertion to bypass TypeScript's strict table checking
+    const { error } = await supabase
+      .from('chatbots')
       .update({
         ...updates,
         ...versionUpdate,
         updated_at: new Date().toISOString()
       })
-      .eq('id', id);
+      .eq('id', id) as { data: any; error: any };
 
     if (error) {
       throw error;
@@ -116,11 +116,11 @@ export const updateChatbot = async (id: string, updates: Partial<Chatbot>): Prom
 
 export const deleteChatbot = async (id: string): Promise<boolean> => {
   try {
-    // Use type assertion to bypass TypeScript's strict table checking
-    const { error } = await (supabase
-      .from('chatbots') as any)
+    // Type assertion to bypass TypeScript's strict table checking
+    const { error } = await supabase
+      .from('chatbots')
       .delete()
-      .eq('id', id);
+      .eq('id', id) as { data: any; error: any };
 
     if (error) {
       throw error;
