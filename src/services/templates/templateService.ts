@@ -1,6 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { uploadFile } from "@/utils/fileUpload";
+import { TemplateButton } from "@/components/templates/ButtonEditor";
 
 export interface Template {
   id: string;
@@ -13,12 +14,12 @@ export interface Template {
   last_used?: string;
   variables?: string[];
   media_url?: string;
-  buttons?: any[];
+  media_type?: 'image' | 'video' | 'document';
+  buttons?: TemplateButton[];
 }
 
 export const fetchTemplates = async (): Promise<Template[]> => {
   try {
-    // Type assertion with explicit generic to bypass TypeScript's strict table checking
     const { data, error } = await supabase
       .from('templates')
       .select('*')
@@ -36,9 +37,29 @@ export const fetchTemplates = async (): Promise<Template[]> => {
   }
 };
 
-export const addTemplate = async (template: Omit<Template, 'id' | 'created_at'>): Promise<Template | null> => {
+export const addTemplate = async (
+  template: Omit<Template, 'id' | 'created_at'>, 
+  mediaFile?: File | null
+): Promise<Template | null> => {
   try {
-    // Type assertion with explicit generic to bypass TypeScript's strict table checking
+    let mediaUrl: string | undefined;
+    let mediaType: 'image' | 'video' | 'document' | undefined;
+    
+    if (mediaFile) {
+      if (mediaFile.type.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (mediaFile.type.startsWith('video/')) {
+        mediaType = 'video';
+      } else {
+        mediaType = 'document';
+      }
+      
+      mediaUrl = await uploadFile(mediaFile, 'template-media');
+      if (!mediaUrl) {
+        throw new Error('Failed to upload media file');
+      }
+    }
+    
     const { data, error } = await supabase
       .from('templates')
       .insert({
@@ -48,8 +69,9 @@ export const addTemplate = async (template: Omit<Template, 'id' | 'created_at'>)
         language: template.language,
         content: template.content,
         variables: template.variables || [],
-        media_url: template.media_url,
-        buttons: template.buttons
+        media_url: mediaUrl || template.media_url,
+        media_type: mediaType || template.media_type,
+        buttons: template.buttons || []
       })
       .select()
       .single() as { data: Template | null; error: any };
@@ -69,7 +91,6 @@ export const addTemplate = async (template: Omit<Template, 'id' | 'created_at'>)
 
 export const updateTemplate = async (id: string, updates: Partial<Template>): Promise<boolean> => {
   try {
-    // Type assertion to bypass TypeScript's strict table checking
     const { error } = await supabase
       .from('templates')
       .update(updates)
@@ -90,7 +111,6 @@ export const updateTemplate = async (id: string, updates: Partial<Template>): Pr
 
 export const deleteTemplate = async (id: string): Promise<boolean> => {
   try {
-    // Type assertion to bypass TypeScript's strict table checking
     const { error } = await supabase
       .from('templates')
       .delete()
@@ -111,7 +131,6 @@ export const deleteTemplate = async (id: string): Promise<boolean> => {
 
 export const markTemplateUsed = async (id: string): Promise<void> => {
   try {
-    // Type assertion to bypass TypeScript's strict table checking
     await supabase
       .from('templates')
       .update({ 
@@ -123,20 +142,48 @@ export const markTemplateUsed = async (id: string): Promise<void> => {
   }
 };
 
+export const getTemplateCategoriesSummary = async (): Promise<any> => {
+  try {
+    const templates = await fetchTemplates();
+    
+    const total = templates.length;
+    const approved = templates.filter(t => t.status === 'approved').length;
+    const pending = templates.filter(t => t.status === 'pending').length;
+    const rejected = templates.filter(t => t.status === 'rejected').length;
+    
+    const textCount = templates.filter(t => t.type === 'text').length;
+    const mediaCount = templates.filter(t => t.type === 'media').length;
+    const interactiveCount = templates.filter(t => t.type === 'interactive').length;
+    
+    return {
+      total,
+      approved,
+      pending,
+      rejected,
+      byType: {
+        text: textCount,
+        media: mediaCount,
+        interactive: interactiveCount
+      }
+    };
+  } catch (error) {
+    console.error('Error generating templates summary:', error);
+    return null;
+  }
+};
+
 export const subscribeToTemplateChanges = (callback: (templates: Template[]) => void) => {
   const channel = supabase
     .channel('templates-changes')
     .on('postgres_changes', 
       { event: '*', schema: 'public', table: 'templates' },
       async () => {
-        // When any change happens, fetch the updated list
         const templates = await fetchTemplates();
         callback(templates);
       }
     )
     .subscribe();
 
-  // Return unsubscribe function
   return () => {
     supabase.removeChannel(channel);
   };

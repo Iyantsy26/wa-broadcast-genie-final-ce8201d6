@@ -8,6 +8,7 @@ import { getClients } from '@/services/clientService';
 import { getConversations } from '@/services/conversationService';
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
+import { TeamContactImport } from '@/components/conversations/TeamContactImport';
 
 const Conversations = () => {
   const [selectedDevice, setSelectedDevice] = useState('1');
@@ -68,21 +69,32 @@ const Conversations = () => {
     fetchContactsFromAllSources();
   }, []);
 
+  const handleTeamContactsImported = (importedContacts: Contact[]) => {
+    setContacts([...contacts, ...importedContacts]);
+    toast({
+      title: 'Team contacts imported',
+      description: `${importedContacts.length} team contacts imported successfully`,
+    });
+  };
+
   return (
     <ConversationProvider initialContacts={contacts}>
       <div className="flex flex-col h-full space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
-          <p className="text-muted-foreground">
-            Manage all your conversations in one place
-          </p>
-        </div>
-        
-        <div className="flex items-center mb-2">
-          <DeviceSelector 
-            selectedDevice={selectedDevice}
-            onSelectDevice={setSelectedDevice}
-          />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
+            <p className="text-muted-foreground">
+              Manage all your conversations in one place
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <TeamContactImport onImportComplete={handleTeamContactsImported} />
+            <DeviceSelector 
+              selectedDevice={selectedDevice}
+              onSelectDevice={setSelectedDevice}
+            />
+          </div>
         </div>
         
         <div className="flex-1">
