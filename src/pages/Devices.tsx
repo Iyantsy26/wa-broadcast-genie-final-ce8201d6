@@ -15,7 +15,8 @@ import {
   getUserPlan,
   updateDeviceAccount,
   subscribeToDeviceChanges,
-  upgradePlan
+  upgradePlan,
+  getAccountLimits // Make sure this is imported
 } from '@/services/deviceService';
 
 // Import components

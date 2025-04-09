@@ -75,9 +75,13 @@ const PhoneVerificationTab = ({
         // For development/testing purposes, extract and display verification code
         if (debugMode) {
           // Extract verification code from console logs (hack for demo/testing)
-          const verificationLog = console.logs?.find(log => 
-            log.includes("[SMS SERVICE] Verification code") && log.includes(phoneNumber)
-          );
+          const logs = console.log.toString();
+          const verificationLog = logs && logs.includes 
+            ? logs.find((log: string) => 
+                log.includes("[SMS SERVICE] Verification code") && 
+                log.includes(phoneNumber)
+              )
+            : '';
           
           if (verificationLog) {
             const match = verificationLog.match(/Verification code (\d+) sent/);
