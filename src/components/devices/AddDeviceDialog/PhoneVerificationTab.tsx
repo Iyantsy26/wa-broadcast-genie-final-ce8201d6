@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,11 +47,9 @@ const PhoneVerificationTab = ({
 }: PhoneVerificationTabProps) => {
   const [resendCooldown, setResendCooldown] = useState(0);
   
-  // Debug flag - for testing only, display verification code in browser
   const [debugMode] = useState(process.env.NODE_ENV === 'development');
   const [debugVerificationCode, setDebugVerificationCode] = useState<string>('');
   
-  // Handle sending verification code with real functionality
   const handleSendVerification = async () => {
     if (!phoneNumber || !deviceId) {
       toast.error("Please enter a valid phone number");
@@ -68,23 +65,13 @@ const PhoneVerificationTab = ({
       
       if (result.success) {
         setCodeSent(true);
-        // Start cooldown timer for resend
         setResendCooldown(60);
         toast.success(result.message);
         
-        // For development/testing purposes, extract and display verification code
         if (debugMode) {
-          // Extract verification code from console logs (hack for demo/testing)
-          const logs = console.log.toString();
-          const verificationLog = logs && logs.includes 
-            ? logs.find((log: string) => 
-                log.includes("[SMS SERVICE] Verification code") && 
-                log.includes(phoneNumber)
-              )
-            : '';
-          
-          if (verificationLog) {
-            const match = verificationLog.match(/Verification code (\d+) sent/);
+          const logOutput = console.log.toString();
+          if (logOutput && typeof logOutput === 'string') {
+            const match = logOutput.match(/\[SMS SERVICE\] Verification code (\d+) sent/);
             if (match && match[1]) {
               setDebugVerificationCode(match[1]);
             }
@@ -101,7 +88,6 @@ const PhoneVerificationTab = ({
     }
   };
   
-  // Handle verifying code with real functionality
   const handleVerify = async () => {
     if (!verificationCode || verificationCode.length < 6 || !deviceId) {
       toast.error("Please enter a valid verification code");
@@ -130,7 +116,6 @@ const PhoneVerificationTab = ({
     }
   };
   
-  // Cooldown timer for resend
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (resendCooldown > 0) {
@@ -200,7 +185,6 @@ const PhoneVerificationTab = ({
         </AlertDescription>
       </Alert>
       
-      {/* Debug verification code display for development only */}
       {debugMode && debugVerificationCode && (
         <Alert className="mb-4 bg-yellow-50 border-yellow-500">
           <AlertCircle className="h-4 w-4 text-yellow-600" />
