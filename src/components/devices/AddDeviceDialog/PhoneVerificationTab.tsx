@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,13 +70,23 @@ const PhoneVerificationTab = ({
         toast.success(result.message);
         
         if (debugMode) {
-          const logOutput = console.log.toString();
-          if (logOutput && typeof logOutput === 'string') {
-            const match = logOutput.match(/\[SMS SERVICE\] Verification code (\d+) sent/);
-            if (match && match[1]) {
-              setDebugVerificationCode(match[1]);
+          // In development mode, extract the verification code from console output
+          // This is a hack for development/testing purposes only
+          setTimeout(() => {
+            try {
+              // Check recent console logs for the verification code
+              const logMessages = document.querySelector('.react-inspector-theme-chromedark');
+              if (logMessages) {
+                const text = logMessages.textContent || '';
+                const match = text.match(/\[SMS SERVICE\] Verification code (\d+) sent/);
+                if (match && match[1]) {
+                  setDebugVerificationCode(match[1]);
+                }
+              }
+            } catch (err) {
+              console.warn("Could not extract verification code for debug display:", err);
             }
-          }
+          }, 500);
         }
       } else {
         toast.error(result.message || "Failed to send verification code");

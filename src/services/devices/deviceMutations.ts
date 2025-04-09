@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { DeviceAccount, DeviceConnectionStatus, VerificationResponse } from './deviceTypes';
 
@@ -36,7 +37,7 @@ export const addDeviceAccount = async (account: Omit<DeviceAccount, 'id'>): Prom
 /**
  * Update device account status
  */
-export const updateDeviceStatus = async (id: string, status: 'connected' | 'disconnected' | 'expired'): Promise<void> => {
+export const updateDeviceStatus = async (id: string, status: 'connected' | 'disconnected' | 'expired'): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('device_accounts')
@@ -48,11 +49,12 @@ export const updateDeviceStatus = async (id: string, status: 'connected' | 'disc
     
     if (error) {
       console.error('Error in updateDeviceStatus:', error);
-      throw error;
+      return false;
     }
+    return true;
   } catch (error) {
     console.error('Error in updateDeviceStatus:', error);
-    throw error;
+    return false;
   }
 };
 
@@ -65,10 +67,20 @@ export const deleteDeviceAccount = async (id: string): Promise<boolean> => {
     return false;
   }
 
-  // Implement a delay to ensure UI has time to update properly
-  await new Promise(resolve => setTimeout(resolve, 500));
-
   try {
+    // First check if the device exists
+    const { data: deviceExists, error: checkError } = await supabase
+      .from('device_accounts')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (checkError || !deviceExists) {
+      console.error('Device not found or error checking device:', checkError);
+      return false;
+    }
+
+    // Proceed with deletion
     const { error } = await supabase
       .from('device_accounts')
       .delete()
@@ -99,9 +111,6 @@ export const updateDeviceAccount = async (
     console.error('Invalid ID provided for update');
     return false;
   }
-
-  // Implement a delay to prevent UI freezing
-  await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
     const { error } = await supabase
@@ -276,11 +285,11 @@ export const verifyPhoneNumber = async (
  */
 export const connectDeviceViaQR = async (deviceId: string): Promise<DeviceConnectionStatus> => {
   try {
-    // Implement a delay to simulate processing and prevent freezing
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const result = await updateDeviceStatus(deviceId, 'connected');
     
-    // In a real implementation, this would validate the connection with WhatsApp Business API
-    await updateDeviceStatus(deviceId, 'connected');
+    if (!result) {
+      throw new Error('Failed to update device status');
+    }
     
     return {
       success: true,
