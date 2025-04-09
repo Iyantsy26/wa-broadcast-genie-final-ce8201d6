@@ -18,8 +18,9 @@ export interface Template {
 
 export const fetchTemplates = async (): Promise<Template[]> => {
   try {
-    const { data, error } = await supabase
-      .from('templates')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('templates') as any)
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -37,8 +38,9 @@ export const fetchTemplates = async (): Promise<Template[]> => {
 
 export const addTemplate = async (template: Omit<Template, 'id' | 'created_at'>): Promise<Template | null> => {
   try {
-    const { data, error } = await supabase
-      .from('templates')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('templates') as any)
       .insert({
         name: template.name,
         status: template.status || 'pending',
@@ -67,8 +69,9 @@ export const addTemplate = async (template: Omit<Template, 'id' | 'created_at'>)
 
 export const updateTemplate = async (id: string, updates: Partial<Template>): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('templates')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { error } = await (supabase
+      .from('templates') as any)
       .update(updates)
       .eq('id', id);
 
@@ -87,8 +90,9 @@ export const updateTemplate = async (id: string, updates: Partial<Template>): Pr
 
 export const deleteTemplate = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('templates')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { error } = await (supabase
+      .from('templates') as any)
       .delete()
       .eq('id', id);
 
@@ -107,8 +111,9 @@ export const deleteTemplate = async (id: string): Promise<boolean> => {
 
 export const markTemplateUsed = async (id: string): Promise<void> => {
   try {
-    await supabase
-      .from('templates')
+    // Use type assertion to bypass TypeScript's strict table checking
+    await (supabase
+      .from('templates') as any)
       .update({ 
         last_used: new Date().toISOString() 
       })

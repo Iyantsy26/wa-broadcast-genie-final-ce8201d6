@@ -57,6 +57,90 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcasts: {
+        Row: {
+          audience: string
+          created_at: string
+          delivered: number | null
+          id: string
+          name: string
+          read: number | null
+          responded: number | null
+          scheduled: string | null
+          sent: number | null
+          status: string
+          template: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          created_at?: string
+          delivered?: number | null
+          id?: string
+          name: string
+          read?: number | null
+          responded?: number | null
+          scheduled?: string | null
+          sent?: number | null
+          status: string
+          template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          delivered?: number | null
+          id?: string
+          name?: string
+          read?: number | null
+          responded?: number | null
+          scheduled?: string | null
+          sent?: number | null
+          status?: string
+          template?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chatbots: {
+        Row: {
+          created_at: string
+          description: string
+          device_id: string | null
+          flow: Json
+          id: string
+          name: string
+          status: string
+          triggers: string[]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          device_id?: string | null
+          flow?: Json
+          id?: string
+          name: string
+          status: string
+          triggers?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          device_id?: string | null
+          flow?: Json
+          id?: string
+          name?: string
+          status?: string
+          triggers?: string[]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -669,6 +753,48 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          buttons: Json | null
+          content: string
+          created_at: string
+          id: string
+          language: string
+          last_used: string | null
+          media_url: string | null
+          name: string
+          status: string
+          type: string
+          variables: Json | null
+        }
+        Insert: {
+          buttons?: Json | null
+          content: string
+          created_at?: string
+          id?: string
+          language: string
+          last_used?: string | null
+          media_url?: string | null
+          name: string
+          status: string
+          type: string
+          variables?: Json | null
+        }
+        Update: {
+          buttons?: Json | null
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string
+          last_used?: string | null
+          media_url?: string | null
+          name?: string
+          status?: string
+          type?: string
+          variables?: Json | null
         }
         Relationships: []
       }

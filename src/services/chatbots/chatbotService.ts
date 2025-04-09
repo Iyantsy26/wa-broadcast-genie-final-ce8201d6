@@ -17,8 +17,9 @@ export interface Chatbot {
 
 export const fetchChatbots = async (): Promise<Chatbot[]> => {
   try {
-    const { data, error } = await supabase
-      .from('chatbots')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('chatbots') as any)
       .select('*')
       .order('updated_at', { ascending: false });
 
@@ -36,8 +37,9 @@ export const fetchChatbots = async (): Promise<Chatbot[]> => {
 
 export const getChatbot = async (id: string): Promise<Chatbot | null> => {
   try {
-    const { data, error } = await supabase
-      .from('chatbots')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('chatbots') as any)
       .select('*')
       .eq('id', id)
       .single();
@@ -56,8 +58,9 @@ export const getChatbot = async (id: string): Promise<Chatbot | null> => {
 
 export const addChatbot = async (chatbot: Omit<Chatbot, 'id' | 'created_at' | 'updated_at' | 'version'>): Promise<Chatbot | null> => {
   try {
-    const { data, error } = await supabase
-      .from('chatbots')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('chatbots') as any)
       .insert({
         name: chatbot.name,
         description: chatbot.description || '',
@@ -88,8 +91,9 @@ export const updateChatbot = async (id: string, updates: Partial<Chatbot>): Prom
     // Increment version if flow is updated
     const versionUpdate = updates.flow ? { version: (updates.version || 1) + 1 } : {};
     
-    const { error } = await supabase
-      .from('chatbots')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { error } = await (supabase
+      .from('chatbots') as any)
       .update({
         ...updates,
         ...versionUpdate,
@@ -112,8 +116,9 @@ export const updateChatbot = async (id: string, updates: Partial<Chatbot>): Prom
 
 export const deleteChatbot = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('chatbots')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { error } = await (supabase
+      .from('chatbots') as any)
       .delete()
       .eq('id', id);
 

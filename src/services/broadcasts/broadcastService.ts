@@ -19,8 +19,9 @@ export interface Broadcast {
 
 export const fetchBroadcasts = async (): Promise<Broadcast[]> => {
   try {
-    const { data, error } = await supabase
-      .from('broadcasts')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('broadcasts') as any)
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -38,8 +39,9 @@ export const fetchBroadcasts = async (): Promise<Broadcast[]> => {
 
 export const addBroadcast = async (broadcast: Omit<Broadcast, 'id'>): Promise<Broadcast | null> => {
   try {
-    const { data, error } = await supabase
-      .from('broadcasts')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { data, error } = await (supabase
+      .from('broadcasts') as any)
       .insert({
         name: broadcast.name,
         status: broadcast.status,
@@ -69,8 +71,9 @@ export const addBroadcast = async (broadcast: Omit<Broadcast, 'id'>): Promise<Br
 
 export const updateBroadcast = async (id: string, updates: Partial<Broadcast>): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('broadcasts')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { error } = await (supabase
+      .from('broadcasts') as any)
       .update(updates)
       .eq('id', id);
 
@@ -89,8 +92,9 @@ export const updateBroadcast = async (id: string, updates: Partial<Broadcast>): 
 
 export const deleteBroadcast = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('broadcasts')
+    // Use type assertion to bypass TypeScript's strict table checking
+    const { error } = await (supabase
+      .from('broadcasts') as any)
       .delete()
       .eq('id', id);
 
