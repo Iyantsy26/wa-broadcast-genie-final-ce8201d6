@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Accordion,
@@ -7,7 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Info, QrCode, PhoneCall, Key, Smartphone, HelpCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Info, QrCode, PhoneCall, Key, Smartphone, HelpCircle, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 const DeviceConnectionGuide = () => {
   return (

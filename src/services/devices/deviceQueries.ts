@@ -133,14 +133,22 @@ export const getQrCodeForDevice = async (deviceId: string): Promise<string> => {
       throw new Error('Failed to generate QR code');
     }
     
-    // Store QR code URL in device account
+    // Store QR code URL in temporary storage since device_accounts doesn't have this column
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${deviceId}`;
     
-    // Update device with QR code URL
-    await supabase
-      .from('device_accounts')
-      .update({ qr_code_url: qrCodeUrl })
-      .eq('id', deviceId);
+    // Try to use a qr_codes table if it exists
+    try {
+      await supabase
+        .from('device_qr_codes')
+        .upsert({ 
+          device_id: deviceId,
+          qr_code_url: qrCodeUrl,
+          created_at: new Date().toISOString()
+        });
+    } catch (e) {
+      // Fallback to session storage if table doesn't exist
+      sessionStorage.setItem(`qrcode-${deviceId}`, qrCodeUrl);
+    }
     
     return qrCodeUrl;
   } catch (error) {

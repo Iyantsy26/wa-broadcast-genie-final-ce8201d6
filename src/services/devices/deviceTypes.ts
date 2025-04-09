@@ -44,3 +44,81 @@ export interface DeviceConnection {
   status: 'pending' | 'connected' | 'failed';
   sessionData?: any;
 }
+
+// Add the missing types referenced in errors
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: 'super_admin' | 'admin' | 'user' | 'white_label';
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationBranding {
+  id: string;
+  organization_id: string;
+  logo_url?: string;
+  favicon_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+  custom_domain?: string;
+  custom_domain_verified?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  interval?: string;
+  features: any;
+  is_custom: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationSubscription {
+  id: string;
+  organization_id: string;
+  plan_id: string;
+  status: string;
+  payment_provider?: string;
+  payment_provider_subscription_id?: string;
+  current_period_start: string;
+  current_period_end: string;
+  canceled_at?: string;
+  cancel_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: UserRole['role'];
+  status: 'active' | 'suspended' | 'pending';
+  company?: string;
+  position?: string;
+  address?: string;
+  avatar?: string;
+  department_id?: string;
+  is_super_admin?: boolean;
+  custom_id?: string;
+  created_at: string;
+  updated_at: string;
+  last_active?: string;
+}

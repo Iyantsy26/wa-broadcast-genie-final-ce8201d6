@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Smartphone, Plus, RefreshCw, Settings, Trash2, Check, AlertCircle } from "lucide-react";
+import { Loader2, Smartphone, Plus, RefreshCw, Settings, Trash2, Check, AlertCircle, PhoneCall, Key } from "lucide-react";
 import { DeviceAccount } from "@/services/deviceService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow } from "date-fns";
