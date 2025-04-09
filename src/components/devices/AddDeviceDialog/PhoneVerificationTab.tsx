@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Check, Info, Loader2, PhoneCall } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { sendVerificationCode, verifyPhoneNumber } from '@/services/devices/deviceMutations';
+import { toast } from "sonner";
 
 interface PhoneVerificationTabProps {
   newAccountName: string;
@@ -16,10 +18,14 @@ interface PhoneVerificationTabProps {
   setCountryCode: (code: string) => void;
   verificationCode: string;
   setVerificationCode: (code: string) => void;
+  deviceId: string;
   codeSent: boolean;
+  setCodeSent: (sent: boolean) => void;
   verifying: boolean;
+  setVerifying: (verifying: boolean) => void;
   onSendVerificationCode: () => void;
   onVerifyCode: () => void;
+  onVerifySuccess?: (deviceId: string) => void;
 }
 
 const PhoneVerificationTab = ({
@@ -31,11 +37,88 @@ const PhoneVerificationTab = ({
   setCountryCode,
   verificationCode,
   setVerificationCode,
+  deviceId,
   codeSent,
+  setCodeSent,
   verifying,
+  setVerifying,
   onSendVerificationCode,
-  onVerifyCode
+  onVerifyCode,
+  onVerifySuccess
 }: PhoneVerificationTabProps) => {
+  const [resendCooldown, setResendCooldown] = useState(0);
+  
+  // Handle sending verification code with real functionality
+  const handleSendVerification = async () => {
+    if (!phoneNumber || !deviceId) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+    
+    setVerifying(true);
+    
+    try {
+      const result = await sendVerificationCode(phoneNumber, countryCode, deviceId);
+      
+      if (result.success) {
+        setCodeSent(true);
+        // Start cooldown timer for resend
+        setResendCooldown(60);
+        toast.success(result.message);
+      } else {
+        toast.error(result.message || "Failed to send verification code");
+      }
+    } catch (error) {
+      console.error("Error sending verification code:", error);
+      toast.error("Failed to send verification code");
+    } finally {
+      setVerifying(false);
+    }
+  };
+  
+  // Handle verifying code with real functionality
+  const handleVerify = async () => {
+    if (!verificationCode || verificationCode.length < 6 || !deviceId) {
+      toast.error("Please enter a valid verification code");
+      return;
+    }
+    
+    setVerifying(true);
+    
+    try {
+      const result = await verifyPhoneNumber(deviceId, verificationCode);
+      
+      if (result.success) {
+        if (onVerifySuccess) {
+          onVerifySuccess(deviceId);
+        }
+        toast.success(result.message);
+        onVerifyCode();
+      } else {
+        toast.error(result.message || "Invalid verification code");
+      }
+    } catch (error) {
+      console.error("Error verifying code:", error);
+      toast.error("Failed to verify code");
+    } finally {
+      setVerifying(false);
+    }
+  };
+  
+  // Cooldown timer for resend
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [resendCooldown]);
+
   const countryCodes = [
     { code: '+1', country: 'United States' },
     { code: '+44', country: 'United Kingdom' },
@@ -88,8 +171,7 @@ const PhoneVerificationTab = ({
       <Alert className="mb-4">
         <Info className="h-4 w-4" />
         <AlertDescription>
-          In a real implementation, this would send a verification code to your phone via SMS.
-          For demo purposes, you can enter any 6-digit code after requesting it.
+          Enter your WhatsApp phone number. A verification code will be sent to verify your device.
         </AlertDescription>
       </Alert>
       
@@ -112,13 +194,28 @@ const PhoneVerificationTab = ({
                 <InputOTPSlot index={5} />
               </InputOTPGroup>
             </InputOTP>
-            <p className="text-xs text-muted-foreground mt-2">
-              For demo purposes, any 6-digit code will work.
-            </p>
+            <div className="flex justify-between">
+              <p className="text-xs text-muted-foreground mt-2">
+                Enter the 6-digit code sent to your phone
+              </p>
+              {resendCooldown > 0 ? (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Resend in {resendCooldown}s
+                </p>
+              ) : (
+                <button
+                  onClick={handleSendVerification}
+                  disabled={verifying}
+                  className="text-xs text-primary hover:text-primary/80 transition-colors mt-2"
+                >
+                  Resend code
+                </button>
+              )}
+            </div>
           </div>
           <Button 
             className="w-full" 
-            onClick={onVerifyCode}
+            onClick={handleVerify}
             disabled={verifying || !verificationCode || verificationCode.length < 6}
           >
             {verifying ? (
@@ -147,7 +244,7 @@ const PhoneVerificationTab = ({
           
           <Button 
             className="w-full" 
-            onClick={onSendVerificationCode}
+            onClick={handleSendVerification}
             disabled={verifying || !phoneNumber || !newAccountName}
           >
             {verifying ? (

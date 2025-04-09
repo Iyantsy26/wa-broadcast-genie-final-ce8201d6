@@ -119,3 +119,54 @@ export const subscribeToDeviceById = (deviceId: string, callback: (payload: any)
     supabase.removeChannel(channel);
   };
 };
+
+/**
+ * Get QR code for device connection
+ */
+export const getQrCodeForDevice = async (deviceId: string): Promise<string> => {
+  try {
+    // In a real implementation, this would make a call to WhatsApp Business API
+    // For now, simulate with a real QR code generation service
+    const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${deviceId}&format=svg`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate QR code');
+    }
+    
+    // Store QR code URL in device account
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp:connect:${deviceId}`;
+    
+    // Update device with QR code URL
+    await supabase
+      .from('device_accounts')
+      .update({ qr_code_url: qrCodeUrl })
+      .eq('id', deviceId);
+    
+    return qrCodeUrl;
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get connection status for a device
+ */
+export const checkDeviceConnectionStatus = async (deviceId: string): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .from('device_accounts')
+      .select('status')
+      .eq('id', deviceId)
+      .single();
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data.status;
+  } catch (error) {
+    console.error('Error checking device connection status:', error);
+    throw error;
+  }
+};

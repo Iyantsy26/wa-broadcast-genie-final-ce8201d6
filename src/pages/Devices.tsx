@@ -12,7 +12,8 @@ import {
   deleteDeviceAccount,
   checkAccountLimit,
   getUserPlan,
-  updateDeviceAccount
+  updateDeviceAccount,
+  subscribeToDeviceChanges
 } from '@/services/deviceService';
 
 // Import components
@@ -22,6 +23,7 @@ import AddDeviceDialog from '@/components/devices/AddDeviceDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
 import EditDeviceDialog from '@/components/devices/EditDeviceDialog';
 import WebWhatsAppSheet from '@/components/devices/WebWhatsAppSheet';
+import DeviceGuideDialog from '@/components/devices/DeviceGuideDialog';
 
 const planFeatures = {
   starter: {
@@ -45,17 +47,8 @@ const Devices = () => {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<DeviceAccount[]>([]);
   const [newAccountName, setNewAccountName] = useState('');
-  const [businessId, setBusinessId] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchingAccounts, setFetchingAccounts] = useState(true);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [showQrLoader, setShowQrLoader] = useState(true);
   const [webBrowserOpen, setWebBrowserOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [userPlan, setUserPlan] = useState<'starter' | 'professional' | 'enterprise'>('starter');
@@ -71,24 +64,12 @@ const Devices = () => {
     fetchUserPlanInfo();
 
     // Set up real-time listener for device account changes
-    const channel = supabase
-      .channel('device-changes')
-      .on('postgres_changes', 
-        {
-          event: '*',
-          schema: 'public',
-          table: 'device_accounts'
-        },
-        (payload) => {
-          console.log('Real-time update received:', payload);
-          fetchDeviceAccounts();
-        }
-      )
-      .subscribe();
+    const cleanup = subscribeToDeviceChanges((payload) => {
+      console.log('Real-time update received:', payload);
+      fetchDeviceAccounts();
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return cleanup;
   }, []);
 
   const fetchUserPlanInfo = async () => {
@@ -100,6 +81,11 @@ const Devices = () => {
       setAccountLimit(limits);
     } catch (error) {
       console.error("Error fetching user plan info:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch plan information",
+        variant: "destructive",
+      });
     }
   };
 
@@ -121,15 +107,6 @@ const Devices = () => {
     } finally {
       setFetchingAccounts(false);
     }
-  };
-
-  const generateQrCode = () => {
-    setShowQrLoader(true);
-    setTimeout(() => {
-      const uniqueId = new Date().getTime();
-      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=whatsapp-connect-${uniqueId}`);
-      setShowQrLoader(false);
-    }, 1500);
   };
 
   const handleConnect = async (accountId: string) => {
@@ -176,60 +153,20 @@ const Devices = () => {
         return;
       }
       
-      if (type === 'phone_otp') {
-        if (!phoneNumber) {
-          toast({
-            title: "Missing information",
-            description: "Please provide a phone number.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (codeSent && !verificationCode) {
-          toast({
-            title: "Missing verification code",
-            description: "Please enter the verification code sent to your phone.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      
-      if (type === 'business_api' && (!businessId || !apiKey)) {
-        toast({
-          title: "Missing information",
-          description: "Please provide both business ID and API key.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const newAccount: Omit<DeviceAccount, 'id'> = {
-        name: newAccountName,
-        phone: type === 'phone_otp' ? `${countryCode} ${phoneNumber}` : 'Business Account',
-        status: 'connected',
-        type: type,
-        last_active: new Date().toISOString(),
-        business_id: type === 'business_api' || type === 'new_business' ? businessId : undefined,
-        plan_tier: userPlan,
-      };
-      
-      await addDeviceAccount(newAccount);
+      // Note: Most of the actual device creation is now handled in the AddDeviceDialog component
+      // This function is now primarily for finalizing the account after connection
       
       toast({
         title: "Device added",
         description: `Successfully added WhatsApp device.`,
       });
       
-      const updatedLimits = await checkAccountLimit();
-      setAccountLimit(updatedLimits);
+      // Refresh devices list and limits after adding
+      fetchDeviceAccounts();
       
-      resetFormFields();
-      
-      if (type === 'browser_qr') {
-        generateQrCode();
-      }
+      // Reset form state
+      setNewAccountName('');
+      setDialogOpen(false);
     } catch (error: any) {
       console.error("Error in handleAddAccount:", error);
       toast({
@@ -240,68 +177,6 @@ const Devices = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetFormFields = () => {
-    setNewAccountName('');
-    setBusinessId('');
-    setApiKey('');
-    setPhoneNumber('');
-    setCountryCode('+1');
-    setVerificationCode('');
-    setCodeSent(false);
-    setVerifying(false);
-    setDialogOpen(false);
-  };
-
-  const handleSendVerificationCode = () => {
-    if (!phoneNumber) {
-      toast({
-        title: "Missing phone number",
-        description: "Please enter a valid phone number to receive the verification code.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setVerifying(true);
-    
-    setTimeout(() => {
-      setVerifying(false);
-      setCodeSent(true);
-      toast({
-        title: "Verification code sent",
-        description: `A verification code has been sent to ${countryCode} ${phoneNumber}.`,
-      });
-    }, 1500);
-  };
-
-  const handleVerifyCode = () => {
-    if (!verificationCode) {
-      toast({
-        title: "Missing verification code",
-        description: "Please enter the verification code you received.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setVerifying(true);
-    
-    setTimeout(() => {
-      setVerifying(false);
-      handleAddAccount('phone_otp');
-    }, 1500);
-  };
-
-  const handleRefreshQrCode = () => {
-    setShowQrLoader(true);
-    setQrCodeUrl('');
-    generateQrCode();
-  };
-
-  const openWebWhatsApp = () => {
-    setWebBrowserOpen(true);
   };
 
   const handleDisconnect = async (accountId: string) => {
@@ -341,8 +216,7 @@ const Devices = () => {
           description: "Successfully removed WhatsApp device.",
         });
         
-        const updatedLimits = await checkAccountLimit();
-        setAccountLimit(updatedLimits);
+        // No need to manually update the accounts list, the real-time listener will handle it
       } else {
         toast({
           title: "Error",
@@ -382,6 +256,8 @@ const Devices = () => {
         
         setEditDialogOpen(false);
         setDeviceToEdit(null);
+        
+        // No need to manually update the accounts list, the real-time listener will handle it
       } else {
         toast({
           title: "Error",
@@ -417,35 +293,18 @@ const Devices = () => {
         </div>
         
         <div className="flex gap-2">
+          <DeviceGuideDialog />
+          
           <AddDeviceDialog
             open={dialogOpen}
             onOpenChange={setDialogOpen}
             onAddAccount={handleAddAccount}
             canAddDevices={accountLimit.canAdd}
             loading={loading}
+            setLoading={setLoading}
             newAccountName={newAccountName}
             setNewAccountName={setNewAccountName}
-            businessId={businessId}
-            setBusinessId={setBusinessId}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            phoneNumber={phoneNumber}
-            setPhoneNumber={setPhoneNumber}
-            countryCode={countryCode}
-            setCountryCode={setCountryCode}
-            verificationCode={verificationCode}
-            setVerificationCode={setVerificationCode}
-            codeSent={codeSent}
-            setCodeSent={setCodeSent}
-            verifying={verifying}
-            setVerifying={setVerifying}
-            onSendVerificationCode={handleSendVerificationCode}
-            onVerifyCode={handleVerifyCode}
-            generateQrCode={generateQrCode}
-            handleRefreshQrCode={handleRefreshQrCode}
-            openWebWhatsApp={openWebWhatsApp}
-            qrCodeUrl={qrCodeUrl}
-            showQrLoader={showQrLoader}
+            refreshDevices={fetchDeviceAccounts}
           />
         </div>
       </div>
