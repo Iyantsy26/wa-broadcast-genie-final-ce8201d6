@@ -6,12 +6,14 @@ import { getFileTypeCategory } from "@/utils/fileUpload";
 interface FilePreviewProps {
   file: File | null;
   onClear: () => void;
+  type?: string | null; // Added type prop
 }
 
-const FilePreview: React.FC<FilePreviewProps> = ({ file, onClear }) => {
+const FilePreview: React.FC<FilePreviewProps> = ({ file, onClear, type }) => {
   if (!file) return null;
 
-  const fileTypeCategory = getFileTypeCategory(file.type);
+  // Use the provided type if available, otherwise detect from file
+  const fileTypeCategory = type || getFileTypeCategory(file.type);
   const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
   
   // Create an object URL for image preview

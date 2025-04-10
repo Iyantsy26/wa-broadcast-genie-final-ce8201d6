@@ -155,7 +155,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         <FilePreview 
           file={selectedFile}
           type={activeAttachmentType}
-          onRemove={() => {
+          onClear={() => {
             setSelectedFile(null);
             setShowFilePreview(false);
           }}

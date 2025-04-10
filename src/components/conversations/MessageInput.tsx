@@ -74,6 +74,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setMessageInput(prev => prev + emoji);
   };
 
+  const handleGenerateAIResponse = async () => {
+    if (!onRequestAIAssistance) return;
+    
+    setIsGeneratingResponse(true);
+    try {
+      const response = await onRequestAIAssistance(messageInput || "Generate a response");
+      setMessageInput(response);
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+    } finally {
+      setIsGeneratingResponse(false);
+    }
+  };
+
   useEffect(() => {
     // Focus textarea when component mounts
     if (textareaRef.current) {
@@ -85,24 +99,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
     <div className="bg-white border-t px-4 pt-2 pb-3 space-y-2">
       {/* Reply Preview */}
       {replyTo && onCancelReply && (
-        <ReplyPreview message={replyTo} onCancelReply={onCancelReply} />
+        <ReplyPreview replyTo={replyTo} onCancelReply={onCancelReply} />
       )}
       
       {/* File Preview */}
       {showFilePreview && selectedFile && (
-        <FilePreview file={selectedFile} onClear={clearSelectedFile} />
+        <FilePreview file={selectedFile} onClear={clearSelectedFile} type={activeAttachmentType} />
       )}
       
       {/* AI Response Generator */}
       {onRequestAIAssistance && (
-        <AIResponseGenerator
-          isActive={isGeneratingResponse}
-          setIsActive={setIsGeneratingResponse}
-          onRequestAIAssistance={onRequestAIAssistance}
-          onResponseGenerated={(response) => {
-            setMessageInput(response);
-          }}
-        />
+        <div className="flex items-center justify-end">
+          <AIResponseGenerator
+            onGenerateResponse={handleGenerateAIResponse}
+            disabled={isGeneratingResponse}
+            isGenerating={isGeneratingResponse}
+          />
+        </div>
       )}
       
       {/* Message Input Area */}
@@ -134,9 +147,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             {/* Voice Recorder */}
             {onVoiceMessageSent && (
               <VoiceRecorder 
-                isRecording={isRecording}
-                setIsRecording={setIsRecording}
                 onVoiceMessageReady={onVoiceMessageSent}
+                disabled={false}
               />
             )}
           </div>

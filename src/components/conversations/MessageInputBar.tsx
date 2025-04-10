@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -147,8 +146,8 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
       {selectedFile && onRemoveFile && (
         <FilePreview 
           file={selectedFile} 
-          type={activeAttachmentType} 
-          onRemove={onRemoveFile} 
+          onClear={onRemoveFile}
+          type={activeAttachmentType}
         />
       )}
       

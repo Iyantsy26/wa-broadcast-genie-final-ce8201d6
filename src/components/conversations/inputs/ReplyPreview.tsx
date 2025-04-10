@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { Message } from '@/types/conversation';
 
 interface ReplyPreviewProps {
-  replyTo: Message | null;
+  replyTo?: Message | null;  // Changed from message to replyTo for consistency
   onCancelReply: () => void;
 }
 

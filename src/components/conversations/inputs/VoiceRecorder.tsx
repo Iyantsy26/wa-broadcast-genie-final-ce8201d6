@@ -3,42 +3,66 @@ import React, { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Mic, StopCircle } from 'lucide-react';
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface VoiceRecorderProps {
-  onRecordingComplete: (durationInSeconds: number) => void;
+  onRecordingComplete?: (durationInSeconds: number) => void;
+  onVoiceMessageReady?: (durationInSeconds: number) => void;
   disabled?: boolean;
+  isRecording?: boolean;
+  setIsRecording?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ 
   onRecordingComplete,
-  disabled = false
+  onVoiceMessageReady,
+  disabled = false,
+  isRecording = false,
+  setIsRecording
 }) => {
-  const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const recordingTimerRef = useRef<number | null>(null);
+  const internalIsRecording = useRef(false);
+  
+  // Handle internal or external recording state
+  const isCurrentlyRecording = setIsRecording ? isRecording : internalIsRecording.current;
 
   const toggleVoiceRecording = () => {
-    if (isRecording) {
+    if (isCurrentlyRecording) {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
       }
       
-      onRecordingComplete(recordingTime);
+      // Use the appropriate callback
+      if (onRecordingComplete) {
+        onRecordingComplete(recordingTime);
+      } else if (onVoiceMessageReady) {
+        onVoiceMessageReady(recordingTime);
+      }
+      
       setRecordingTime(0);
+      
+      if (setIsRecording) {
+        setIsRecording(false);
+      } else {
+        internalIsRecording.current = false;
+      }
     } else {
-      toast({
-        title: "Recording started",
+      toast("Recording started", {
         description: "Voice recording has started. Click the stop button when finished.",
       });
       
       recordingTimerRef.current = window.setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
+      
+      if (setIsRecording) {
+        setIsRecording(true);
+      } else {
+        internalIsRecording.current = true;
+      }
     }
-    
-    setIsRecording(!isRecording);
   };
 
   const formatRecordingTime = (seconds: number) => {
@@ -49,7 +73,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
   return (
     <>
-      {!isRecording ? (
+      {!isCurrentlyRecording ? (
         <Button 
           variant="ghost" 
           size="icon"

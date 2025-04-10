@@ -78,11 +78,11 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ onRequestAIAssistan
         {selectedFile && (
           <FilePreview 
             file={selectedFile} 
-            type={attachmentType} 
-            onRemove={() => {
+            onClear={() => {
               setSelectedFile(null);
               setAttachmentType(null);
-            }} 
+            }}
+            type={attachmentType}
           />
         )}
         
