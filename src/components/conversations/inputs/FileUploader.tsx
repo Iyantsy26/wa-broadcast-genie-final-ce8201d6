@@ -13,6 +13,16 @@ import {
   Video, 
   FileText,
 } from 'lucide-react';
+import { 
+  SUPPORTED_IMAGE_TYPES, 
+  SUPPORTED_VIDEO_TYPES, 
+  SUPPORTED_DOCUMENT_TYPES,
+  MAX_IMAGE_SIZE,
+  MAX_VIDEO_SIZE,
+  MAX_DOCUMENT_SIZE,
+  validateFile
+} from "@/utils/fileUpload";
+import { toast } from "sonner";
 
 interface FileUploaderProps {
   onFileSelect: (file: File) => void;
@@ -29,8 +39,30 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    
+    // Validate based on type
+    let isValid = false;
+    
+    switch (activeAttachmentType) {
+      case 'image':
+        isValid = validateFile(file, SUPPORTED_IMAGE_TYPES, MAX_IMAGE_SIZE);
+        break;
+      case 'video':
+        isValid = validateFile(file, SUPPORTED_VIDEO_TYPES, MAX_VIDEO_SIZE);
+        break;
+      case 'document':
+        isValid = validateFile(file, SUPPORTED_DOCUMENT_TYPES, MAX_DOCUMENT_SIZE);
+        break;
+    }
+    
+    if (isValid) {
       onFileSelect(file);
+    }
+    
+    // Reset the input value to allow the same file to be selected again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -39,13 +71,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     if (fileInputRef.current) {
       switch (type) {
         case 'image':
-          fileInputRef.current.accept = 'image/*';
+          fileInputRef.current.accept = SUPPORTED_IMAGE_TYPES.join(',');
           break;
         case 'video':
-          fileInputRef.current.accept = 'video/*';
+          fileInputRef.current.accept = SUPPORTED_VIDEO_TYPES.join(',');
           break;
         case 'document':
-          fileInputRef.current.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt';
+          fileInputRef.current.accept = SUPPORTED_DOCUMENT_TYPES.join(',');
           break;
       }
       fileInputRef.current.click();

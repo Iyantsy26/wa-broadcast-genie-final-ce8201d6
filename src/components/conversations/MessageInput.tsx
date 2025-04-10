@@ -1,11 +1,11 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send } from 'lucide-react';
 import { Message } from '@/types/conversation';
 
-// Import our new components
+// Import our components
 import EmojiPicker from './inputs/EmojiPicker';
 import FileUploader from './inputs/FileUploader';
 import VoiceRecorder from './inputs/VoiceRecorder';
@@ -52,104 +52,105 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setShowFilePreview(true);
     // Auto focus to text area after file selection
     setTimeout(() => {
-      textareaRef.current?.focus();
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }, 100);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setShowFilePreview(false);
   };
 
   const handleEmojiSelect = (emoji: string) => {
     setMessageInput(prev => prev + emoji);
+  };
+
+  useEffect(() => {
+    // Focus textarea when component mounts
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
-  };
-
-  const handleVoiceRecordingComplete = (durationInSeconds: number) => {
-    setIsRecording(false);
-    if (onVoiceMessageSent) {
-      onVoiceMessageSent(durationInSeconds);
-    }
-  };
-
-  const handleAIAssist = async () => {
-    if (!onRequestAIAssistance || !messageInput.trim()) return;
-    
-    setIsGeneratingResponse(true);
-    try {
-      const prompt = `Help me professionally respond to: "${messageInput}"`;
-      const response = await onRequestAIAssistance(prompt);
-      setMessageInput(response);
-    } catch (error) {
-      console.error('Error getting AI assistance:', error);
-    } finally {
-      setIsGeneratingResponse(false);
-    }
-  };
+  }, []);
 
   return (
-    <div className="p-3 border-t">
-      <ReplyPreview 
-        replyTo={replyTo || null} 
-        onCancelReply={onCancelReply || (() => {})} 
-      />
+    <div className="bg-white border-t px-4 pt-2 pb-3 space-y-2">
+      {/* Reply Preview */}
+      {replyTo && onCancelReply && (
+        <ReplyPreview message={replyTo} onCancelReply={onCancelReply} />
+      )}
       
-      <div className="flex items-center gap-2">
-        <FileUploader 
-          onFileSelect={handleFileSelect}
-          activeAttachmentType={activeAttachmentType}
-          setActiveAttachmentType={setActiveAttachmentType}
-        />
-        
-        <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-        
-        <Textarea
-          ref={textareaRef}
-          placeholder="Type a message..."
-          className="min-h-[44px] max-h-[120px] resize-none"
-          value={messageInput}
-          onChange={(e) => setMessageInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isRecording || isGeneratingResponse}
-        />
-        
-        {onRequestAIAssistance && messageInput.trim() && (
-          <AIResponseGenerator 
-            onGenerateResponse={handleAIAssist}
-            disabled={isRecording}
-            isGenerating={isGeneratingResponse}
-          />
-        )}
-        
-        <VoiceRecorder 
-          onRecordingComplete={handleVoiceRecordingComplete}
-          disabled={isGeneratingResponse}
-        />
-        
-        <Button 
-          size="icon" 
-          onClick={handleSendMessage}
-          disabled={(!messageInput.trim() && !selectedFile) || isRecording || isGeneratingResponse}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* File Preview */}
+      {showFilePreview && selectedFile && (
+        <FilePreview file={selectedFile} onClear={clearSelectedFile} />
+      )}
       
-      {selectedFile && showFilePreview && (
-        <FilePreview 
-          file={selectedFile}
-          type={activeAttachmentType}
-          onRemove={() => {
-            setSelectedFile(null);
-            setShowFilePreview(false);
+      {/* AI Response Generator */}
+      {onRequestAIAssistance && (
+        <AIResponseGenerator
+          isActive={isGeneratingResponse}
+          setIsActive={setIsGeneratingResponse}
+          onRequestAIAssistance={onRequestAIAssistance}
+          onResponseGenerated={(response) => {
+            setMessageInput(response);
           }}
         />
       )}
       
-      {isGeneratingResponse && <AIResponseLoader />}
+      {/* Message Input Area */}
+      <div className="flex items-end gap-2">
+        <div className="flex-grow relative rounded-md border overflow-hidden">
+          {isGeneratingResponse && <AIResponseLoader />}
+          
+          <Textarea
+            ref={textareaRef}
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            className="min-h-[40px] max-h-[120px] py-3 resize-none pr-[90px]"
+            disabled={isRecording || isGeneratingResponse}
+          />
+          
+          <div className="absolute right-1 bottom-1 flex items-center">
+            {/* Emoji Picker */}
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+            
+            {/* File Uploader */}
+            <FileUploader 
+              onFileSelect={handleFileSelect}
+              activeAttachmentType={activeAttachmentType} 
+              setActiveAttachmentType={setActiveAttachmentType}
+            />
+            
+            {/* Voice Recorder */}
+            {onVoiceMessageSent && (
+              <VoiceRecorder 
+                isRecording={isRecording}
+                setIsRecording={setIsRecording}
+                onVoiceMessageReady={onVoiceMessageSent}
+              />
+            )}
+          </div>
+        </div>
+        
+        <Button 
+          className="shrink-0" 
+          size="icon" 
+          onClick={handleSendMessage}
+          disabled={(!messageInput.trim() && !selectedFile) || isRecording}
+        >
+          <Send className="h-5 w-5" />
+        </Button>
+      </div>
     </div>
   );
 };

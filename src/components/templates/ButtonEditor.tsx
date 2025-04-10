@@ -1,17 +1,28 @@
 
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, X, Edit, ExternalLink, MessageSquare, Phone } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Plus, Edit, Trash, ArrowUp, ArrowDown } from "lucide-react";
 
 export interface TemplateButton {
-  id: string;
   type: 'url' | 'phone' | 'quick_reply';
   text: string;
-  value?: string;
+  value?: string; // URL for url type, phone number for phone type, text for quick_reply
 }
 
 interface ButtonEditorProps {
@@ -20,188 +31,262 @@ interface ButtonEditorProps {
   maxButtons?: number;
 }
 
-export function ButtonEditor({ buttons, onChange, maxButtons = 3 }: ButtonEditorProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingButton, setEditingButton] = useState<TemplateButton | null>(null);
-  const [buttonType, setButtonType] = useState<'url' | 'phone' | 'quick_reply'>('quick_reply');
-  const [buttonText, setButtonText] = useState('');
-  const [buttonValue, setButtonValue] = useState('');
-  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
-
-  const generateId = () => Math.random().toString(36).substring(2, 9);
+export function ButtonEditor({
+  buttons,
+  onChange,
+  maxButtons = 3
+}: ButtonEditorProps) {
+  const [currentButton, setCurrentButton] = useState<TemplateButton | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editIndex, setEditIndex] = useState<number>(-1);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleAddButton = () => {
-    setEditingButton(null);
-    setCurrentIndex(null);
-    setButtonType('quick_reply');
-    setButtonText('');
-    setButtonValue('');
-    setIsDialogOpen(true);
+    if (buttons.length >= maxButtons) return;
+    
+    setIsEditMode(false);
+    setCurrentButton({ type: 'quick_reply', text: '', value: '' });
+    setDialogOpen(true);
   };
 
-  const handleEditButton = (button: TemplateButton, index: number) => {
-    setEditingButton(button);
-    setCurrentIndex(index);
-    setButtonType(button.type);
-    setButtonText(button.text);
-    setButtonValue(button.value || '');
-    setIsDialogOpen(true);
+  const handleEditButton = (index: number) => {
+    setIsEditMode(true);
+    setEditIndex(index);
+    setCurrentButton({ ...buttons[index] });
+    setDialogOpen(true);
   };
 
-  const handleRemoveButton = (index: number) => {
+  const handleDeleteButton = (index: number) => {
     const newButtons = [...buttons];
     newButtons.splice(index, 1);
     onChange(newButtons);
   };
 
+  const handleMoveButton = (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) || 
+      (direction === 'down' && index === buttons.length - 1)
+    ) {
+      return;
+    }
+
+    const newButtons = [...buttons];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap positions
+    [newButtons[index], newButtons[newIndex]] = [newButtons[newIndex], newButtons[index]];
+    
+    onChange(newButtons);
+  };
+
   const handleSaveButton = () => {
-    // Validate inputs
-    if (!buttonText.trim()) {
-      alert('Button text is required');
+    if (!currentButton || !currentButton.text) return;
+
+    // Validate button data
+    if (currentButton.type === 'url' && (!currentButton.value || !currentButton.value.startsWith('http'))) {
       return;
     }
-
-    if ((buttonType === 'url' || buttonType === 'phone') && !buttonValue.trim()) {
-      alert(`Please enter a valid ${buttonType === 'url' ? 'URL' : 'phone number'}`);
+    
+    if (currentButton.type === 'phone' && (!currentButton.value || !currentButton.value.startsWith('+'))) {
       return;
     }
-
-    if (buttonType === 'url' && !buttonValue.startsWith('http')) {
-      alert('URL must start with http:// or https://');
-      return;
-    }
-
-    // Create or update button
-    const button: TemplateButton = {
-      id: editingButton?.id || generateId(),
-      type: buttonType,
-      text: buttonText,
-      value: buttonType !== 'quick_reply' ? buttonValue : undefined
-    };
 
     const newButtons = [...buttons];
     
-    if (currentIndex !== null) {
-      // Update existing button
-      newButtons[currentIndex] = button;
+    if (isEditMode && editIndex > -1) {
+      newButtons[editIndex] = currentButton;
     } else {
-      // Add new button
-      newButtons.push(button);
+      newButtons.push(currentButton);
     }
-
+    
     onChange(newButtons);
-    setIsDialogOpen(false);
+    setDialogOpen(false);
+    setCurrentButton(null);
   };
 
-  const getButtonIcon = (type: string) => {
-    switch(type) {
-      case 'url': return <ExternalLink className="h-4 w-4" />;
-      case 'phone': return <Phone className="h-4 w-4" />;
-      case 'quick_reply': return <MessageSquare className="h-4 w-4" />;
-      default: return <MessageSquare className="h-4 w-4" />;
+  const renderButtonTypeOptions = () => {
+    // Different types allowed based on button position
+    const position = isEditMode ? editIndex : buttons.length;
+    
+    // WhatsApp rules: First two buttons can be any type, third must be quick_reply
+    if (position === 2) {
+      return (
+        <SelectItem value="quick_reply">Quick Reply</SelectItem>
+      );
     }
+
+    return (
+      <>
+        <SelectItem value="url">URL Button</SelectItem>
+        <SelectItem value="phone">Phone Button</SelectItem>
+        <SelectItem value="quick_reply">Quick Reply</SelectItem>
+      </>
+    );
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        {buttons.map((button, index) => (
-          <div key={button.id} className="rounded-md border p-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                {getButtonIcon(button.type)}
-                <div>
-                  <div className="font-medium text-sm">{button.text}</div>
+    <div className="space-y-3">
+      {buttons.length === 0 ? (
+        <div className="text-center p-6 border border-dashed rounded-md">
+          <p className="text-sm text-muted-foreground">No buttons added yet</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {buttons.map((button, index) => (
+            <div 
+              key={index} 
+              className="flex items-center justify-between p-3 border rounded-md group"
+            >
+              <div className="flex-1">
+                <div className="font-medium">{button.text}</div>
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="capitalize">{button.type.replace('_', ' ')}</span>
                   {button.value && (
-                    <div className="text-xs text-muted-foreground">{button.value}</div>
+                    <>
+                      <span>•</span>
+                      <span className="truncate max-w-[150px]">{button.value}</span>
+                    </>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={() => handleEditButton(button, index)}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                  onClick={() => handleMoveButton(index, 'up')}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                  onClick={() => handleMoveButton(index, 'down')}
+                  disabled={index === buttons.length - 1}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => handleEditButton(index)}
+                >
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleRemoveButton(index)}>
-                  <X className="h-4 w-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => handleDeleteButton(index)}
+                >
+                  <Trash className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
+          ))}
+        </div>
+      )}
+      
       {buttons.length < maxButtons && (
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={handleAddButton} 
-          className="w-full"
+          className="w-full mt-2" 
+          onClick={handleAddButton}
         >
-          <Plus className="h-4 w-4 mr-2" /> Add Button
+          <Plus className="h-4 w-4 mr-1" />
+          Add Button
         </Button>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingButton ? 'Edit Button' : 'Add Button'}
-            </DialogTitle>
+            <DialogTitle>{isEditMode ? 'Edit Button' : 'Add Button'}</DialogTitle>
           </DialogHeader>
+          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Button Type</Label>
-              <RadioGroup value={buttonType} onValueChange={(value) => setButtonType(value as any)}>
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="quick_reply" id="quick_reply" />
-                    <Label htmlFor="quick_reply" className="flex items-center">
-                      <MessageSquare className="h-4 w-4 mr-2" /> Quick Reply
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="url" id="url" />
-                    <Label htmlFor="url" className="flex items-center">
-                      <ExternalLink className="h-4 w-4 mr-2" /> URL
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="phone" id="phone" />
-                    <Label htmlFor="phone" className="flex items-center">
-                      <Phone className="h-4 w-4 mr-2" /> Phone Number
-                    </Label>
-                  </div>
-                </div>
-              </RadioGroup>
+              <Label htmlFor="button-type">Button Type</Label>
+              <Select
+                value={currentButton?.type || 'quick_reply'}
+                onValueChange={(value: 'url' | 'phone' | 'quick_reply') => 
+                  setCurrentButton(prev => prev ? { ...prev, type: value } : null)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select button type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {renderButtonTypeOptions()}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {currentButton?.type === 'url' ? 'Opens a URL when clicked' : 
+                 currentButton?.type === 'phone' ? 'Initiates a phone call' : 
+                 'Sends a quick response message'}
+              </p>
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="button-text">Button Text</Label>
-              <Input 
-                id="button-text" 
-                value={buttonText} 
-                onChange={(e) => setButtonText(e.target.value)} 
-                maxLength={25}
-                placeholder="Enter button text (max 25 characters)"
+              <Input
+                id="button-text"
+                maxLength={20}
+                value={currentButton?.text || ''}
+                onChange={(e) => 
+                  setCurrentButton(prev => prev ? { ...prev, text: e.target.value } : null)
+                }
+                placeholder="e.g., Learn More"
               />
+              <p className="text-xs text-muted-foreground">
+                Maximum 20 characters
+              </p>
             </div>
-            {buttonType !== 'quick_reply' && (
+            
+            {currentButton?.type === 'url' && (
               <div className="space-y-2">
-                <Label htmlFor="button-value">
-                  {buttonType === 'url' ? 'URL' : 'Phone Number'}
-                </Label>
-                <Input 
-                  id="button-value" 
-                  value={buttonValue} 
-                  onChange={(e) => setButtonValue(e.target.value)} 
-                  placeholder={buttonType === 'url' ? 'https://example.com' : '+1234567890'}
-                  type={buttonType === 'phone' ? 'tel' : 'text'}
+                <Label htmlFor="button-url">URL</Label>
+                <Input
+                  id="button-url"
+                  type="url"
+                  value={currentButton?.value || ''}
+                  onChange={(e) => 
+                    setCurrentButton(prev => prev ? { ...prev, value: e.target.value } : null)
+                  }
+                  placeholder="https://example.com"
                 />
               </div>
             )}
+            
+            {currentButton?.type === 'phone' && (
+              <div className="space-y-2">
+                <Label htmlFor="button-phone">Phone Number</Label>
+                <Input
+                  id="button-phone"
+                  value={currentButton?.value || ''}
+                  onChange={(e) => 
+                    setCurrentButton(prev => prev ? { ...prev, value: e.target.value } : null)
+                  }
+                  placeholder="+1234567890"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Include country code with + prefix
+                </p>
+              </div>
+            )}
           </div>
+          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveButton}>Save Button</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveButton}>
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
