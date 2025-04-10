@@ -150,7 +150,7 @@ export function CreateBroadcastDialog({
   };
 
   const handleFileSelect = (type: 'image' | 'video' | 'document') => {
-    // Create and trigger hidden file input
+    // Create a hidden file input element
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     
@@ -166,6 +166,7 @@ export function CreateBroadcastDialog({
         break;
     }
     
+    // Add a change event listener to handle the selected file
     fileInput.onchange = (e) => {
       const files = (e.target as HTMLInputElement).files;
       if (files && files.length > 0) {
@@ -173,6 +174,7 @@ export function CreateBroadcastDialog({
       }
     };
     
+    // Trigger the file input click to open the file selection dialog
     fileInput.click();
   };
 

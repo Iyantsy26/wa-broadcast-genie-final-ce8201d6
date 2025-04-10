@@ -130,6 +130,9 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
   
   const clearFile = () => {
     setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const triggerFileInput = () => {
