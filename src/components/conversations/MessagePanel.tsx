@@ -1,10 +1,10 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import { Contact, Message } from '@/types/conversation';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import MessageInputBar from './MessageInputBar';
+import { getFileTypeCategory } from '@/utils/fileUpload';
 
 interface MessagePanelProps {
   contact: Contact;
@@ -52,23 +52,18 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
   
   const contactMessages = messages[contact.id] || [];
   
-  // Set background style if wallpaper is set
   const backgroundStyle = wallpaper
     ? { backgroundImage: `url(${wallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : {};
   
   const handleSendMessage = (message: string) => {
     if (selectedFile) {
-      // Handle file attachment
       console.log('Sending message with attachment:', selectedFile.name);
-      // In a real implementation, you would upload the file and get a URL
       const fileUrl = URL.createObjectURL(selectedFile);
       
-      // Create a message object with the file attachment
       const fileType = getFileTypeCategory(selectedFile.type);
       const content = message || `Sent a ${fileType}`;
       
-      // Send the message with file information
       const messageWithAttachment = {
         content,
         fileUrl,
@@ -76,13 +71,10 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
         fileName: selectedFile.name
       };
       
-      // This would be replaced with an actual API call to send the message with attachment
       console.log('Sending message with attachment:', messageWithAttachment);
       
-      // Then send the regular message
       sendMessage(contact.id, content, deviceId);
       
-      // Clear the selected file
       setSelectedFile(null);
       setActiveAttachmentType(null);
     } else {
@@ -107,7 +99,6 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
   };
   
   const handleForwardMessage = (messageId: string, contactIds: string[]) => {
-    // Implement message forwarding logic here
     console.log('Forwarding message', messageId, 'to contacts', contactIds);
   };
   
@@ -124,11 +115,10 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
     }
   };
 
-  // Clean up disappearing messages
   useEffect(() => {
     if (disappearingMessages.enabled) {
       const now = new Date();
-      const timeoutMs = disappearingMessages.timeout * 60 * 60 * 1000; // Convert hours to milliseconds
+      const timeoutMs = disappearingMessages.timeout * 60 * 60 * 1000;
       
       const expiredMessageIds = contactMessages
         .filter(msg => {
@@ -137,7 +127,6 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
         })
         .map(msg => msg.id);
       
-      // Delete expired messages
       expiredMessageIds.forEach(id => {
         deleteMessage(id);
       });
@@ -146,7 +135,6 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      {/* Conversation header */}
       <ConversationHeader 
         contact={contact} 
         onInfoClick={toggleSidebar}
@@ -156,7 +144,6 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
         onClearChat={onClearChat ? () => onClearChat(contact.id) : undefined}
       />
       
-      {/* Message list */}
       <div 
         className="flex-1 overflow-y-auto bg-slate-50" 
         style={backgroundStyle}
@@ -174,7 +161,6 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
         />
       </div>
       
-      {/* Message input */}
       <MessageInputBar
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ContactSidebar from './ContactSidebar';
@@ -7,6 +8,7 @@ import AIAssistantPanel from './AIAssistantPanel';
 import EmptyConversation from './EmptyConversation';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFileTypeCategory } from '@/utils/fileUpload';
 
 interface ConversationLayoutProps {
   currentDeviceId: string;
@@ -107,7 +109,7 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentDeviceId, toast]);
+  }, [currentDeviceId]);
   
   const changeWallpaper = (wallpaperUrl: string | null) => {
     setWallpaper(wallpaperUrl);
@@ -170,7 +172,7 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
           onClearChat={() => clearChat(selectedContact.id)}
           onToggleDisappearing={toggleDisappearingMessages}
           onSetDisappearingTimeout={setDisappearingTimeout}
-          onBlockContact={blockContact ? (contactId, isBlocked) => blockContact(contactId, isBlocked) : undefined}
+          onBlockContact={blockContact}
         />
       )}
       
