@@ -6,11 +6,15 @@ import { getFileTypeCategory } from "@/utils/fileUpload";
 interface FilePreviewProps {
   file: File | null;
   onClear: () => void;
-  type?: string | null; // Added type prop
+  type?: string | null; // For specific file type
+  onRemove?: () => void; // Alias for onClear for backwards compatibility
 }
 
-const FilePreview: React.FC<FilePreviewProps> = ({ file, onClear, type }) => {
+const FilePreview: React.FC<FilePreviewProps> = ({ file, onClear, type, onRemove }) => {
   if (!file) return null;
+
+  // Use the onClear function or fall back to onRemove for backwards compatibility
+  const handleRemove = onRemove || onClear;
 
   // Use the provided type if available, otherwise detect from file
   const fileTypeCategory = type || getFileTypeCategory(file.type);
@@ -62,7 +66,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ file, onClear, type }) => {
           </div>
         </div>
 
-        <Button variant="ghost" size="icon" onClick={onClear} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={handleRemove} className="shrink-0">
           <X className="h-4 w-4" />
         </Button>
       </div>

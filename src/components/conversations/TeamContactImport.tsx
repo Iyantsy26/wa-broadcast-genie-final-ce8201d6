@@ -1,78 +1,144 @@
 
-import { useState } from "react";
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Users } from "lucide-react";
-import { importContactsFromTeam } from "@/services/contactService";
-import { Contact } from "@/types/conversation";
+import { Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Contact } from '@/types/conversation';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeamContactImportProps {
-  onImportComplete?: (contacts: Contact[]) => void;
+  onImportComplete: (contacts: Contact[]) => void;
 }
 
-export function TeamContactImport({ onImportComplete }: TeamContactImportProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const handleImport = async () => {
-    setIsLoading(true);
+export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportComplete }) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+
+  const fetchTeamMembers = async () => {
     try {
-      const contacts = await importContactsFromTeam();
-      if (contacts.length > 0 && onImportComplete) {
-        onImportComplete(contacts);
+      setLoading(true);
+      
+      // Fetch team members from the database
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('status', 'active');
+        
+      if (error) {
+        throw error;
       }
-      setIsOpen(false);
+      
+      setTeamMembers(data || []);
     } catch (error) {
-      console.error('Error importing team contacts:', error);
+      console.error('Error fetching team members:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load team members',
+        variant: 'destructive',
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-  
+
+  const handleOpen = () => {
+    setOpen(true);
+    fetchTeamMembers();
+  };
+
+  const toggleMemberSelection = (id: string) => {
+    if (selectedMembers.includes(id)) {
+      setSelectedMembers(selectedMembers.filter(memberId => memberId !== id));
+    } else {
+      setSelectedMembers([...selectedMembers, id]);
+    }
+  };
+
+  const handleImport = () => {
+    // Convert selected team members to contacts
+    const importedContacts: Contact[] = teamMembers
+      .filter(member => selectedMembers.includes(member.id))
+      .map(member => ({
+        id: member.id,
+        name: member.name,
+        avatar: member.avatar,
+        phone: member.phone || '',
+        type: 'team',
+        isOnline: true,
+        lastSeen: new Date().toISOString(),
+        tags: []
+      }));
+    
+    onImportComplete(importedContacts);
+    toast({
+      title: 'Team contacts imported',
+      description: `${importedContacts.length} team contacts imported successfully`,
+    });
+    setOpen(false);
+    setSelectedMembers([]);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Users className="h-4 w-4" />
-          Import Team Contacts
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Import Team Contacts</DialogTitle>
-          <DialogDescription>
-            Import all team members from Team Management into your chat contacts.
-            This will allow you to start conversations with your team members directly.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="py-4">
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <Users className="mx-auto h-8 w-8 text-muted-foreground" />
-            <h3 className="mt-2 font-semibold">Team Members</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              All team members will be imported as contacts in your Team Chats section
-            </p>
+    <>
+      <Button variant="outline" onClick={handleOpen} className="flex items-center gap-2">
+        <Users className="h-4 w-4" />
+        <span>Import Team</span>
+      </Button>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Team Contacts</DialogTitle>
+            <DialogDescription>
+              Select team members to import as contacts for conversations
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {loading ? (
+              <div className="text-center py-4">Loading team members...</div>
+            ) : teamMembers.length > 0 ? (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {teamMembers.map(member => (
+                  <div 
+                    key={member.id} 
+                    className="flex items-center p-2 rounded hover:bg-slate-100 cursor-pointer"
+                    onClick={() => toggleMemberSelection(member.id)}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={selectedMembers.includes(member.id)} 
+                      onChange={() => toggleMemberSelection(member.id)}
+                      className="mr-3 h-4 w-4"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium">{member.name}</p>
+                      <p className="text-sm text-muted-foreground">{member.position || member.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">No team members found.</div>
+            )}
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button onClick={handleImport} disabled={isLoading}>
-            {isLoading ? 'Importing...' : 'Import Team Contacts'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleImport}
+              disabled={selectedMembers.length === 0 || loading}
+            >
+              Import {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ""}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
-}
+};

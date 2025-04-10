@@ -63,8 +63,26 @@ const MessagePanel: React.FC<MessagePanelProps> = ({
       console.log('Sending message with attachment:', selectedFile.name);
       // In a real implementation, you would upload the file and get a URL
       const fileUrl = URL.createObjectURL(selectedFile);
-      // Then send the message with the file URL
-      // sendMessageWithAttachment(contact.id, message, fileUrl, activeAttachmentType, deviceId);
+      
+      // Create a message object with the file attachment
+      const fileType = getFileTypeCategory(selectedFile.type);
+      const content = message || `Sent a ${fileType}`;
+      
+      // Send the message with file information
+      const messageWithAttachment = {
+        content,
+        fileUrl,
+        fileType,
+        fileName: selectedFile.name
+      };
+      
+      // This would be replaced with an actual API call to send the message with attachment
+      console.log('Sending message with attachment:', messageWithAttachment);
+      
+      // Then send the regular message
+      sendMessage(contact.id, content, deviceId);
+      
+      // Clear the selected file
       setSelectedFile(null);
       setActiveAttachmentType(null);
     } else {

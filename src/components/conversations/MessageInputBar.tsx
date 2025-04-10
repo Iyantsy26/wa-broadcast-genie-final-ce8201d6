@@ -147,7 +147,7 @@ const MessageInputBar: React.FC<MessageInputBarProps> = ({
         <FilePreview 
           file={selectedFile} 
           onClear={onRemoveFile}
-          type={activeAttachmentType}
+          type={activeAttachmentType || undefined}
         />
       )}
       

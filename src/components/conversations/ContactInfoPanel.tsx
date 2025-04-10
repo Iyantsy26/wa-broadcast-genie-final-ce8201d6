@@ -14,7 +14,9 @@ import {
   Trash,
   Image as ImageIcon,
   FileText,
-  Film
+  Film,
+  Ban,
+  Check
 } from 'lucide-react';
 import { Contact } from '@/types/conversation';
 import { useConversation } from '@/contexts/ConversationContext';
@@ -28,6 +30,7 @@ interface ContactInfoPanelProps {
   onClearChat?: () => void;
   onToggleDisappearing?: (enabled: boolean) => void;
   onSetDisappearingTimeout?: (hours: number) => void;
+  onBlockContact?: (contactId: string, isBlocked: boolean) => void;
 }
 
 const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
@@ -37,7 +40,8 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   onToggleMute,
   onClearChat,
   onToggleDisappearing,
-  onSetDisappearingTimeout
+  onSetDisappearingTimeout,
+  onBlockContact
 }) => {
   const {
     messages,
@@ -92,8 +96,12 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
     }
   };
   
+  const isBlocked = contact.isBlocked || 
+                   (contact.type === 'client' && contact.tags?.includes('blocked')) ||
+                   (contact.type === 'lead' && contact.status === 'blocked');
+  
   return (
-    <div className="w-72 flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
+    <div className="w-80 p-4 bg-white border-l flex flex-col h-full">
       <div className="flex justify-between items-center p-3 border-b">
         <h3 className="font-semibold">Contact Info</h3>
         <Button variant="ghost" size="icon" onClick={toggleSidebar}>
@@ -235,6 +243,30 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           </div>
         </div>
       </ScrollArea>
+      
+      <div className="py-4 border-t border-b">
+        <h3 className="font-medium mb-2">Actions</h3>
+        <div className="space-y-3">
+          {onBlockContact && (
+            <button 
+              onClick={() => onBlockContact(contact.id, !isBlocked)}
+              className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-100 rounded-md transition-colors text-left"
+            >
+              {isBlocked ? (
+                <>
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Unblock Contact</span>
+                </>
+              ) : (
+                <>
+                  <Ban className="h-4 w-4 text-red-500" />
+                  <span>Block Contact</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

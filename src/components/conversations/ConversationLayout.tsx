@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useConversation } from '@/contexts/ConversationContext';
 import ContactSidebar from './ContactSidebar';
@@ -24,7 +23,8 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     setWallpaper,
     toggleContactStar,
     muteContact,
-    clearChat
+    clearChat,
+    blockContact
   } = useConversation();
   
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -37,14 +37,9 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     ? contacts.find(c => c.id === selectedContactId) 
     : null;
 
-  // Create a function that returns a Promise<string> as required by the AIAssistantPanel
   const handleRequestAIAssistance = async (prompt: string): Promise<string> => {
     console.log('AI assistance requested with prompt:', prompt);
-    // This would typically call an API or service
-    // to generate AI-powered responses
-    
     try {
-      // For now, just return a mock response
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       return `AI response to: ${prompt}`;
     } catch (error) {
@@ -53,7 +48,6 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     }
   };
   
-  // Track device connection status
   useEffect(() => {
     if (!currentDeviceId) return;
     
@@ -83,7 +77,6 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     
     checkDeviceStatus();
     
-    // Set up real-time listener for device status changes
     const channel = supabase
       .channel('device-status')
       .on('postgres_changes', 
@@ -126,7 +119,6 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
   
   const toggleContactMute = (contactId: string, isMuted: boolean) => {
     muteContact(contactId, isMuted);
-    // If sound is being muted, also update global sound setting
     if (isMuted) {
       setSoundEnabled(false);
     }
@@ -148,10 +140,8 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
 
   return (
     <div className="flex gap-3 overflow-hidden h-full">
-      {/* Contact sidebar */}
       <ContactSidebar />
       
-      {/* Main content area */}
       <div className="flex-1 flex rounded-lg overflow-hidden bg-card shadow-sm">
         {selectedContact ? (
           <MessagePanel 
@@ -171,7 +161,6 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
         )}
       </div>
       
-      {/* Contact info panel (when open) */}
       {isSidebarOpen && selectedContact && (
         <ContactInfoPanel 
           contact={selectedContact} 
@@ -181,10 +170,10 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
           onClearChat={() => clearChat(selectedContact.id)}
           onToggleDisappearing={toggleDisappearingMessages}
           onSetDisappearingTimeout={setDisappearingTimeout}
+          onBlockContact={blockContact ? (contactId, isBlocked) => blockContact(contactId, isBlocked) : undefined}
         />
       )}
       
-      {/* AI Assistant panel (when active) */}
       {isAssistantActive && (
         <AIAssistantPanel 
           onRequestAIAssistance={handleRequestAIAssistance}

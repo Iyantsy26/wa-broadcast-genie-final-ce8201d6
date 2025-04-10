@@ -77,6 +77,7 @@ interface ConversationContextType {
   clearChat: (contactId: string) => void;
   addReaction: (messageId: string, emoji: string) => void;
   deleteMessage: (messageId: string) => void;
+  blockContact: (contactId: string, isBlocked: boolean) => void;
 }
 
 interface ConversationProviderProps {
@@ -304,6 +305,37 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     });
   };
 
+  const blockContact = (contactId: string, isBlocked: boolean) => {
+    setContacts(contacts.map(contact => {
+      if (contact.id === contactId) {
+        if (contact.type === 'client') {
+          // For clients, use tags
+          const updatedTags = isBlocked
+            ? [...(contact.tags || []), 'blocked'] 
+            : (contact.tags || []).filter(tag => tag !== 'blocked');
+          
+          return { ...contact, tags: updatedTags, isBlocked };
+        } else if (contact.type === 'lead') {
+          // For leads, use status
+          return { 
+            ...contact, 
+            status: isBlocked ? 'blocked' : 'active',
+            isBlocked 
+          };
+        } else {
+          // For team and others
+          return { ...contact, isBlocked };
+        }
+      }
+      return contact;
+    }));
+    
+    toast({
+      title: isBlocked ? 'Contact blocked' : 'Contact unblocked',
+      description: `The contact has been ${isBlocked ? 'blocked' : 'unblocked'}.`,
+    });
+  };
+
   const handleSendMessage = (content: string, file: File | null, replyToMessageId?: string) => {
     if (activeConversation && content.trim()) {
       sendMessage(activeConversation.contact.id, content, selectedDevice);
@@ -514,7 +546,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({ chil
     clearChat,
     
     addReaction,
-    deleteMessage
+    deleteMessage,
+    blockContact
   };
 
   return (
