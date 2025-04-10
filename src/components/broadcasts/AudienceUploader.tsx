@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -130,6 +131,12 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
   const clearFile = () => {
     setFile(null);
   };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
   
   return (
     <div className="space-y-4">
@@ -137,7 +144,7 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
         <>
           <div 
             className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => document.getElementById('csv-file-input')?.click()}
+            onClick={triggerFileInput}
           >
             <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground mb-2">
@@ -149,7 +156,7 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
           </div>
           
           <input
-            id="csv-file-input"
+            ref={fileInputRef}
             type="file"
             accept=".csv,text/csv"
             onChange={handleFileChange}
@@ -160,7 +167,7 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={() => document.getElementById('csv-file-input')?.click()}
+            onClick={triggerFileInput}
           >
             Select CSV File
           </Button>

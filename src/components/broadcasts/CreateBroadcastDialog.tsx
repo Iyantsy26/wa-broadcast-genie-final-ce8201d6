@@ -29,12 +29,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Image, Video, File } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import { fetchTemplates } from "@/services/templates/templateService";
 import { addBroadcast } from "@/services/broadcasts/broadcastService";
 import { toast } from "sonner";
 import { Template } from "@/services/templates/templateService";
+import { AudienceUploader } from "@/components/broadcasts/AudienceUploader";
 
 interface CreateBroadcastDialogProps {
   open: boolean;
@@ -58,6 +59,7 @@ export function CreateBroadcastDialog({
   const [templates, setTemplates] = useState<Template[]>([]);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showAudienceUploader, setShowAudienceUploader] = useState<boolean>(false);
   
   // Fetch templates
   useEffect(() => {
@@ -146,6 +148,43 @@ export function CreateBroadcastDialog({
       setIsLoading(false);
     }
   };
+
+  const handleFileSelect = (type: 'image' | 'video' | 'document') => {
+    // Create and trigger hidden file input
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    
+    switch (type) {
+      case 'image':
+        fileInput.accept = 'image/jpeg,image/png,image/gif,image/webp';
+        break;
+      case 'video':
+        fileInput.accept = 'video/mp4,video/webm,video/ogg';
+        break;
+      case 'document':
+        fileInput.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
+        break;
+    }
+    
+    fileInput.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        setMediaFile(files[0]);
+      }
+    };
+    
+    fileInput.click();
+  };
+
+  const handleAudienceUploadComplete = (contacts: any[]) => {
+    // In a real application, you would save these contacts to the database
+    // and create a new audience with them
+    const audienceName = `Imported Audience (${contacts.length} contacts)`;
+    
+    toast.success(`Created new audience: ${audienceName}`);
+    setSelectedAudience('imported-audience');
+    setShowAudienceUploader(false);
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,33 +248,78 @@ export function CreateBroadcastDialog({
                 />
                 
                 <div className="space-y-4">
-                  <Label>Add Media (Optional)</Label>
-                  <FileUpload
-                    onFileChange={setMediaFile}
-                    value={mediaFile}
-                    maxSizeMB={10}
-                  />
+                  {mediaFile ? (
+                    <FileUpload
+                      onFileChange={setMediaFile}
+                      value={mediaFile}
+                      maxSizeMB={10}
+                    />
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleFileSelect('image')}>
+                        <Image className="h-4 w-4 mr-2" />
+                        Add Image
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleFileSelect('video')}>
+                        <Video className="h-4 w-4 mr-2" />
+                        Add Video
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleFileSelect('document')}>
+                        <File className="h-4 w-4 mr-2" />
+                        Add Document
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="audience">Audience</Label>
-            <Select
-              value={selectedAudience}
-              onValueChange={setSelectedAudience}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select audience" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-customers">All Customers (2,548)</SelectItem>
-                <SelectItem value="new-customers">New Customers (489)</SelectItem>
-                <SelectItem value="premium">Premium Members (356)</SelectItem>
-                <SelectItem value="inactive">Inactive Users (712)</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="audience">Audience</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAudienceUploader(true)}
+              >
+                Create New
+              </Button>
+            </div>
+            
+            {showAudienceUploader ? (
+              <div className="mt-4 border rounded-md p-4">
+                <h3 className="text-sm font-medium mb-2">Upload New Audience</h3>
+                <AudienceUploader onUploadComplete={handleAudienceUploadComplete} />
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowAudienceUploader(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Select
+                value={selectedAudience}
+                onValueChange={setSelectedAudience}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select audience" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-customers">All Customers (2,548)</SelectItem>
+                  <SelectItem value="new-customers">New Customers (489)</SelectItem>
+                  <SelectItem value="premium">Premium Members (356)</SelectItem>
+                  <SelectItem value="inactive">Inactive Users (712)</SelectItem>
+                  {selectedAudience === 'imported-audience' && (
+                    <SelectItem value="imported-audience">Imported Audience</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           
           <div className="space-y-2">
