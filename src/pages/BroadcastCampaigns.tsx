@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -65,6 +65,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { CreateBroadcastDialog } from "@/components/broadcasts/CreateBroadcastDialog";
 
 interface BroadcastCampaign {
   id: string;
@@ -136,6 +137,9 @@ const BroadcastCampaigns = () => {
   const [campaignName, setCampaignName] = useState<string>('');
   const [messageContent, setMessageContent] = useState<string>('');
   const [showAudienceDialog, setShowAudienceDialog] = useState<boolean>(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
 
   const handleCreateCampaign = () => {
     if (!campaignName) {
@@ -169,6 +173,32 @@ const BroadcastCampaigns = () => {
       title: "Campaign created",
       description: "Your broadcast campaign has been created as a draft",
     });
+  };
+
+  const handleFileUpload = () => {
+    if (csvFileInputRef.current) {
+      csvFileInputRef.current.click();
+    }
+  };
+
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a valid CSV file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setCsvFile(file);
+      toast({
+        title: "File selected",
+        description: `${file.name} has been selected`,
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -211,181 +241,20 @@ const BroadcastCampaigns = () => {
           </p>
         </div>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Broadcast
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Create New Broadcast Campaign</DialogTitle>
-              <DialogDescription>
-                Set up your campaign details, select a template or create a custom message.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="campaign-name">Campaign Name</Label>
-                <Input
-                  id="campaign-name"
-                  placeholder="e.g., Summer Promotion 2023"
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <Label className="mb-2 block">Message Content</Label>
-                <Tabs defaultValue="template">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="template">Use Template</TabsTrigger>
-                    <TabsTrigger value="custom">Custom Message</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="template" className="space-y-4 py-4">
-                    <Select 
-                      value={selectedTemplate} 
-                      onValueChange={setSelectedTemplate}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="welcome">Welcome Message</SelectItem>
-                        <SelectItem value="promotion">Promotion Announcement</SelectItem>
-                        <SelectItem value="feedback">Feedback Request</SelectItem>
-                        <SelectItem value="reminder">Appointment Reminder</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    {selectedTemplate && (
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm">Template Preview</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="bg-gray-50 p-3 rounded-md">
-                            <div className="flex items-center gap-2 mb-2">
-                              <FileText className="h-4 w-4 text-primary" />
-                              <span className="text-sm font-medium">
-                                {selectedTemplate === 'welcome' 
-                                  ? 'Welcome Message' 
-                                  : selectedTemplate === 'promotion' 
-                                  ? 'Promotion Announcement' 
-                                  : selectedTemplate === 'feedback' 
-                                  ? 'Feedback Request' 
-                                  : 'Appointment Reminder'}
-                              </span>
-                            </div>
-                            <p className="text-sm">
-                              {selectedTemplate === 'welcome' 
-                                ? "Hello {{1}}, welcome to our service! We're excited to have you onboard."
-                                : selectedTemplate === 'promotion' 
-                                ? "Great news, {{1}}! We have a special offer just for you: {{2}} off your next purchase."
-                                : selectedTemplate === 'feedback' 
-                                ? "Hi {{1}}, we'd love to hear your feedback about your recent experience with us."
-                                : "Reminder: You have an appointment scheduled for {{1}} at {{2}}. Reply YES to confirm."}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="custom" className="space-y-4 py-4">
-                    <Textarea
-                      placeholder="Type your message here..."
-                      className="min-h-[120px]"
-                      value={messageContent}
-                      onChange={(e) => setMessageContent(e.target.value)}
-                    />
-                    
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Image className="h-4 w-4 mr-2" />
-                        Add Image
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Video className="h-4 w-4 mr-2" />
-                        Add Video
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <File className="h-4 w-4 mr-2" />
-                        Add Document
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="audience">Audience</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAudienceDialog(true)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Create New
-                  </Button>
-                </div>
-                <Select
-                  value={selectedAudience}
-                  onValueChange={setSelectedAudience}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select audience" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all-customers">All Customers (2,548)</SelectItem>
-                    <SelectItem value="new-customers">New Customers (489)</SelectItem>
-                    <SelectItem value="premium">Premium Members (356)</SelectItem>
-                    <SelectItem value="inactive">Inactive Users (712)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp-account">Send From</Label>
-                <Select defaultValue="business-1">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select WhatsApp account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="business-1">Business Account 1 (+1 555-123-4567)</SelectItem>
-                    <SelectItem value="marketing">Marketing Account (+1 555-987-6543)</SelectItem>
-                    <SelectItem value="support">Support Account (+1 555-456-7890)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="schedule">Schedule</Label>
-                <div className="flex gap-2">
-                  <Select defaultValue="now">
-                    <SelectTrigger>
-                      <SelectValue placeholder="When to send" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="now">Send immediately</SelectItem>
-                      <SelectItem value="schedule">Schedule for later</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input type="datetime-local" disabled className="flex-1" />
-                </div>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline">Save as Draft</Button>
-              <Button onClick={handleCreateCampaign}>Create Campaign</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setOpenCreateDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Broadcast
+        </Button>
+        <CreateBroadcastDialog 
+          open={openCreateDialog} 
+          onOpenChange={setOpenCreateDialog}
+          onSuccess={() => {
+            toast({
+              title: "Campaign created",
+              description: "Your broadcast campaign has been created successfully"
+            });
+          }}
+        />
         
         <Dialog open={showAudienceDialog} onOpenChange={setShowAudienceDialog}>
           <DialogContent className="sm:max-w-[600px]">
@@ -408,9 +277,27 @@ const BroadcastCampaigns = () => {
                   <p className="mt-2 text-sm text-muted-foreground">
                     Drag and drop your CSV file here, or click to browse
                   </p>
-                  <Button variant="outline" size="sm" className="mt-4">
+                  
+                  <input
+                    ref={csvFileInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleCsvFileChange}
+                  />
+                  
+                  <Button variant="outline" size="sm" className="mt-4" onClick={handleFileUpload}>
                     Choose File
                   </Button>
+                  
+                  {csvFile && (
+                    <div className="mt-3 text-sm">
+                      <p className="font-medium">{csvFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(csvFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   <p>Your CSV should include the following columns:</p>
@@ -466,7 +353,15 @@ const BroadcastCampaigns = () => {
               <Button variant="outline" onClick={() => setShowAudienceDialog(false)}>
                 Cancel
               </Button>
-              <Button>Create Audience</Button>
+              <Button onClick={() => {
+                toast({
+                  title: "Audience created",
+                  description: "Your new audience has been created successfully"
+                });
+                setShowAudienceDialog(false);
+              }}>
+                Create Audience
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

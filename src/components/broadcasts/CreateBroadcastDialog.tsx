@@ -29,13 +29,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock, Image, Video, File } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Image, Video, File, X } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import { fetchTemplates } from "@/services/templates/templateService";
 import { addBroadcast } from "@/services/broadcasts/broadcastService";
 import { toast } from "sonner";
 import { Template } from "@/services/templates/templateService";
 import { AudienceUploader } from "@/components/broadcasts/AudienceUploader";
+import FilePreview from "@/components/conversations/inputs/FilePreview";
+import { getFileTypeCategory } from "@/utils/fileUpload";
 
 interface CreateBroadcastDialogProps {
   open: boolean;
@@ -58,6 +60,7 @@ export function CreateBroadcastDialog({
   const [scheduledTime, setScheduledTime] = useState<string>('12:00');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | 'document' | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showAudienceUploader, setShowAudienceUploader] = useState<boolean>(false);
   
@@ -121,21 +124,14 @@ export function CreateBroadcastDialog({
           read: 0,
           responded: 0,
           scheduled: scheduledDateTime,
-          message_content: messageContent
+          message_content: messageContent,
+          media_type: mediaType
         },
         mediaFile
       );
       
       // Reset form
-      setCampaignName('');
-      setSelectedTemplate('');
-      setSelectedAudience('');
-      setMessageContent('');
-      setSelectedDevice('');
-      setSchedulingOption('now');
-      setScheduledDate(undefined);
-      setScheduledTime('12:00');
-      setMediaFile(null);
+      resetForm();
       
       // Close dialog and notify parent
       onOpenChange(false);
@@ -144,9 +140,23 @@ export function CreateBroadcastDialog({
       }
     } catch (error) {
       console.error('Error creating broadcast:', error);
+      toast.error('Failed to create broadcast campaign');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setCampaignName('');
+    setSelectedTemplate('');
+    setSelectedAudience('');
+    setMessageContent('');
+    setSelectedDevice('');
+    setSchedulingOption('now');
+    setScheduledDate(undefined);
+    setScheduledTime('12:00');
+    setMediaFile(null);
+    setMediaType(null);
   };
 
   const handleFileSelect = (type: 'image' | 'video' | 'document') => {
@@ -171,11 +181,18 @@ export function CreateBroadcastDialog({
       const files = (e.target as HTMLInputElement).files;
       if (files && files.length > 0) {
         setMediaFile(files[0]);
+        setMediaType(type);
+        toast.success(`${type} added successfully`);
       }
     };
     
     // Trigger the file input click to open the file selection dialog
     fileInput.click();
+  };
+  
+  const clearMediaFile = () => {
+    setMediaFile(null);
+    setMediaType(null);
   };
 
   const handleAudienceUploadComplete = (contacts: any[]) => {
@@ -251,10 +268,10 @@ export function CreateBroadcastDialog({
                 
                 <div className="space-y-4">
                   {mediaFile ? (
-                    <FileUpload
-                      onFileChange={setMediaFile}
-                      value={mediaFile}
-                      maxSizeMB={10}
+                    <FilePreview
+                      file={mediaFile}
+                      onClear={clearMediaFile}
+                      type={mediaType || undefined}
                     />
                   ) : (
                     <div className="flex gap-2">
