@@ -59,8 +59,8 @@ export const addBroadcast = async (
         mediaType = 'document';
       }
       
-      // Upload to Supabase storage
-      mediaUrl = await uploadFile(mediaFile, 'broadcast-media');
+      // Fix: Use uploadFile with just the file parameter
+      mediaUrl = await uploadFile(mediaFile);
       if (!mediaUrl) {
         throw new Error('Failed to upload media file');
       }

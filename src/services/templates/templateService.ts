@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadFile } from "@/utils/fileUpload";
@@ -56,13 +55,12 @@ export const addTemplate = async (
         mediaType = 'document';
       }
       
-      mediaUrl = await uploadFile(mediaFile, 'template-media');
+      mediaUrl = await uploadFile(mediaFile);
       if (!mediaUrl) {
         throw new Error('Failed to upload media file');
       }
     }
 
-    // Convert the template buttons to a JSON-compatible format
     const buttonsJson = template.buttons ? JSON.parse(JSON.stringify(template.buttons)) : undefined;
     
     const { data, error } = await supabase
@@ -96,7 +94,6 @@ export const addTemplate = async (
 
 export const updateTemplate = async (id: string, updates: Partial<Template>): Promise<boolean> => {
   try {
-    // Convert buttons to proper JSON if they exist
     const updatesWithJsonButtons = {
       ...updates,
       buttons: updates.buttons ? JSON.parse(JSON.stringify(updates.buttons)) : undefined

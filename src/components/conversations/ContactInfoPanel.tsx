@@ -97,8 +97,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   };
   
   const isBlocked = contact.isBlocked || 
-                   (contact.type === 'client' && contact.tags?.includes('blocked')) ||
-                   (contact.type === 'lead' && contact.status === 'blocked');
+                   (contact.type === 'client' && contact.tags?.includes('blocked'));
   
   return (
     <div className="w-80 p-4 bg-white border-l flex flex-col h-full">
