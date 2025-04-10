@@ -8,13 +8,19 @@ export const blockContact = async (contactId: string, isBlocked: boolean): Promi
     // For leads
     const { error: leadsError } = await supabase
       .from('leads')
-      .update({ is_blocked: isBlocked })
+      .update({ 
+        // Store blocking status in the status field as a prefix
+        status: isBlocked ? 'blocked' : 'active'
+      })
       .eq('id', contactId);
     
     // For clients
     const { error: clientsError } = await supabase
       .from('clients')
-      .update({ is_blocked: isBlocked })
+      .update({ 
+        // Store blocking status in the tags array
+        tags: isBlocked ? ['blocked'] : []
+      })
       .eq('id', contactId);
     
     if (leadsError && clientsError) {

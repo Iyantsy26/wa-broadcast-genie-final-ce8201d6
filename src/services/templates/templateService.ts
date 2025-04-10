@@ -1,7 +1,9 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadFile } from "@/utils/fileUpload";
 import { TemplateButton } from "@/components/templates/ButtonEditor";
+import { Json } from "@/integrations/supabase/types";
 
 export interface Template {
   id: string;
@@ -59,6 +61,9 @@ export const addTemplate = async (
         throw new Error('Failed to upload media file');
       }
     }
+
+    // Convert the template buttons to a JSON-compatible format
+    const buttonsJson = template.buttons ? JSON.parse(JSON.stringify(template.buttons)) : undefined;
     
     const { data, error } = await supabase
       .from('templates')
@@ -71,7 +76,7 @@ export const addTemplate = async (
         variables: template.variables || [],
         media_url: mediaUrl || template.media_url,
         media_type: mediaType || template.media_type,
-        buttons: template.buttons || []
+        buttons: buttonsJson
       })
       .select()
       .single() as { data: Template | null; error: any };
@@ -91,9 +96,15 @@ export const addTemplate = async (
 
 export const updateTemplate = async (id: string, updates: Partial<Template>): Promise<boolean> => {
   try {
+    // Convert buttons to proper JSON if they exist
+    const updatesWithJsonButtons = {
+      ...updates,
+      buttons: updates.buttons ? JSON.parse(JSON.stringify(updates.buttons)) : undefined
+    };
+    
     const { error } = await supabase
       .from('templates')
-      .update(updates)
+      .update(updatesWithJsonButtons)
       .eq('id', id) as { data: any; error: any };
 
     if (error) {
