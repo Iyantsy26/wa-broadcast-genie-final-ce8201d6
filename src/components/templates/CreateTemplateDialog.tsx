@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,8 @@ import { LanguageSelector } from "@/components/ui/language-selector";
 import { ButtonEditor, TemplateButton } from "./ButtonEditor";
 import { addTemplate } from "@/services/templates/templateService";
 import { toast } from "sonner";
+import { Image, Video, File } from "lucide-react";
+import FilePreview from "@/components/conversations/inputs/FilePreview";
 
 interface CreateTemplateDialogProps {
   open: boolean;
@@ -43,6 +45,14 @@ export function CreateTemplateDialog({
   const [mediaCaption, setMediaCaption] = useState('');
   const [buttons, setButtons] = useState<TemplateButton[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | 'document' | null>(null);
+  
+  // Reset form when dialog opens or closes
+  useEffect(() => {
+    if (!open) {
+      resetForm();
+    }
+  }, [open]);
   
   const resetForm = () => {
     setTemplateName('');
@@ -52,6 +62,7 @@ export function CreateTemplateDialog({
     setMediaFile(null);
     setMediaCaption('');
     setButtons([]);
+    setMediaType(null);
   };
   
   const handleCreateTemplate = async () => {
@@ -100,9 +111,46 @@ export function CreateTemplateDialog({
       }
     } catch (error) {
       console.error('Error creating template:', error);
+      toast.error('Failed to create template');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFileSelect = (type: 'image' | 'video' | 'document') => {
+    // Create a hidden file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    
+    switch (type) {
+      case 'image':
+        fileInput.accept = 'image/jpeg,image/png,image/gif,image/webp';
+        break;
+      case 'video':
+        fileInput.accept = 'video/mp4,video/webm,video/ogg';
+        break;
+      case 'document':
+        fileInput.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain';
+        break;
+    }
+    
+    // Add a change event listener to handle the selected file
+    fileInput.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        setMediaFile(files[0]);
+        setMediaType(type);
+        toast.success(`${type} added successfully`);
+      }
+    };
+    
+    // Trigger the file input click to open the file selection dialog
+    fileInput.click();
+  };
+  
+  const clearMediaFile = () => {
+    setMediaFile(null);
+    setMediaType(null);
   };
   
   return (
@@ -158,11 +206,38 @@ export function CreateTemplateDialog({
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Media</Label>
-                    <FileUpload 
-                      onFileChange={setMediaFile}
-                      value={mediaFile}
-                      maxSizeMB={10}
-                    />
+                    
+                    {mediaFile ? (
+                      <FilePreview
+                        file={mediaFile}
+                        onClear={clearMediaFile}
+                        type={mediaType || undefined}
+                      />
+                    ) : (
+                      <>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleFileSelect('image')}>
+                            <Image className="h-4 w-4 mr-2" />
+                            Add Image
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleFileSelect('video')}>
+                            <Video className="h-4 w-4 mr-2" />
+                            Add Video
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleFileSelect('document')}>
+                            <File className="h-4 w-4 mr-2" />
+                            Add Document
+                          </Button>
+                        </div>
+                        
+                        <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                          <Image className="h-8 w-8 mx-auto text-muted-foreground" />
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            Drag and drop your media here, or click a button above to browse
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                   
                   <div className="space-y-2">

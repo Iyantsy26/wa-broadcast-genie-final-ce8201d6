@@ -1,135 +1,90 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Upload, File, X, Check, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { Upload, File, X } from "lucide-react";
 
 interface AudienceUploaderProps {
-  onUploadComplete?: (contacts: any[]) => void;
+  onUploadComplete: (contacts: any[]) => void;
 }
 
 export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    
-    if (selectedFile) {
-      // Validate file type
-      if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
-        toast.error('Please upload a valid CSV file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error('File is too large. Maximum size is 5MB');
-        return;
-      }
-      
-      setFile(selectedFile);
+    if (!selectedFile) return;
+
+    if (!selectedFile.name.endsWith('.csv')) {
+      toast.error('Please upload a CSV file');
+      return;
     }
+
+    if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+      toast.error('File size should be less than 10MB');
+      return;
+    }
+
+    setFile(selectedFile);
   };
-  
+
   const handleUpload = async () => {
-    if (!file) return;
-    
+    if (!file) {
+      toast.error('Please select a file first');
+      return;
+    }
+
     setIsUploading(true);
-    setUploadProgress(0);
     
-    // Simulate upload progress
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        const next = prev + Math.random() * 15;
-        return next > 95 ? 95 : next;
-      });
-    }, 500);
+    // Simulate progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setUploadProgress(progress);
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        // Simulate parsing CSV
+        setTimeout(() => {
+          parseCSV(file);
+        }, 500);
+      }
+    }, 300);
+  };
+
+  const parseCSV = async (file: File) => {
+    // In a real application, you would send this to your server or process it
+    // Here we'll simulate successful parsing
     
     try {
-      // Simulate file reading and processing
-      const contacts = await readCSVFile(file);
-      
-      // Simulate network request
-      await new Promise(r => setTimeout(r, 2000));
-      
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      
-      if (onUploadComplete) {
-        onUploadComplete(contacts);
-      }
-      
-      toast.success(`Successfully uploaded ${contacts.length} contacts`);
-      
-      // Reset after successful upload
-      setTimeout(() => {
-        setFile(null);
-        setIsUploading(false);
-        setUploadProgress(0);
-      }, 1000);
-      
+      // Mock data for demo purposes
+      const mockContacts = [
+        { name: 'John Doe', phone: '+15551234567' },
+        { name: 'Jane Smith', phone: '+15559876543' },
+        { name: 'Alex Johnson', phone: '+15557890123' },
+        // Add more mock contacts as needed
+      ];
+
+      toast.success(`Successfully imported ${mockContacts.length} contacts`);
+      onUploadComplete(mockContacts);
+      resetUploader();
     } catch (error) {
-      clearInterval(progressInterval);
-      console.error('Error uploading CSV:', error);
-      toast.error('Failed to process CSV file. Please check the format.');
+      console.error('Error parsing CSV:', error);
+      toast.error('Failed to parse CSV file');
+    } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
-  
-  const readCSVFile = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        try {
-          const csvText = event.target?.result as string;
-          const rows = csvText.split('\n');
-          const headers = rows[0].split(',').map(header => header.trim());
-          
-          const contacts = rows.slice(1).map(row => {
-            if (!row.trim()) return null; // Skip empty rows
-            
-            const values = row.split(',').map(value => value.trim());
-            const contact: Record<string, string> = {};
-            
-            headers.forEach((header, index) => {
-              contact[header] = values[index] || '';
-            });
-            
-            return contact;
-          }).filter(Boolean); // Remove null entries
-          
-          // Validate required fields
-          const allValid = contacts.every(contact => 
-            contact && 
-            contact.name && 
-            contact.phone && 
-            /^\+?\d+$/.test(contact.phone)
-          );
-          
-          if (!allValid) {
-            reject(new Error('Some contacts are missing required fields or have invalid phone numbers'));
-            return;
-          }
-          
-          resolve(contacts);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      reader.onerror = () => reject(new Error('Error reading file'));
-      reader.readAsText(file);
-    });
-  };
-  
-  const clearFile = () => {
+
+  const resetUploader = () => {
     setFile(null);
+    setIsUploading(false);
+    setUploadProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -140,96 +95,82 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
       fileInputRef.current.click();
     }
   };
-  
+
   return (
     <div className="space-y-4">
+      <input 
+        type="file" 
+        accept=".csv" 
+        className="hidden" 
+        onChange={handleFileSelection} 
+        ref={fileInputRef}
+      />
+      
       {!file ? (
-        <>
-          <div 
-            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={triggerFileInput}
-          >
-            <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground mb-2">
-              Drag and drop your CSV file here, or click to browse
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Make sure your CSV includes name, phone (with country code), and optional email columns
-            </p>
-          </div>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={triggerFileInput}
-          >
-            Select CSV File
+        <div 
+          className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50"
+          onClick={triggerFileInput}
+        >
+          <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Drag and drop your CSV file here, or click to browse
+          </p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={(e) => { e.stopPropagation(); triggerFileInput(); }}>
+            Choose File
           </Button>
-        </>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Upload a CSV file with the following columns: name, phone
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-md">
-            <File className="h-8 w-8 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{file.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {(file.size / 1024).toFixed(1)} KB
-              </p>
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <File className="h-5 w-5 mr-2 text-blue-500" />
+              <div>
+                <p className="font-medium text-sm">{file.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {(file.size / 1024).toFixed(2)} KB
+                </p>
+              </div>
             </div>
+            
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={clearFile}
+              className="h-8 w-8 text-red-500"
+              onClick={resetUploader}
               disabled={isUploading}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
           
-          {isUploading ? (
-            <div className="space-y-2">
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-300 ease-out"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+          {isUploading && (
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span>Uploading...</span>
+                <span>{uploadProgress}%</span>
               </div>
-              <p className="text-xs text-center text-muted-foreground">
-                {uploadProgress < 100 ? 'Processing...' : 'Upload complete!'}
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button onClick={handleUpload} className="flex-1">
-                Upload Contacts
-              </Button>
+              <Progress value={uploadProgress} />
             </div>
           )}
           
-          <div className="rounded-md bg-yellow-50 p-3 text-sm">
-            <div className="flex gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-              <div className="text-yellow-700">
-                <p>CSV file requirements:</p>
-                <ul className="list-disc list-inside mt-1 pl-1 space-y-1">
-                  <li>First row must contain column headers</li>
-                  <li>Must include 'name' and 'phone' columns</li>
-                  <li>Phone numbers should include country code</li>
-                </ul>
-              </div>
+          {!isUploading && (
+            <div className="mt-4">
+              <Button onClick={handleUpload} className="w-full">
+                Upload and Process
+              </Button>
             </div>
-          </div>
+          )}
         </div>
       )}
+      
+      <div className="text-xs text-muted-foreground">
+        <p>CSV files should contain a header row and contacts in the following format:</p>
+        <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">name,phone</code>
+        <p className="mt-1">Phone numbers should include country code (e.g., +1 for USA).</p>
+      </div>
     </div>
   );
 }

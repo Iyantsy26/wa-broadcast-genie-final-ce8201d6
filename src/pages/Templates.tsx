@@ -1,25 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -35,9 +24,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Plus, 
   FileText, 
@@ -53,104 +49,138 @@ import {
   MessageSquare,
   Image,
   Video,
-  File
+  File,
+  X
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-interface Template {
-  id: string;
-  name: string;
-  status: 'approved' | 'pending' | 'rejected';
-  type: 'text' | 'media' | 'interactive';
-  language: string;
-  createdAt: string;
-  lastUsed: string;
-}
-
-const templates: Template[] = [
-  {
-    id: '1',
-    name: 'Welcome Message',
-    status: 'approved',
-    type: 'text',
-    language: 'English',
-    createdAt: '2023-06-10T14:30:00Z',
-    lastUsed: '2023-06-20T09:15:00Z'
-  },
-  {
-    id: '2',
-    name: 'Appointment Confirmation',
-    status: 'approved',
-    type: 'interactive',
-    language: 'English',
-    createdAt: '2023-05-15T11:20:00Z',
-    lastUsed: '2023-06-19T16:45:00Z'
-  },
-  {
-    id: '3',
-    name: 'Product Showcase',
-    status: 'pending',
-    type: 'media',
-    language: 'English',
-    createdAt: '2023-06-18T08:30:00Z',
-    lastUsed: ''
-  },
-  {
-    id: '4',
-    name: 'Customer Feedback',
-    status: 'rejected',
-    type: 'interactive',
-    language: 'English',
-    createdAt: '2023-06-05T10:00:00Z',
-    lastUsed: ''
-  },
-  {
-    id: '5',
-    name: 'Order Confirmation',
-    status: 'approved',
-    type: 'text',
-    language: 'English',
-    createdAt: '2023-04-20T09:45:00Z',
-    lastUsed: '2023-06-15T13:30:00Z'
-  }
-];
+import { Badge } from "@/components/ui/badge";
+import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
+import { toast } from "sonner";
+import { 
+  fetchTemplates, 
+  deleteTemplate, 
+  updateTemplate,
+  Template
+} from "@/services/templates/templateService";
+import { 
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 const Templates = () => {
-  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [templateContent, setTemplateContent] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('text');
-
-  const handleCreateTemplate = () => {
-    if (!templateName.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide a name for your template",
-        variant: "destructive",
-      });
-      return;
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [languageFilter, setLanguageFilter] = useState<string>("all");
+  
+  // Load templates
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+  
+  const loadTemplates = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchTemplates();
+      setTemplates(data);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      toast.error('Failed to load templates');
+    } finally {
+      setLoading(false);
     }
-
-    if (!templateContent.trim()) {
-      toast({
-        title: "Missing content",
-        description: "Please provide content for your template",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Template submitted",
-      description: "Your template has been submitted for approval",
-    });
-
-    setIsCreateDialogOpen(false);
-    setTemplateName('');
-    setTemplateContent('');
-    setSelectedCategory('text');
   };
+
+  // Handle template actions
+  const handlePreview = (template: Template) => {
+    setSelectedTemplate(template);
+    setIsPreviewOpen(true);
+  };
+
+  const handleEdit = (template: Template) => {
+    // In a real app, you would open an edit dialog with the template data
+    toast.info('Edit functionality will be implemented in a future update');
+    // For now, just show a toast message
+  };
+
+  const handleDuplicate = async (template: Template) => {
+    try {
+      // Create a duplicate template with a slightly modified name
+      const duplicatedTemplate = {
+        ...template,
+        name: `${template.name} (Copy)`,
+        status: 'pending' as 'approved' | 'pending' | 'rejected'
+      };
+      
+      // Remove the id to create a new entry
+      delete (duplicatedTemplate as any).id;
+      delete (duplicatedTemplate as any).created_at;
+      
+      // Call the API to create the new template
+      await updateTemplate(template.id, duplicatedTemplate);
+      toast.success('Template duplicated successfully');
+      loadTemplates();
+    } catch (error) {
+      console.error('Error duplicating template:', error);
+      toast.error('Failed to duplicate template');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedTemplate) return;
+    
+    try {
+      await deleteTemplate(selectedTemplate.id);
+      toast.success('Template deleted successfully');
+      setIsDeleteDialogOpen(false);
+      loadTemplates();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      toast.error('Failed to delete template');
+    }
+  };
+
+  const openDeleteDialog = (template: Template) => {
+    setSelectedTemplate(template);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Filter templates
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (template.content && template.content.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesStatus = statusFilter === "all" || template.status === statusFilter;
+    const matchesType = typeFilter === "all" || template.type === typeFilter;
+    const matchesLanguage = languageFilter === "all" || template.language === languageFilter;
+    
+    return matchesSearch && matchesStatus && matchesType && matchesLanguage;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -185,9 +215,22 @@ const Templates = () => {
       case 'media':
         return <Image className="h-4 w-4" />;
       case 'interactive':
-        return <MessageSquare className="h-4 w-4" />;
+        return <FileText className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getMediaTypeIcon = (mediaType?: string) => {
+    switch (mediaType) {
+      case 'image':
+        return <Image className="h-4 w-4" />;
+      case 'video':
+        return <Video className="h-4 w-4" />;
+      case 'document':
+        return <File className="h-4 w-4" />;
+      default:
+        return null;
     }
   };
 
@@ -201,172 +244,16 @@ const Templates = () => {
           </p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Create New Template</DialogTitle>
-              <DialogDescription>
-                Design your WhatsApp template for business messaging
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="template-name">Template Name</Label>
-                <Input
-                  id="template-name"
-                  placeholder="e.g., Welcome Message"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Template names can only contain lowercase letters, numbers, and underscores
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Template Category</Label>
-                <Tabs defaultValue="text" onValueChange={setSelectedCategory}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="text">Text</TabsTrigger>
-                    <TabsTrigger value="media">Media</TabsTrigger>
-                    <TabsTrigger value="interactive">Interactive</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="text" className="pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="text-content">Template Content</Label>
-                      <Textarea
-                        id="text-content"
-                        placeholder="Hello {{1}}, thank you for your interest in our services. We're happy to assist you with {{2}}."
-                        className="min-h-[120px]"
-                        value={templateContent}
-                        onChange={(e) => setTemplateContent(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Use {"{{number}}"} for variables. Example: Hello {"{{1}}"}, your appointment is on {"{{2}}"}.
-                      </p>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="media" className="pt-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Media Type</Label>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Image className="h-4 w-4 mr-2" />
-                            Image
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Video className="h-4 w-4 mr-2" />
-                            Video
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <File className="h-4 w-4 mr-2" />
-                            Document
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Image className="h-8 w-8 mx-auto text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Drag and drop your media here, or click to browse
-                        </p>
-                        <Button variant="outline" size="sm" className="mt-4">
-                          Upload Media
-                        </Button>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="media-caption">Caption (Optional)</Label>
-                        <Textarea
-                          id="media-caption"
-                          placeholder="Check out our new product lineup!"
-                          className="min-h-[80px]"
-                          value={templateContent}
-                          onChange={(e) => setTemplateContent(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="interactive" className="pt-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="interactive-content">Message Content</Label>
-                        <Textarea
-                          id="interactive-content"
-                          placeholder="Would you like to schedule an appointment with us?"
-                          className="min-h-[80px]"
-                          value={templateContent}
-                          onChange={(e) => setTemplateContent(e.target.value)}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <Label>Buttons</Label>
-                          <Button variant="ghost" size="sm">
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add Button
-                          </Button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="rounded-md border p-3">
-                            <div className="flex justify-between items-center">
-                              <div className="font-medium text-sm">Yes, schedule now</div>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          <div className="rounded-md border p-3">
-                            <div className="flex justify-between items-center">
-                              <div className="font-medium text-sm">No, maybe later</div>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Tabs defaultValue="english">
-                  <TabsList>
-                    <TabsTrigger value="english">English</TabsTrigger>
-                    <TabsTrigger value="spanish">Spanish</TabsTrigger>
-                    <TabsTrigger value="more">More...</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateTemplate}>
-                Submit for Approval
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CreateTemplateDialog 
+          open={isCreateDialogOpen} 
+          onOpenChange={setIsCreateDialogOpen} 
+          onSuccess={loadTemplates}
+        />
+        
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Template
+        </Button>
       </div>
 
       <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -376,17 +263,90 @@ const Templates = () => {
             <Input
               placeholder="Search templates..."
               className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <div className="p-2">
+                <p className="text-xs font-medium mb-1">Status</p>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="p-2">
+                <p className="text-xs font-medium mb-1">Type</p>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="text">Text</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="interactive">Interactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="p-2">
+                <p className="text-xs font-medium mb-1">Language</p>
+                <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Filter by language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Languages</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
+                    <SelectItem value="fr">French</SelectItem>
+                    <SelectItem value="pt">Portuguese</SelectItem>
+                    <SelectItem value="ar">Arabic</SelectItem>
+                    <SelectItem value="hi">Hindi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <DropdownMenuSeparator />
+              
+              <div className="p-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full text-xs"
+                  onClick={() => {
+                    setStatusFilter("all");
+                    setTypeFilter("all");
+                    setLanguageFilter("all");
+                  }}
+                >
+                  Reset Filters
+                </Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         <div className="flex items-center gap-2">
           <p className="text-sm text-muted-foreground">
-            Showing <b>{templates.length}</b> templates
+            Showing <b>{filteredTemplates.length}</b> of <b>{templates.length}</b> templates
           </p>
         </div>
       </div>
@@ -399,85 +359,236 @@ const Templates = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Template</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Language</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last Used</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.map((template) => (
-                <TableRow key={template.id}>
-                  <TableCell>
-                    <div className="font-medium">{template.name}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(template.status)}`}>
-                      {getStatusIcon(template.status)}
-                      <span className="ml-1 capitalize">{template.status}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {getTypeIcon(template.type)}
-                      <span className="text-sm capitalize">{template.type}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{template.language}</TableCell>
-                  <TableCell>
-                    {new Date(template.createdAt).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    {template.lastUsed ? new Date(template.lastUsed).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    }) : '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Preview
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {loading ? (
+            <div className="text-center py-8">
+              <p>Loading templates...</p>
+            </div>
+          ) : filteredTemplates.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No templates found</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Your First Template
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Template</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Language</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Last Used</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredTemplates.map((template) => (
+                  <TableRow key={template.id}>
+                    <TableCell>
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <div className="font-medium cursor-pointer hover:text-blue-600">
+                            {template.name}
+                          </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-80 text-sm">
+                          <div className="space-y-2">
+                            <h4 className="font-semibold">{template.name}</h4>
+                            <div className="text-muted-foreground break-words">
+                              {template.content}
+                            </div>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                    </TableCell>
+                    <TableCell>
+                      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(template.status)}`}>
+                        {getStatusIcon(template.status)}
+                        <span className="ml-1 capitalize">{template.status}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {getTypeIcon(template.type)}
+                        <span className="text-sm capitalize">{template.type}</span>
+                        {template.media_type && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            ({template.media_type})
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {template.language === 'en' ? 'English' : 
+                       template.language === 'es' ? 'Spanish' : 
+                       template.language === 'fr' ? 'French' : 
+                       template.language === 'pt' ? 'Portuguese' : template.language}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(template.created_at).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {template.last_used ? new Date(template.last_used).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }) : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handlePreview(template)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Preview
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(template)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicate(template)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => openDeleteDialog(template)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+      
+      {/* Preview Template Sheet */}
+      <Sheet open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Template Preview</SheetTitle>
+            <SheetDescription>
+              This is how your template will appear to recipients
+            </SheetDescription>
+          </SheetHeader>
+          {selectedTemplate && (
+            <div className="mt-6 space-y-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Name</p>
+                <p className="text-sm">{selectedTemplate.name}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Status</p>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedTemplate.status)}`}>
+                  {getStatusIcon(selectedTemplate.status)}
+                  <span className="ml-1 capitalize">{selectedTemplate.status}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Type</p>
+                <div className="flex items-center gap-1.5">
+                  {getTypeIcon(selectedTemplate.type)}
+                  <span className="text-sm capitalize">{selectedTemplate.type}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Language</p>
+                <p className="text-sm">{selectedTemplate.language === 'en' ? 'English' : selectedTemplate.language}</p>
+              </div>
+              
+              {selectedTemplate.media_type && selectedTemplate.media_url && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Media</p>
+                  <div className="flex items-center gap-1.5">
+                    {getMediaTypeIcon(selectedTemplate.media_type)}
+                    <span className="text-sm">{selectedTemplate.media_type}</span>
+                  </div>
+                  {selectedTemplate.media_type === 'image' && (
+                    <div className="mt-2 border rounded overflow-hidden">
+                      <img 
+                        src={selectedTemplate.media_url} 
+                        alt="Template media" 
+                        className="max-h-40 w-auto mx-auto"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Content</p>
+                <div className="p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm whitespace-pre-line">{selectedTemplate.content}</p>
+                </div>
+              </div>
+              
+              {selectedTemplate.buttons && selectedTemplate.buttons.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Buttons</p>
+                  <div className="space-y-2">
+                    {selectedTemplate.buttons.map((button, index) => (
+                      <div key={index} className="p-2 border rounded-md">
+                        <div className="font-medium text-sm">{button.text}</div>
+                        <div className="text-xs text-muted-foreground capitalize">
+                          {button.type.replace('_', ' ')}
+                          {button.value && ` • ${button.value}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the template
+              "{selectedTemplate?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
