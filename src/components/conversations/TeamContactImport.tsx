@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Contact } from '@/types/conversation';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { importContactsFromTeam } from '@/services/contactService';
 
@@ -35,11 +35,7 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       setTeamMembers(data || []);
     } catch (error) {
       console.error('Error fetching team members:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load team members',
-        variant: 'destructive',
-      });
+      toast.error('Failed to load team members');
     } finally {
       setLoading(false);
     }
@@ -74,19 +70,11 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       // Pass the imported contacts back to the parent component
       onImportComplete(selectedContacts);
       
-      toast({
-        title: 'Team contacts imported',
-        description: `${selectedContacts.length} team contacts imported successfully`,
-      });
       setOpen(false);
       setSelectedMembers([]);
     } catch (error) {
       console.error('Error importing team contacts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to import team contacts',
-        variant: 'destructive',
-      });
+      toast.error('Failed to import team contacts');
     } finally {
       setLoading(false);
     }
@@ -143,9 +131,9 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
             </Button>
             <Button 
               onClick={handleImport}
-              disabled={selectedMembers.length === 0 || loading}
+              disabled={loading || (selectedMembers.length === 0 && teamMembers.length > 0)}
             >
-              Import {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ""}
+              Import {selectedMembers.length > 0 ? `(${selectedMembers.length})` : "All"}
             </Button>
           </div>
         </DialogContent>

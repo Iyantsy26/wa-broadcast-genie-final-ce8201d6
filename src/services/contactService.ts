@@ -37,18 +37,26 @@ export const blockContact = async (contactId: string, isBlocked: boolean): Promi
   }
 };
 
+// Function to validate UUID format
+const isValidUUID = (uuid: string): boolean => {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(uuid);
+};
+
 export const importContactsFromTeam = async (): Promise<Contact[]> => {
   try {
     // Get team members
     const { data: teamMembers, error: teamError } = await supabase
       .from('team_members')
-      .select('*');
+      .select('*')
+      .eq('status', 'active');
       
     if (teamError) {
       throw teamError;
     }
     
     if (!teamMembers || teamMembers.length === 0) {
+      toast.error('No active team members found to import');
       return [];
     }
     
@@ -67,6 +75,12 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     
     // Update conversations table to include these team members
     for (const contact of contacts) {
+      // Skip if not a valid UUID 
+      if (!isValidUUID(contact.id)) {
+        console.warn(`Skipping contact with invalid UUID: ${contact.id}`);
+        continue;
+      }
+
       // Check if conversation already exists for this team member
       const { data: existingConv } = await supabase
         .from('conversations')
@@ -87,7 +101,11 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
       }
     }
     
-    toast.success(`Imported ${contacts.length} team contacts`);
+    if (contacts.length > 0) {
+      toast.success(`Imported ${contacts.length} team contacts`);
+    } else {
+      toast.warning('No contacts were imported');
+    }
     return contacts;
   } catch (error) {
     console.error('Error importing team contacts:', error);

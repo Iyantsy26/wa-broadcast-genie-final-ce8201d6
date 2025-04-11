@@ -9,12 +9,35 @@ import { getConversations } from '@/services/conversationService';
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { TeamContactImport } from '@/components/conversations/TeamContactImport';
-import { importContactsFromTeam } from '@/services/contactService';
+import { supabase } from '@/integrations/supabase/client';
 
 const Conversations = () => {
-  const [selectedDevice, setSelectedDevice] = useState('1');
+  const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch available devices on component mount
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('device_accounts')
+          .select('id, name')
+          .eq('status', 'connected')
+          .limit(1);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setSelectedDevice(data[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching devices:', error);
+      }
+    };
+    
+    fetchDevices();
+  }, []);
 
   useEffect(() => {
     async function fetchContactsFromAllSources() {
@@ -47,8 +70,26 @@ const Conversations = () => {
           tags: client.tags || []
         }));
 
-        // Fetch team contacts that were previously imported
-        const teamContacts = await importContactsFromTeam();
+        // Fetch team members
+        const { data: teamMembers, error: teamError } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('status', 'active');
+
+        if (teamError) throw teamError;
+
+        // Convert to contacts
+        const teamContacts: Contact[] = (teamMembers || []).map(member => ({
+          id: member.id,
+          name: member.name,
+          avatar: member.avatar,
+          phone: member.phone || '',
+          type: 'team' as const,
+          isOnline: true,
+          lastSeen: member.last_active || new Date().toISOString(),
+          role: member.role,
+          tags: []
+        }));
 
         // Combine all contacts
         const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
@@ -73,21 +114,27 @@ const Conversations = () => {
     fetchContactsFromAllSources();
   }, []);
 
-  const handleTeamContactsImported = async (importedContacts: Contact[]) => {
+  const handleTeamContactsImported = (importedContacts: Contact[]) => {
     // Add the newly imported contacts to our state
     setContacts(prevContacts => {
       // Filter out existing team contacts with the same IDs to avoid duplicates
-      const filteredContacts = prevContacts.filter(contact => 
-        contact.type !== 'team' || !importedContacts.some(imp => imp.id === contact.id)
-      );
+      const existingIds = new Set(prevContacts.filter(c => c.type === 'team').map(c => c.id));
+      const newContacts = importedContacts.filter(c => !existingIds.has(c.id));
       
-      // Add the new imported contacts
-      return [...filteredContacts, ...importedContacts];
-    });
-    
-    toast({
-      title: 'Team contacts imported',
-      description: `${importedContacts.length} team contacts imported successfully`,
+      if (newContacts.length === 0) {
+        toast({
+          title: 'No new contacts',
+          description: 'All team contacts have already been imported',
+        });
+        return prevContacts;
+      }
+      
+      toast({
+        title: 'Team contacts imported',
+        description: `${newContacts.length} team contacts imported successfully`,
+      });
+      
+      return [...prevContacts, ...newContacts];
     });
   };
 

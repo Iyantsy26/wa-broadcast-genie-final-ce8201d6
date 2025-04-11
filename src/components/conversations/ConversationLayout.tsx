@@ -53,8 +53,20 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
   useEffect(() => {
     if (!currentDeviceId) return;
     
+    // Check if the device ID is a valid UUID before making the database query
+    const isValidUUID = (id: string): boolean => {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidPattern.test(id);
+    };
+    
     const checkDeviceStatus = async () => {
       try {
+        // Skip the check if not a valid UUID
+        if (!isValidUUID(currentDeviceId)) {
+          console.log('Device ID is not a valid UUID:', currentDeviceId);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('device_accounts')
           .select('status')
@@ -77,38 +89,41 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
       }
     };
     
-    checkDeviceStatus();
-    
-    const channel = supabase
-      .channel('device-status')
-      .on('postgres_changes', 
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'device_accounts',
-          filter: `id=eq.${currentDeviceId}`
-        },
-        (payload) => {
-          const status = payload.new?.status;
-          if (status === 'disconnected') {
-            toast({
-              title: "Device disconnected",
-              description: "Your WhatsApp device has been disconnected. Please reconnect it to continue messaging.",
-              variant: "destructive",
-            });
-          } else if (status === 'connected') {
-            toast({
-              title: "Device connected",
-              description: "Your WhatsApp device is now connected.",
-            });
-          }
-        }
-      )
-      .subscribe();
+    // Only check status if valid UUID
+    if (isValidUUID(currentDeviceId)) {
+      checkDeviceStatus();
       
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      const channel = supabase
+        .channel('device-status')
+        .on('postgres_changes', 
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'device_accounts',
+            filter: `id=eq.${currentDeviceId}`
+          },
+          (payload) => {
+            const status = payload.new?.status;
+            if (status === 'disconnected') {
+              toast({
+                title: "Device disconnected",
+                description: "Your WhatsApp device has been disconnected. Please reconnect it to continue messaging.",
+                variant: "destructive",
+              });
+            } else if (status === 'connected') {
+              toast({
+                title: "Device connected",
+                description: "Your WhatsApp device is now connected.",
+              });
+            }
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [currentDeviceId]);
   
   const changeWallpaper = (wallpaperUrl: string | null) => {
