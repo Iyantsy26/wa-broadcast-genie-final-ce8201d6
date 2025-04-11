@@ -9,6 +9,7 @@ import { getConversations } from '@/services/conversationService';
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { TeamContactImport } from '@/components/conversations/TeamContactImport';
+import { importContactsFromTeam } from '@/services/contactService';
 
 const Conversations = () => {
   const [selectedDevice, setSelectedDevice] = useState('1');
@@ -46,8 +47,11 @@ const Conversations = () => {
           tags: client.tags || []
         }));
 
+        // Fetch team contacts that were previously imported
+        const teamContacts = await importContactsFromTeam();
+
         // Combine all contacts
-        const allContacts = [...leadContacts, ...clientContacts];
+        const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
         setContacts(allContacts);
 
         toast({
@@ -69,8 +73,18 @@ const Conversations = () => {
     fetchContactsFromAllSources();
   }, []);
 
-  const handleTeamContactsImported = (importedContacts: Contact[]) => {
-    setContacts([...contacts, ...importedContacts]);
+  const handleTeamContactsImported = async (importedContacts: Contact[]) => {
+    // Add the newly imported contacts to our state
+    setContacts(prevContacts => {
+      // Filter out existing team contacts with the same IDs to avoid duplicates
+      const filteredContacts = prevContacts.filter(contact => 
+        contact.type !== 'team' || !importedContacts.some(imp => imp.id === contact.id)
+      );
+      
+      // Add the new imported contacts
+      return [...filteredContacts, ...importedContacts];
+    });
+    
     toast({
       title: 'Team contacts imported',
       description: `${importedContacts.length} team contacts imported successfully`,

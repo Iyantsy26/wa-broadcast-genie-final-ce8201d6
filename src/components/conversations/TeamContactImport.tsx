@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { importContactsFromTeam } from '@/services/contactService';
 
 interface TeamContactImportProps {
   onImportComplete: (contacts: Contact[]) => void;
@@ -57,28 +58,45 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
     }
   };
 
-  const handleImport = () => {
-    // Convert selected team members to contacts
-    const importedContacts: Contact[] = teamMembers
-      .filter(member => selectedMembers.includes(member.id))
-      .map(member => ({
-        id: member.id,
-        name: member.name,
-        avatar: member.avatar,
-        phone: member.phone || '',
-        type: 'team',
-        isOnline: true,
-        lastSeen: new Date().toISOString(),
-        tags: []
-      }));
-    
-    onImportComplete(importedContacts);
-    toast({
-      title: 'Team contacts imported',
-      description: `${importedContacts.length} team contacts imported successfully`,
-    });
-    setOpen(false);
-    setSelectedMembers([]);
+  const handleImport = async () => {
+    try {
+      setLoading(true);
+      // Convert selected team members to contacts
+      const importedContacts: Contact[] = teamMembers
+        .filter(member => selectedMembers.includes(member.id))
+        .map(member => ({
+          id: member.id,
+          name: member.name,
+          avatar: member.avatar,
+          phone: member.phone || '',
+          type: 'team',
+          isOnline: true,
+          lastSeen: new Date().toISOString(),
+          tags: []
+        }));
+      
+      // Store contacts in the database using the service
+      await importContactsFromTeam();
+      
+      // Pass the imported contacts back to the parent component
+      onImportComplete(importedContacts);
+      
+      toast({
+        title: 'Team contacts imported',
+        description: `${importedContacts.length} team contacts imported successfully`,
+      });
+      setOpen(false);
+      setSelectedMembers([]);
+    } catch (error) {
+      console.error('Error importing team contacts:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to import team contacts',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -142,5 +160,3 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
     </>
   );
 };
-
-// No change needed to the exported component

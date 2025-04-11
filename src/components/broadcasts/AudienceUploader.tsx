@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Upload, File, X } from "lucide-react";
+import { Upload, File as FileIcon, X } from "lucide-react";
 
 interface AudienceUploaderProps {
   onUploadComplete: (contacts: any[]) => void;
@@ -61,17 +61,44 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
     // Here we'll simulate successful parsing
     
     try {
-      // Mock data for demo purposes
-      const mockContacts = [
-        { name: 'John Doe', phone: '+15551234567' },
-        { name: 'Jane Smith', phone: '+15559876543' },
-        { name: 'Alex Johnson', phone: '+15557890123' },
-        // Add more mock contacts as needed
-      ];
-
-      toast.success(`Successfully imported ${mockContacts.length} contacts`);
-      onUploadComplete(mockContacts);
-      resetUploader();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        
+        // Basic CSV parsing
+        const rows = text.split('\n');
+        const headers = rows[0].split(',');
+        
+        // Check for required headers
+        const nameIndex = headers.findIndex(h => h.trim().toLowerCase() === 'name');
+        const phoneIndex = headers.findIndex(h => h.trim().toLowerCase() === 'phone');
+        
+        if (nameIndex === -1 || phoneIndex === -1) {
+          toast.error('CSV must contain "name" and "phone" columns');
+          setIsUploading(false);
+          return;
+        }
+        
+        // Process rows
+        const contacts = rows.slice(1).map((row, index) => {
+          const columns = row.split(',');
+          return {
+            id: `imported-${index}`,
+            name: columns[nameIndex].trim(),
+            phone: columns[phoneIndex].trim(),
+          };
+        }).filter(contact => contact.name && contact.phone);
+        
+        toast.success(`Successfully imported ${contacts.length} contacts`);
+        onUploadComplete(contacts);
+        resetUploader();
+      };
+      
+      reader.onerror = () => {
+        throw new Error('Failed to read file');
+      };
+      
+      reader.readAsText(file);
     } catch (error) {
       console.error('Error parsing CSV:', error);
       toast.error('Failed to parse CSV file');
@@ -126,7 +153,7 @@ export function AudienceUploader({ onUploadComplete }: AudienceUploaderProps) {
         <div className="border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <File className="h-5 w-5 mr-2 text-blue-500" />
+              <FileIcon className="h-5 w-5 mr-2 text-blue-500" />
               <div>
                 <p className="font-medium text-sm">{file.name}</p>
                 <p className="text-xs text-muted-foreground">

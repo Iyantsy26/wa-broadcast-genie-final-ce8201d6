@@ -65,6 +65,28 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
       tags: []
     }));
     
+    // Update conversations table to include these team members
+    for (const contact of contacts) {
+      // Check if conversation already exists for this team member
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('lead_id', contact.id)
+        .maybeSingle();
+      
+      // If not, create a new conversation entry
+      if (!existingConv) {
+        await supabase
+          .from('conversations')
+          .insert({
+            lead_id: contact.id,
+            status: 'active',
+            last_message: 'Conversation started',
+            last_message_timestamp: new Date().toISOString()
+          });
+      }
+    }
+    
     toast.success(`Imported ${contacts.length} team contacts`);
     return contacts;
   } catch (error) {

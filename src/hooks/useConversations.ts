@@ -5,6 +5,7 @@ import { useConversationMessages } from './conversations/useConversationMessages
 import { useConversationActions } from './conversations/useConversationActions';
 import { useState } from 'react';
 import { Conversation, ChatType } from '@/types/conversation';
+import { importContactsFromTeam } from '@/services/contactService';
 
 export const useConversations = () => {
   const {
@@ -54,6 +55,34 @@ export const useConversations = () => {
     setIsSidebarOpen
   );
 
+  // Add function to handle team contact imports
+  const handleImportTeamContacts = async () => {
+    try {
+      const importedContacts = await importContactsFromTeam();
+      
+      if (importedContacts.length > 0) {
+        // Convert imported contacts to conversations
+        const newConversations: Conversation[] = importedContacts.map(contact => ({
+          id: `team-${contact.id}`,
+          contact: contact,
+          lastMessage: {
+            content: 'Conversation started',
+            timestamp: new Date().toISOString(),
+            isOutbound: false,
+            isRead: true
+          },
+          chatType: 'team',
+          unreadCount: 0
+        }));
+        
+        // Add the new conversations
+        setConversations(prev => [...prev, ...newConversations]);
+      }
+    } catch (error) {
+      console.error('Error importing team contacts:', error);
+    }
+  };
+
   return {
     // State
     conversations,
@@ -94,6 +123,9 @@ export const useConversations = () => {
     handleDeleteConversation,
     handleArchiveConversation,
     handleAddTag,
-    handleAssignConversation
+    handleAssignConversation,
+    
+    // Team import
+    handleImportTeamContacts
   };
 };
