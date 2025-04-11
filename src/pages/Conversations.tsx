@@ -47,7 +47,7 @@ const Conversations = () => {
           tags: client.tags || []
         }));
 
-        // Fetch team contacts that were previously imported
+        // Automatically fetch and add team contacts
         const teamContacts = await importContactsFromTeam();
 
         // Combine all contacts
@@ -73,22 +73,34 @@ const Conversations = () => {
     fetchContactsFromAllSources();
   }, []);
 
-  const handleTeamContactsImported = async (importedContacts: Contact[]) => {
-    // Add the newly imported contacts to our state
-    setContacts(prevContacts => {
-      // Filter out existing team contacts with the same IDs to avoid duplicates
-      const filteredContacts = prevContacts.filter(contact => 
-        contact.type !== 'team' || !importedContacts.some(imp => imp.id === contact.id)
-      );
+  const handleTeamContactsImported = async () => {
+    try {
+      // Re-import team contacts - this will update any changed data
+      const importedContacts = await importContactsFromTeam();
       
-      // Add the new imported contacts
-      return [...filteredContacts, ...importedContacts];
-    });
-    
-    toast({
-      title: 'Team contacts imported',
-      description: `${importedContacts.length} team contacts imported successfully`,
-    });
+      // Add the newly imported contacts to our state
+      setContacts(prevContacts => {
+        // Filter out existing team contacts to avoid duplicates
+        const filteredContacts = prevContacts.filter(contact => 
+          contact.type !== 'team' || !importedContacts.some(imp => imp.id === contact.id)
+        );
+        
+        // Add the new imported contacts
+        return [...filteredContacts, ...importedContacts];
+      });
+      
+      toast({
+        title: 'Team contacts refreshed',
+        description: `${importedContacts.length} team contacts refreshed successfully`,
+      });
+    } catch (error) {
+      console.error('Error importing team contacts:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh team contacts',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

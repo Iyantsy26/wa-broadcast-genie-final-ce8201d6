@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { importContactsFromTeam } from '@/services/contactService';
 
 interface TeamContactImportProps {
-  onImportComplete: (contacts: Contact[]) => void;
+  onImportComplete: () => void;
 }
 
 export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportComplete }) => {
@@ -62,21 +62,15 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
     try {
       setLoading(true);
       
-      // Import all contacts from team service
-      const importedContacts = await importContactsFromTeam();
+      // Use the service to import contacts
+      await importContactsFromTeam();
       
-      // Filter to only selected members if selections were made
-      let selectedContacts = importedContacts;
-      if (selectedMembers.length > 0) {
-        selectedContacts = importedContacts.filter(contact => selectedMembers.includes(contact.id));
-      }
-      
-      // Pass the imported contacts back to the parent component
-      onImportComplete(selectedContacts);
+      // Call the callback to notify parent component
+      onImportComplete();
       
       toast({
         title: 'Team contacts imported',
-        description: `${selectedContacts.length} team contacts imported successfully`,
+        description: `Team contacts imported successfully`,
       });
       setOpen(false);
       setSelectedMembers([]);
@@ -94,9 +88,9 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
 
   return (
     <>
-      <Button variant="outline" onClick={handleOpen} className="flex items-center gap-2">
+      <Button variant="outline" onClick={handleImport} className="flex items-center gap-2">
         <Users className="h-4 w-4" />
-        <span>Import Team</span>
+        <span>Refresh Team</span>
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>
@@ -143,9 +137,9 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
             </Button>
             <Button 
               onClick={handleImport}
-              disabled={selectedMembers.length === 0 || loading}
+              disabled={loading}
             >
-              Import {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ""}
+              Refresh Team Contacts
             </Button>
           </div>
         </DialogContent>

@@ -3,8 +3,8 @@ import { useConversationState } from './conversations/useConversationState';
 import { useConversationFilters } from './conversations/useConversationFilters';
 import { useConversationMessages } from './conversations/useConversationMessages';
 import { useConversationActions } from './conversations/useConversationActions';
-import { useState } from 'react';
-import { Conversation, ChatType } from '@/types/conversation';
+import { useState, useEffect } from 'react';
+import { Conversation, Contact, ChatType } from '@/types/conversation';
 import { importContactsFromTeam } from '@/services/contactService';
 
 export const useConversations = () => {
@@ -75,13 +75,28 @@ export const useConversations = () => {
           unreadCount: 0
         }));
         
-        // Add the new conversations
-        setConversations(prev => [...prev, ...newConversations]);
+        // Add the new conversations, avoiding duplicates
+        setConversations(prev => {
+          // Filter out any existing conversations with the same team_member_id
+          const filteredPrev = prev.filter(conversation => 
+            conversation.chatType !== 'team' || 
+            !newConversations.some(newConv => 
+              newConv.contact.id === conversation.contact.id
+            )
+          );
+          
+          return [...filteredPrev, ...newConversations];
+        });
       }
     } catch (error) {
       console.error('Error importing team contacts:', error);
     }
   };
+
+  // Auto-import team contacts on component mount
+  useEffect(() => {
+    handleImportTeamContacts();
+  }, []);
 
   return {
     // State

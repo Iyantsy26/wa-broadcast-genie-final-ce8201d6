@@ -3,11 +3,14 @@ import { Conversation, Contact, ChatType } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 import { getLeads } from '../leadService';
 import { getClients } from '../clientService';
+import { importContactsFromTeam } from '../contactService';
 
 export const getConversations = async (): Promise<Conversation[]> => {
   try {
+    // Get data from all sources
     const leads = await getLeads();
     const clients = await getClients();
+    const teamContacts = await importContactsFromTeam();
     
     // Create lead conversations
     const leadConversations = leads.map(lead => {
@@ -74,9 +77,31 @@ export const getConversations = async (): Promise<Conversation[]> => {
         unreadCount: 0
       } as Conversation;
     });
+
+    // Create team member conversations
+    const teamConversations = teamContacts.map(contact => {
+      return {
+        id: `team-conversation-${contact.id}`,
+        contact,
+        lastMessage: {
+          content: 'This is a team conversation',
+          timestamp: new Date().toISOString(),
+          isOutbound: false,
+          isRead: true
+        },
+        status: 'open',
+        chatType: 'team' as ChatType,
+        tags: [],
+        assignedTo: '',
+        isEncrypted: false,
+        isPinned: false,
+        isArchived: false,
+        unreadCount: 0
+      } as Conversation;
+    });
     
     // Combine and return all conversations
-    return [...leadConversations, ...clientConversations];
+    return [...leadConversations, ...clientConversations, ...teamConversations];
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return [];
