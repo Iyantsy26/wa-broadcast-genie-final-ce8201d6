@@ -4,9 +4,8 @@ import { useConversationFilters } from './conversations/useConversationFilters';
 import { useConversationMessages } from './conversations/useConversationMessages';
 import { useConversationActions } from './conversations/useConversationActions';
 import { useState } from 'react';
-import { Conversation, ChatType, Contact } from '@/types/conversation';
+import { Conversation, ChatType } from '@/types/conversation';
 import { importContactsFromTeam } from '@/services/contactService';
-import { toast } from 'sonner';
 
 export const useConversations = () => {
   const {
@@ -62,7 +61,7 @@ export const useConversations = () => {
       const importedContacts = await importContactsFromTeam();
       
       if (importedContacts.length > 0) {
-        // Create unique IDs for conversations based on contact IDs
+        // Convert imported contacts to conversations
         const newConversations: Conversation[] = importedContacts.map(contact => ({
           id: `team-${contact.id}`,
           contact: contact,
@@ -76,22 +75,11 @@ export const useConversations = () => {
           unreadCount: 0
         }));
         
-        // Filter out any existing contacts with the same ID to prevent duplicates
-        const existingIds = new Set(conversations.map(conv => conv.contact.id));
-        const uniqueNewConversations = newConversations.filter(
-          conv => !existingIds.has(conv.contact.id)
-        );
-        
-        if (uniqueNewConversations.length > 0) {
-          setConversations(prev => [...prev, ...uniqueNewConversations]);
-          toast.success(`${uniqueNewConversations.length} team contacts imported successfully`);
-        } else {
-          toast.info('All team contacts were already imported');
-        }
+        // Add the new conversations
+        setConversations(prev => [...prev, ...newConversations]);
       }
     } catch (error) {
       console.error('Error importing team contacts:', error);
-      toast.error('Failed to import team contacts');
     }
   };
 
