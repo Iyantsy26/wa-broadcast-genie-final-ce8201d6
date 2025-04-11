@@ -71,7 +71,7 @@ export const languages: Language[] = [
   { code: 'tr', name: 'Turkish', nativeName: 'Türkçe' },
   { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'ur', name: 'Urdu', nativeName: 'اردو' },
-  { code: 'uz', name: 'Uzbek', nativeName: 'O'zbek' },
+  { code: 'uz', name: 'Uzbek', nativeName: "O'zbek" },
   { code: 'vi', name: 'Vietnamese', nativeName: 'Tiếng Việt' },
   { code: 'zu', name: 'Zulu', nativeName: 'isiZulu' }
 ];
