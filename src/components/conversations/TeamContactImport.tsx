@@ -61,29 +61,22 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
   const handleImport = async () => {
     try {
       setLoading(true);
-      // Convert selected team members to contacts
-      const importedContacts: Contact[] = teamMembers
-        .filter(member => selectedMembers.includes(member.id))
-        .map(member => ({
-          id: member.id,
-          name: member.name,
-          avatar: member.avatar,
-          phone: member.phone || '',
-          type: 'team',
-          isOnline: true,
-          lastSeen: new Date().toISOString(),
-          tags: []
-        }));
       
-      // Store contacts in the database using the service
-      await importContactsFromTeam();
+      // Import all contacts from team service
+      const importedContacts = await importContactsFromTeam();
+      
+      // Filter to only selected members if selections were made
+      let selectedContacts = importedContacts;
+      if (selectedMembers.length > 0) {
+        selectedContacts = importedContacts.filter(contact => selectedMembers.includes(contact.id));
+      }
       
       // Pass the imported contacts back to the parent component
-      onImportComplete(importedContacts);
+      onImportComplete(selectedContacts);
       
       toast({
         title: 'Team contacts imported',
-        description: `${importedContacts.length} team contacts imported successfully`,
+        description: `${selectedContacts.length} team contacts imported successfully`,
       });
       setOpen(false);
       setSelectedMembers([]);

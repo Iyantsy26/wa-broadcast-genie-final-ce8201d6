@@ -200,6 +200,7 @@ export type Database = {
           lead_id: string | null
           status: string | null
           tags: string[] | null
+          team_member_id: string | null
           updated_at: string
         }
         Insert: {
@@ -212,6 +213,7 @@ export type Database = {
           lead_id?: string | null
           status?: string | null
           tags?: string[] | null
+          team_member_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -224,9 +226,18 @@ export type Database = {
           lead_id?: string | null
           status?: string | null
           tags?: string[] | null
+          team_member_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_team_members"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       departments: {
         Row: {

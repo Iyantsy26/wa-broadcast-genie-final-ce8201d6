@@ -59,7 +59,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
       avatar: member.avatar,
       phone: member.phone || '',
       type: 'team',
-      isOnline: member.status === 'online',
+      isOnline: member.status === 'active',
       lastSeen: member.last_active || new Date().toISOString(),
       role: member.role,
       tags: []
@@ -71,7 +71,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
-        .eq('lead_id', contact.id)
+        .eq('team_member_id', contact.id)
         .maybeSingle();
       
       // If not, create a new conversation entry
@@ -79,7 +79,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
         await supabase
           .from('conversations')
           .insert({
-            lead_id: contact.id,
+            team_member_id: contact.id,
             status: 'active',
             last_message: 'Conversation started',
             last_message_timestamp: new Date().toISOString()

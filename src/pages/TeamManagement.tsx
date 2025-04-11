@@ -53,6 +53,7 @@ import DepartmentCard from '@/components/team/DepartmentCard';
 import DepartmentForm from '@/components/team/DepartmentForm';
 import RolePermissionsForm from '@/components/team/RolePermissionsForm';
 import TeamMemberProfile from '@/components/team/TeamMemberProfile';
+import { supabase } from "@/integrations/supabase/client";
 
 const TeamManagement = () => {
   const { toast } = useToast();
@@ -106,6 +107,77 @@ const TeamManagement = () => {
     };
     
     fetchData();
+    
+    const teamMembersChannel = supabase
+      .channel('team_members_changes')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'team_members'
+        }, 
+        async (payload) => {
+          console.log('Team members change detected:', payload);
+          const updatedMembers = await getTeamMembers();
+          setMembers(updatedMembers);
+          
+          if (payload.eventType === 'INSERT') {
+            toast({
+              title: "Team member added",
+              description: "A new team member has been added",
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            toast({
+              title: "Team member updated",
+              description: "Team member information has been updated",
+            });
+          } else if (payload.eventType === 'DELETE') {
+            toast({
+              title: "Team member removed",
+              description: "A team member has been removed from the system",
+            });
+          }
+        }
+      )
+      .subscribe();
+      
+    const departmentsChannel = supabase
+      .channel('departments_changes')
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'departments'
+        }, 
+        async (payload) => {
+          console.log('Departments change detected:', payload);
+          const updatedDepartments = await getDepartments();
+          setDepartments(updatedDepartments);
+          
+          if (payload.eventType === 'INSERT') {
+            toast({
+              title: "Department added",
+              description: "A new department has been created",
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            toast({
+              title: "Department updated",
+              description: "Department information has been updated",
+            });
+          } else if (payload.eventType === 'DELETE') {
+            toast({
+              title: "Department removed",
+              description: "A department has been removed from the system",
+            });
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(teamMembersChannel);
+      supabase.removeChannel(departmentsChannel);
+    };
   }, [toast]);
 
   const filteredMembers = members.filter(member => {

@@ -117,10 +117,7 @@ export const getTeamMembers = async (): Promise<TeamMember[]> => {
     return result;
   } catch (error) {
     console.error('Error in getTeamMembers:', error);
-    
-    // Return mock data as fallback
-    console.log("Returning mock team members data");
-    return mockTeamMembers;
+    return [];
   }
 };
 
@@ -228,57 +225,52 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
     }
     
     // Create the new team member record
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          id: memberId,
-          name: member.name,
-          email: member.email,
-          phone: member.phone,
-          avatar: member.avatar,
-          role: member.role,
-          status: member.status,
-          position: member.position,
-          address: member.address,
-          company: member.company,
-          department_id: departmentId,
-          last_active: new Date().toISOString(),
-        });
+    const { data, error } = await supabase
+      .from('team_members')
+      .insert({
+        id: memberId,
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        avatar: member.avatar,
+        role: member.role,
+        status: member.status,
+        position: member.position,
+        address: member.address,
+        company: member.company,
+        department_id: departmentId,
+        last_active: new Date().toISOString(),
+      })
+      .select();
 
-      if (error) {
-        console.error("Database error when inserting team member:", error);
-        throw error;
-      }
-      
-      // Handle WhatsApp account assignments if provided
-      if (member.whatsappAccounts && member.whatsappAccounts.length > 0) {
-        // Lookup the account IDs by name
-        for (const accountName of member.whatsappAccounts) {
-          try {
-            const { data: accountData } = await supabase
-              .from('whatsapp_accounts')
-              .select('id')
-              .eq('account_name', accountName)
-              .single();
-              
-            if (accountData) {
-              await supabase
-                .from('team_member_whatsapp_accounts')
-                .insert({
-                  team_member_id: memberId,
-                  whatsapp_account_id: accountData.id
-                });
-            }
-          } catch (error) {
-            console.error(`Error assigning WhatsApp account ${accountName}:`, error);
+    if (error) {
+      console.error("Database error when inserting team member:", error);
+      throw error;
+    }
+    
+    // Handle WhatsApp account assignments if provided
+    if (member.whatsappAccounts && member.whatsappAccounts.length > 0) {
+      // Lookup the account IDs by name
+      for (const accountName of member.whatsappAccounts) {
+        try {
+          const { data: accountData } = await supabase
+            .from('whatsapp_accounts')
+            .select('id')
+            .eq('account_name', accountName)
+            .single();
+            
+          if (accountData) {
+            await supabase
+              .from('team_member_whatsapp_accounts')
+              .insert({
+                team_member_id: memberId,
+                whatsapp_account_id: accountData.id
+              });
           }
+        } catch (error) {
+          console.error(`Error assigning WhatsApp account ${accountName}:`, error);
         }
       }
-      
-    } catch (error) {
-      console.error("Error during team member creation:", error);
-      // Continue with the mock data approach as fallback
     }
     
     // Create the complete team member object to return
@@ -298,52 +290,11 @@ export const addTeamMember = async (member: Omit<TeamMember, 'id'>): Promise<Tea
       department: member.department,
       lastActive: member.lastActive || new Date().toISOString()
     };
-    
-    // Add the new team member to mock data as well
-    mockTeamMembers.push(newMember);
-    
-    // Update department member count if needed
-    if (member.department) {
-      const departmentIndex = mockDepartments.findIndex(d => d.name === member.department);
-      if (departmentIndex >= 0) {
-        mockDepartments[departmentIndex].memberCount++;
-      }
-    }
 
     return newMember;
   } catch (error) {
     console.error('Error in addTeamMember:', error);
-    
-    // Fallback to mock data
-    const memberId = uuidv4();
-    const newMember: TeamMember = {
-      id: memberId,
-      name: member.name,
-      email: member.email,
-      phone: member.phone,
-      avatar: member.avatar,
-      role: member.role,
-      status: member.status,
-      position: member.position,
-      address: member.address,
-      company: member.company,
-      whatsappAccounts: member.whatsappAccounts || [],
-      whatsappPermissions: member.whatsappPermissions || [],
-      department: member.department,
-      lastActive: member.lastActive || new Date().toISOString()
-    };
-    
-    mockTeamMembers.push(newMember);
-    
-    // Update department member count if needed
-    if (member.department) {
-      const departmentIndex = mockDepartments.findIndex(d => d.name === member.department);
-      if (departmentIndex >= 0) {
-        mockDepartments[departmentIndex].memberCount++;
-      }
-    }
-    
-    return newMember;
+    throw error;
   }
 };
 
@@ -451,12 +402,17 @@ export const updateTeamMember = async (id: string, updates: Partial<TeamMember>)
 
 export const deleteTeamMember = async (id: string): Promise<void> => {
   try {
-    // Remove from mock data
-    const memberIndex = mockTeamMembers.findIndex(m => m.id === id);
-    if (memberIndex >= 0) {
-      mockTeamMembers.splice(memberIndex, 1);
-      console.log('Removed team member from mock data:', id);
+    const { error } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting team member:', error);
+      throw error;
     }
+    
+    console.log('Successfully deleted team member with ID:', id);
   } catch (error) {
     console.error('Error in deleteTeamMember:', error);
     throw error;
@@ -469,7 +425,7 @@ export const deleteTeamMember = async (id: string): Promise<void> => {
 export const activateTeamMember = async (id: string): Promise<TeamMember> => {
   console.log(`Activating team member with ID: ${id}`);
   try {
-    // First try to update in the database
+    // Update in the database
     const { data, error } = await supabase
       .from('team_members')
       .update({ 
@@ -481,16 +437,14 @@ export const activateTeamMember = async (id: string): Promise<TeamMember> => {
 
     if (error) {
       console.error("Error activating team member in database:", error);
-    } else {
-      console.log("Successfully activated team member in database:", data);
+      throw error;
     }
-
-    // Fallback to updateTeamMember which handles both database and mock data
-    return updateTeamMember(id, { status: 'active' });
+    
+    // Get the updated team member details
+    return getTeamMemberById(id) as Promise<TeamMember>;
   } catch (error) {
     console.error('Error in activateTeamMember:', error);
-    // Fallback to updateTeamMember which will update the mock data
-    return updateTeamMember(id, { status: 'active' });
+    throw error;
   }
 };
 
@@ -500,7 +454,7 @@ export const activateTeamMember = async (id: string): Promise<TeamMember> => {
 export const deactivateTeamMember = async (id: string): Promise<TeamMember> => {
   console.log(`Deactivating team member with ID: ${id}`);
   try {
-    // First try to update in the database
+    // Update in the database
     const { data, error } = await supabase
       .from('team_members')
       .update({ 
@@ -512,16 +466,14 @@ export const deactivateTeamMember = async (id: string): Promise<TeamMember> => {
 
     if (error) {
       console.error("Error deactivating team member in database:", error);
-    } else {
-      console.log("Successfully deactivated team member in database:", data);
+      throw error;
     }
 
-    // Fallback to updateTeamMember which handles both database and mock data
-    return updateTeamMember(id, { status: 'inactive' });
+    // Get the updated team member details
+    return getTeamMemberById(id) as Promise<TeamMember>;
   } catch (error) {
     console.error('Error in deactivateTeamMember:', error);
-    // Fallback to updateTeamMember which will update the mock data
-    return updateTeamMember(id, { status: 'inactive' });
+    throw error;
   }
 };
 
@@ -563,6 +515,255 @@ export const updateWhatsAppPermissions = async (
     console.error('Error updating WhatsApp permissions:', error);
     throw error;
   }
+};
+
+export const getDepartments = async (): Promise<Department[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*');
+
+    if (error) {
+      throw error;
+    }
+
+    // For each department, count the number of team members
+    const departmentsWithCounts: Department[] = [];
+    
+    for (const dept of data || []) {
+      const { count, error: countError } = await supabase
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('department_id', dept.id);
+      
+      if (countError) {
+        console.error('Error counting department members:', countError);
+      }
+      
+      // Try to get lead name if lead_id exists
+      let leadName;
+      if (dept.lead_id) {
+        const { data: leadData } = await supabase
+          .from('team_members')
+          .select('name')
+          .eq('id', dept.lead_id)
+          .single();
+        
+        if (leadData) {
+          leadName = leadData.name;
+        }
+      }
+      
+      departmentsWithCounts.push({
+        id: dept.id,
+        name: dept.name,
+        description: dept.description,
+        memberCount: count || 0,
+        leadName
+      });
+    }
+    
+    return departmentsWithCounts;
+  } catch (error) {
+    console.error('Error in getDepartments:', error);
+    return [];
+  }
+};
+
+export const getDepartmentById = async (id: string): Promise<Department | undefined> => {
+  return mockDepartments.find(dept => dept.id === id);
+};
+
+export const addDepartment = async (department: Omit<Department, 'id'>): Promise<Department> => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .insert({
+        name: department.name,
+        description: department.description,
+        lead_id: null // We'll need to find the lead ID based on name if provided
+      })
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    const newDept = data[0];
+    
+    // Find and assign a lead by name if provided
+    if (department.leadName) {
+      try {
+        const { data: leadData } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('name', department.leadName)
+          .single();
+        
+        if (leadData) {
+          await supabase
+            .from('departments')
+            .update({ lead_id: leadData.id })
+            .eq('id', newDept.id);
+        }
+      } catch (error) {
+        console.error('Error finding team lead by name:', error);
+      }
+    }
+    
+    return {
+      id: newDept.id,
+      name: department.name,
+      description: department.description || undefined,
+      memberCount: 0,
+      leadName: department.leadName
+    };
+  } catch (error) {
+    console.error('Error in addDepartment:', error);
+    throw error;
+  }
+};
+
+export const updateDepartment = async (id: string, updates: Partial<Department>): Promise<Department> => {
+  try {
+    // First find the lead ID if a name is provided
+    let leadId = undefined;
+    if (updates.leadName) {
+      try {
+        const { data: leadData } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('name', updates.leadName)
+          .single();
+        
+        if (leadData) {
+          leadId = leadData.id;
+        }
+      } catch (error) {
+        console.error('Error finding team lead by name:', error);
+      }
+    }
+    
+    // Update the department
+    const { data, error } = await supabase
+      .from('departments')
+      .update({
+        name: updates.name,
+        description: updates.description,
+        lead_id: leadId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      throw error;
+    }
+    
+    // Get current count of members
+    const { count, error: countError } = await supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('department_id', id);
+    
+    if (countError) {
+      console.error('Error counting department members:', countError);
+    }
+    
+    return {
+      id,
+      name: updates.name || "",  // TypeScript needs a fallback even though name is required
+      description: updates.description,
+      memberCount: count || 0,
+      leadName: updates.leadName
+    };
+  } catch (error) {
+    console.error('Error in updateDepartment:', error);
+    throw error;
+  }
+};
+
+export const deleteDepartment = async (id: string): Promise<void> => {
+  try {
+    // Update any team members that belong to this department
+    await supabase
+      .from('team_members')
+      .update({ department_id: null })
+      .eq('department_id', id);
+    
+    // Delete the department
+    const { error } = await supabase
+      .from('departments')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in deleteDepartment:', error);
+    throw error;
+  }
+};
+
+// Roles - these are still hardcoded as they're not stored in DB
+export const roles: Role[] = [
+  {
+    id: '1',
+    name: 'Administrator',
+    permissions: [
+      'Manage team members',
+      'Manage WhatsApp accounts',
+      'Create and edit templates',
+      'Create and manage chatbots',
+      'Access all conversations',
+      'View analytics',
+      'Configure system settings',
+    ],
+    description: 'Full access to all system features and settings',
+  },
+  {
+    id: '2',
+    name: 'Manager',
+    permissions: [
+      'Manage team members (limited)',
+      'Create and edit templates',
+      'Create and manage chatbots',
+      'Access department conversations',
+      'View analytics',
+    ],
+    description: 'Department-level management and oversight',
+  },
+  {
+    id: '3',
+    name: 'Agent',
+    permissions: [
+      'Handle assigned conversations',
+      'Use templates',
+      'View basic analytics',
+    ],
+    description: 'Handle customer conversations and basic tasks',
+  },
+];
+
+export const getRoles = async (): Promise<Role[]> => {
+  return Promise.resolve(roles);
+};
+
+export const getRoleById = async (id: string): Promise<Role | undefined> => {
+  const role = roles.find(r => r.id === id);
+  return Promise.resolve(role);
+};
+
+export const updateRolePermissions = async (id: string, permissions: string[]): Promise<Role> => {
+  const roleIndex = roles.findIndex(r => r.id === id);
+  if (roleIndex === -1) {
+    throw new Error('Role not found');
+  }
+  
+  const updatedRole = { ...roles[roleIndex], permissions };
+  roles[roleIndex] = updatedRole;
+  return Promise.resolve(updatedRole);
 };
 
 // In-memory mock data
@@ -632,102 +833,3 @@ let mockDepartments: Department[] = [
     leadName: undefined,
   }
 ];
-
-export const getDepartments = async (): Promise<Department[]> => {
-  return [...mockDepartments];
-};
-
-export const getDepartmentById = async (id: string): Promise<Department | undefined> => {
-  return mockDepartments.find(dept => dept.id === id);
-};
-
-export const addDepartment = async (department: Omit<Department, 'id'>): Promise<Department> => {
-  const newDepartment: Department = {
-    id: uuidv4(),
-    ...department
-  };
-  
-  mockDepartments.push(newDepartment);
-  return newDepartment;
-};
-
-export const updateDepartment = async (id: string, updates: Partial<Department>): Promise<Department> => {
-  const deptIndex = mockDepartments.findIndex(d => d.id === id);
-  
-  if (deptIndex === -1) {
-    throw new Error("Department not found");
-  }
-  
-  const updatedDepartment = {
-    ...mockDepartments[deptIndex],
-    ...updates,
-    id: mockDepartments[deptIndex].id
-  };
-  
-  mockDepartments[deptIndex] = updatedDepartment;
-  return updatedDepartment;
-};
-
-export const deleteDepartment = async (id: string): Promise<void> => {
-  mockDepartments = mockDepartments.filter(d => d.id !== id);
-};
-
-// Roles - these are still hardcoded as they're not stored in DB
-export const roles: Role[] = [
-  {
-    id: '1',
-    name: 'Administrator',
-    permissions: [
-      'Manage team members',
-      'Manage WhatsApp accounts',
-      'Create and edit templates',
-      'Create and manage chatbots',
-      'Access all conversations',
-      'View analytics',
-      'Configure system settings',
-    ],
-    description: 'Full access to all system features and settings',
-  },
-  {
-    id: '2',
-    name: 'Manager',
-    permissions: [
-      'Manage team members (limited)',
-      'Create and edit templates',
-      'Create and manage chatbots',
-      'Access department conversations',
-      'View analytics',
-    ],
-    description: 'Department-level management and oversight',
-  },
-  {
-    id: '3',
-    name: 'Agent',
-    permissions: [
-      'Handle assigned conversations',
-      'Use templates',
-      'View basic analytics',
-    ],
-    description: 'Handle customer conversations and basic tasks',
-  },
-];
-
-export const getRoles = async (): Promise<Role[]> => {
-  return Promise.resolve(roles);
-};
-
-export const getRoleById = async (id: string): Promise<Role | undefined> => {
-  const role = roles.find(r => r.id === id);
-  return Promise.resolve(role);
-};
-
-export const updateRolePermissions = async (id: string, permissions: string[]): Promise<Role> => {
-  const roleIndex = roles.findIndex(r => r.id === id);
-  if (roleIndex === -1) {
-    throw new Error('Role not found');
-  }
-  
-  const updatedRole = { ...roles[roleIndex], permissions };
-  roles[roleIndex] = updatedRole;
-  return Promise.resolve(updatedRole);
-};
