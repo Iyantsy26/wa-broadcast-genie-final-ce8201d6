@@ -17,6 +17,10 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
   const handleImport = async () => {
     try {
       setLoading(true);
+      toast({
+        title: 'Importing team contacts',
+        description: 'Please wait while we import your team contacts...',
+      });
       
       // Use the service to import contacts and get the returned contacts
       const importedContacts = await importContactsFromTeam();
@@ -27,6 +31,12 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       
       if (importedContacts.length === 0) {
         console.warn('No team contacts were imported. Check your team_members table in Supabase.');
+        toast({
+          title: 'No team contacts found',
+          description: 'No team contacts were found in your database.',
+          variant: 'destructive',
+        });
+        return;
       }
       
       // Call the callback to notify parent component with the imported contacts
@@ -34,7 +44,7 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       
       toast({
         title: 'Team contacts imported',
-        description: `${importedContacts.length} team contacts imported successfully`,
+        description: `${importedContacts.length} team contacts imported successfully. Please click on "Team" tab to view them.`,
       });
     } catch (error) {
       console.error('Error importing team contacts:', error);

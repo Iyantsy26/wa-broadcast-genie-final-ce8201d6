@@ -59,29 +59,29 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     }
     
     console.log('Team members fetched successfully:', teamMembers.length);
+    console.log('Raw team members data:', teamMembers);
     
     // Convert team members to contacts
-    const contacts: Contact[] = teamMembers.map(member => {
+    const contacts: Contact[] = teamMembers.map((member, index) => {
       const contact: Contact = {
         id: member.id,
-        name: member.name || 'Unknown Team Member',
+        name: member.name || `Unknown Team Member ${index + 1}`,
         avatar: member.avatar || '',
         phone: member.phone || '',
-        type: 'team',
+        type: 'team', // Explicitly set as team type
         isOnline: member.status === 'active',
         lastSeen: member.last_active || new Date().toISOString(),
         role: member.role,
         tags: []
       };
-      console.log(`Created team contact: ${contact.name} with type: ${contact.type}`);
+      console.log(`Created team contact ${index + 1}:`, contact);
       return contact;
     });
     
     console.log('Converted team members to contacts:', contacts.length);
-    console.log('Team contact types after conversion:', contacts.map(c => c.type));
+    console.log('Team contact types:', contacts.map(c => c.type));
     
     // Try to update conversations table to include these team members
-    // but don't fail if we can't update the conversations table
     try {
       for (const contact of contacts) {
         console.log(`Processing team member for conversation: ${contact.name} (${contact.id})`);
@@ -126,6 +126,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     
     if (contacts.length > 0) {
       console.log(`Successfully imported ${contacts.length} team contacts`);
+      toast.success(`Imported ${contacts.length} team contacts`);
     }
     
     return contacts;
