@@ -22,6 +22,12 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       const importedContacts = await importContactsFromTeam();
       
       console.log('Team contacts imported successfully:', importedContacts);
+      console.log('Team contact count:', importedContacts.length);
+      console.log('Team contact types:', importedContacts.map(c => c.type));
+      
+      if (importedContacts.length === 0) {
+        console.warn('No team contacts were imported. Check your team_members table in Supabase.');
+      }
       
       // Call the callback to notify parent component with the imported contacts
       onImportComplete(importedContacts);

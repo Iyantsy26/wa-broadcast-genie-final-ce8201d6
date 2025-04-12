@@ -59,8 +59,12 @@ export const useConversationState = () => {
       console.log('Fetching all conversations...');
       setLoading(true);
       const data = await getConversations();
-      console.log('Retrieved conversations:', data);
-      console.log('Team conversations:', data.filter(c => c.chatType === 'team').length);
+      console.log('Retrieved conversations:', data.length);
+      console.log('Conversation types:', {
+        leads: data.filter(c => c.chatType === 'lead').length,
+        clients: data.filter(c => c.chatType === 'client').length,
+        team: data.filter(c => c.chatType === 'team').length
+      });
       
       setConversations(data);
       

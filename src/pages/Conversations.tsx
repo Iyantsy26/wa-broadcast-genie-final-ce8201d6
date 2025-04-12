@@ -6,10 +6,11 @@ import DeviceSelector from '@/components/conversations/DeviceSelector';
 import { getLeads } from '@/services/leadService';
 import { getClients } from '@/services/clientService';
 import { getConversations } from '@/services/conversationService';
-import { Contact } from '@/types/conversation';
+import { Contact, ChatType } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { TeamContactImport } from '@/components/conversations/TeamContactImport';
 import { importContactsFromTeam } from '@/services/contactService';
+import { supabase } from '@/integrations/supabase/client';
 
 const Conversations = () => {
   const [selectedDevice, setSelectedDevice] = useState('1');
@@ -28,7 +29,7 @@ const Conversations = () => {
           name: lead.name,
           avatar: lead.avatar_url,
           phone: lead.phone || '',
-          type: 'lead' as const,
+          type: 'lead' as ChatType,
           isOnline: false,
           lastSeen: lead.last_contact || new Date().toISOString(),
           tags: lead.status ? [lead.status] : []
@@ -41,7 +42,7 @@ const Conversations = () => {
           name: client.name,
           avatar: client.avatar_url,
           phone: client.phone || '',
-          type: 'client' as const,
+          type: 'client' as ChatType,
           isOnline: false,
           lastSeen: client.join_date || new Date().toISOString(),
           tags: client.tags || []
@@ -51,11 +52,18 @@ const Conversations = () => {
         console.log('Fetching team contacts...');
         const teamContacts = await importContactsFromTeam();
         console.log('Team contacts fetched:', teamContacts);
+        console.log('Team contact types:', teamContacts.map(c => c.type));
 
         // Combine all contacts
         const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
-        console.log('All contacts combined:', allContacts);
-        console.log('Team contacts count:', teamContacts.length);
+        console.log('All contacts combined:', allContacts.length);
+        console.log('Contact types in combined list:', 
+          {
+            leads: allContacts.filter(c => c.type === 'lead').length,
+            clients: allContacts.filter(c => c.type === 'client').length, 
+            team: allContacts.filter(c => c.type === 'team').length
+          }
+        );
         
         setContacts(allContacts);
 
@@ -76,11 +84,39 @@ const Conversations = () => {
     }
 
     fetchContactsFromAllSources();
+    
+    // Listen for team_members changes and update contacts
+    const teamMembersSubscription = supabase
+      .channel('team_members_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'team_members' 
+        },
+        (payload) => {
+          console.log('Team members change detected:', payload);
+          importContactsFromTeam().then(teamContacts => {
+            setContacts(prevContacts => {
+              // Remove existing team contacts
+              const nonTeamContacts = prevContacts.filter(c => c.type !== 'team');
+              // Add the new team contacts
+              return [...nonTeamContacts, ...teamContacts];
+            });
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(teamMembersSubscription);
+    };
   }, []);
 
   const handleTeamContactsImported = async (importedContacts: Contact[]) => {
     try {
-      console.log('Handling team contacts import, received:', importedContacts);
+      console.log('Handling team contacts import, received:', importedContacts.length);
+      console.log('Imported contact types:', importedContacts.map(c => c.type));
       
       // Add the newly imported contacts to our state
       setContacts(prevContacts => {
@@ -91,7 +127,7 @@ const Conversations = () => {
         
         // Add the new imported contacts
         const updatedContacts = [...filteredContacts, ...importedContacts];
-        console.log('Updated contacts state:', updatedContacts);
+        console.log('Updated contacts state:', updatedContacts.length);
         console.log('Team contacts in updated list:', updatedContacts.filter(c => c.type === 'team').length);
         
         return updatedContacts;

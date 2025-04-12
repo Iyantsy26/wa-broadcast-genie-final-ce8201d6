@@ -18,6 +18,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
     
     const teamContacts = await importContactsFromTeam();
     console.log(`Fetched ${teamContacts.length} team contacts`);
+    console.log('Team contact types:', teamContacts.map(c => c.type));
     
     // Create lead conversations
     const leadConversations = leads.map(lead => {
@@ -91,11 +92,14 @@ export const getConversations = async (): Promise<Conversation[]> => {
 
     // Create team member conversations
     const teamConversations = teamContacts.map(contact => {
-      console.log(`Creating team conversation for: ${contact.name}`);
+      console.log(`Creating team conversation for: ${contact.name} with type: ${contact.type}`);
       
       return {
         id: `team-conversation-${contact.id}`,
-        contact,
+        contact: {
+          ...contact,
+          type: 'team' // Ensure this is explicitly set
+        },
         lastMessage: {
           content: 'This is a team conversation',
           timestamp: new Date().toISOString(),
@@ -118,6 +122,11 @@ export const getConversations = async (): Promise<Conversation[]> => {
     // Combine and return all conversations
     const allConversations = [...leadConversations, ...clientConversations, ...teamConversations];
     console.log(`Total conversations: ${allConversations.length}`);
+    console.log('Conversation types:', {
+      leads: allConversations.filter(c => c.chatType === 'lead').length,
+      clients: allConversations.filter(c => c.chatType === 'client').length,
+      team: allConversations.filter(c => c.chatType === 'team').length
+    });
     
     return allConversations;
   } catch (error) {

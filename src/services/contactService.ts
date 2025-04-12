@@ -39,6 +39,7 @@ export const blockContact = async (contactId: string, isBlocked: boolean): Promi
 
 export const importContactsFromTeam = async (): Promise<Contact[]> => {
   try {
+    console.log('Importing team contacts from Supabase...');
     // Get team members
     const { data: teamMembers, error: teamError } = await supabase
       .from('team_members')
@@ -57,22 +58,27 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
       return [];
     }
     
-    console.log('Team members fetched successfully:', teamMembers);
+    console.log('Team members fetched successfully:', teamMembers.length);
     
     // Convert team members to contacts
-    const contacts: Contact[] = teamMembers.map(member => ({
-      id: member.id,
-      name: member.name || 'Unknown Team Member',
-      avatar: member.avatar || '',
-      phone: member.phone || '',
-      type: 'team',
-      isOnline: member.status === 'active',
-      lastSeen: member.last_active || new Date().toISOString(),
-      role: member.role,
-      tags: []
-    }));
+    const contacts: Contact[] = teamMembers.map(member => {
+      const contact: Contact = {
+        id: member.id,
+        name: member.name || 'Unknown Team Member',
+        avatar: member.avatar || '',
+        phone: member.phone || '',
+        type: 'team',
+        isOnline: member.status === 'active',
+        lastSeen: member.last_active || new Date().toISOString(),
+        role: member.role,
+        tags: []
+      };
+      console.log(`Created team contact: ${contact.name} with type: ${contact.type}`);
+      return contact;
+    });
     
-    console.log('Converted team members to contacts:', contacts);
+    console.log('Converted team members to contacts:', contacts.length);
+    console.log('Team contact types after conversion:', contacts.map(c => c.type));
     
     // Try to update conversations table to include these team members
     // but don't fail if we can't update the conversations table
