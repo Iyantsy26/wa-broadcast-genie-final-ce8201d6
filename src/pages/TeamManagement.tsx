@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -85,6 +86,7 @@ const TeamManagement = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Initial data fetch
         const [teamData, departmentData, roleData] = await Promise.all([
           getTeamMembers(),
           getDepartments(),
@@ -108,6 +110,7 @@ const TeamManagement = () => {
     
     fetchData();
     
+    // Set up real-time subscription for team members
     const teamMembersChannel = supabase
       .channel('team_members_changes')
       .on('postgres_changes', 
@@ -118,20 +121,101 @@ const TeamManagement = () => {
         }, 
         async (payload) => {
           console.log('Team members change detected:', payload);
-          const updatedMembers = await getTeamMembers();
-          setMembers(updatedMembers);
           
+          // Handle different change types
           if (payload.eventType === 'INSERT') {
+            const { data: newMember, error } = await supabase
+              .from('team_members')
+              .select('*, department_id')
+              .eq('id', payload.new.id)
+              .single();
+              
+            if (!error && newMember) {
+              // Process the new member to match our interface
+              const { data: departmentData } = await supabase
+                .from('departments')
+                .select('name')
+                .eq('id', newMember.department_id)
+                .maybeSingle();
+                
+              const processedMember: TeamMember = {
+                id: newMember.id,
+                name: newMember.name,
+                email: newMember.email,
+                phone: newMember.phone,
+                avatar: newMember.avatar,
+                role: newMember.role as 'admin' | 'manager' | 'agent',
+                status: newMember.status as 'active' | 'inactive' | 'pending',
+                company: newMember.company,
+                position: newMember.position,
+                address: newMember.address,
+                whatsappAccounts: [],
+                department: departmentData?.name,
+                lastActive: newMember.last_active
+              };
+              
+              setMembers(prevMembers => [...prevMembers.filter(m => m.id !== processedMember.id), processedMember]);
+            } else {
+              // If we couldn't get details, fetch all team members
+              const updatedMembers = await getTeamMembers();
+              setMembers(updatedMembers);
+            }
+            
             toast({
               title: "Team member added",
               description: "A new team member has been added",
             });
           } else if (payload.eventType === 'UPDATE') {
+            // For updates, fetch the full member data
+            const { data: updatedMember, error } = await supabase
+              .from('team_members')
+              .select('*, department_id')
+              .eq('id', payload.new.id)
+              .single();
+              
+            if (!error && updatedMember) {
+              // Get department name
+              const { data: departmentData } = await supabase
+                .from('departments')
+                .select('name')
+                .eq('id', updatedMember.department_id)
+                .maybeSingle();
+                
+              const processedMember: TeamMember = {
+                id: updatedMember.id,
+                name: updatedMember.name,
+                email: updatedMember.email,
+                phone: updatedMember.phone,
+                avatar: updatedMember.avatar,
+                role: updatedMember.role as 'admin' | 'manager' | 'agent',
+                status: updatedMember.status as 'active' | 'inactive' | 'pending',
+                company: updatedMember.company,
+                position: updatedMember.position,
+                address: updatedMember.address,
+                whatsappAccounts: [],
+                department: departmentData?.name,
+                lastActive: updatedMember.last_active
+              };
+              
+              setMembers(prevMembers => 
+                prevMembers.map(m => m.id === processedMember.id ? processedMember : m)
+              );
+            } else {
+              // If we couldn't get details, fetch all team members
+              const updatedMembers = await getTeamMembers();
+              setMembers(updatedMembers);
+            }
+            
             toast({
               title: "Team member updated",
               description: "Team member information has been updated",
             });
           } else if (payload.eventType === 'DELETE') {
+            // For deletes, remove from state
+            setMembers(prevMembers => 
+              prevMembers.filter(member => member.id !== payload.old.id)
+            );
+            
             toast({
               title: "Team member removed",
               description: "A team member has been removed from the system",
@@ -141,6 +225,7 @@ const TeamManagement = () => {
       )
       .subscribe();
       
+    // Set up real-time subscription for departments
     const departmentsChannel = supabase
       .channel('departments_changes')
       .on('postgres_changes', 
@@ -151,20 +236,32 @@ const TeamManagement = () => {
         }, 
         async (payload) => {
           console.log('Departments change detected:', payload);
-          const updatedDepartments = await getDepartments();
-          setDepartments(updatedDepartments);
           
+          // Update departments using the same pattern as for team members
           if (payload.eventType === 'INSERT') {
+            // Fetch the new department with member count
+            const updatedDepartments = await getDepartments();
+            setDepartments(updatedDepartments);
+            
             toast({
               title: "Department added",
               description: "A new department has been created",
             });
           } else if (payload.eventType === 'UPDATE') {
+            // Fetch updated departments
+            const updatedDepartments = await getDepartments();
+            setDepartments(updatedDepartments);
+            
             toast({
               title: "Department updated",
               description: "Department information has been updated",
             });
           } else if (payload.eventType === 'DELETE') {
+            // Remove the deleted department
+            setDepartments(prevDepartments => 
+              prevDepartments.filter(dept => dept.id !== payload.old.id)
+            );
+            
             toast({
               title: "Department removed",
               description: "A department has been removed from the system",
@@ -174,6 +271,7 @@ const TeamManagement = () => {
       )
       .subscribe();
     
+    // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(teamMembersChannel);
       supabase.removeChannel(departmentsChannel);
@@ -196,18 +294,11 @@ const TeamManagement = () => {
   });
 
   const handleAddMemberSuccess = async (newMember?: TeamMember) => {
-    try {
-      const updatedMembers = await getTeamMembers();
-      setMembers(updatedMembers);
-      
-      if (newMember) {
-        toast({
-          title: "Team member added",
-          description: `${newMember.name} has been added to the team`,
-        });
-      }
-    } catch (error) {
-      console.error('Error refreshing team members:', error);
+    if (newMember) {
+      toast({
+        title: "Team member added",
+        description: `${newMember.name} has been added to the team`,
+      });
     }
   };
 
@@ -237,8 +328,6 @@ const TeamManagement = () => {
   const handleActivateMember = async (id: string) => {
     try {
       await activateTeamMember(id);
-      const updatedMembers = await getTeamMembers();
-      setMembers(updatedMembers);
       
       toast({
         title: "Team member activated",
@@ -257,8 +346,6 @@ const TeamManagement = () => {
   const handleDeactivateMember = async (id: string) => {
     try {
       await deactivateTeamMember(id);
-      const updatedMembers = await getTeamMembers();
-      setMembers(updatedMembers);
       
       toast({
         title: "Team member deactivated",
@@ -277,8 +364,6 @@ const TeamManagement = () => {
   const handleDeleteMember = async (id: string) => {
     try {
       await deleteTeamMember(id);
-      const updatedMembers = await getTeamMembers();
-      setMembers(updatedMembers);
       
       toast({
         title: "Team member removed",
@@ -306,9 +391,6 @@ const TeamManagement = () => {
         memberCount: 0,
         leadName: department.leadName,
       });
-      
-      const updatedDepartments = await getDepartments();
-      setDepartments(updatedDepartments);
       
       toast({
         title: "Department created",
@@ -338,9 +420,6 @@ const TeamManagement = () => {
       
       await updateDepartment(department.id, department);
       
-      const updatedDepartments = await getDepartments();
-      setDepartments(updatedDepartments);
-      
       toast({
         title: "Department updated",
         description: `${department.name} has been updated`,
@@ -358,9 +437,6 @@ const TeamManagement = () => {
   const handleDeleteDepartment = async (id: string) => {
     try {
       await deleteDepartment(id);
-      
-      const updatedDepartments = await getDepartments();
-      setDepartments(updatedDepartments);
       
       toast({
         title: "Department deleted",
@@ -563,7 +639,6 @@ const TeamManagement = () => {
               editMember={selectedMember}
               onSuccess={(updatedMember) => {
                 if (updatedMember) {
-                  handleAddMemberSuccess();
                   setSelectedMember(updatedMember);
                 }
                 
@@ -675,3 +750,20 @@ const TeamManagement = () => {
 };
 
 export default TeamManagement;
+
+function handleAddMembersToDepartment(id: string): void {
+  console.log('Add members to department:', id);
+}
+
+function handleViewDepartmentAnalytics(id: string): void {
+  console.log('View department analytics:', id);
+}
+
+function handleViewDepartmentMembers(id: string): void {
+  console.log('View department members:', id);
+}
+
+function handleViewDepartmentConversations(id: string): void {
+  console.log('View department conversations:', id);
+}
+

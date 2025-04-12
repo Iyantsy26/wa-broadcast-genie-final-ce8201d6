@@ -766,7 +766,7 @@ export const updateRolePermissions = async (id: string, permissions: string[]): 
   return Promise.resolve(updatedRole);
 };
 
-// In-memory mock data
+// In-memory mock data - used as fallbacks only when database operations fail
 let mockTeamMembers: TeamMember[] = [
   {
     id: '1',
@@ -809,7 +809,7 @@ let mockTeamMembers: TeamMember[] = [
   }
 ];
 
-// In-memory department store
+// In-memory department store - used as fallbacks only when database operations fail
 let mockDepartments: Department[] = [
   {
     id: '1',
