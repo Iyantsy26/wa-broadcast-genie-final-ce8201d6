@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ChatType } from '@/types/conversation';
 import { MessageCircle, Users, UserRound, Building2 } from 'lucide-react';
@@ -13,6 +13,11 @@ export const ChatTypeSelector: React.FC<ChatTypeSelectorProps> = ({
   chatTypeFilter,
   setChatTypeFilter
 }) => {
+  useEffect(() => {
+    // Log the current filter when it changes
+    console.log('ChatTypeSelector - Current filter:', chatTypeFilter);
+  }, [chatTypeFilter]);
+
   const handleFilterChange = (type: ChatType | 'all') => {
     console.log('Setting chat type filter to:', type);
     setChatTypeFilter(type);

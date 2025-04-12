@@ -20,6 +20,10 @@ export const getConversations = async (): Promise<Conversation[]> => {
     console.log(`Fetched ${teamContacts.length} team contacts`);
     console.log('Team contact types:', teamContacts.map(c => c.type));
     
+    if (teamContacts.length === 0) {
+      console.warn('No team contacts were found. Verify team_members table in Supabase has active members.');
+    }
+    
     // Create lead conversations
     const leadConversations = leads.map(lead => {
       const contact: Contact = {

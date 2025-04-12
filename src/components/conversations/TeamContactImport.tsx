@@ -1,10 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Users } from 'lucide-react';
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { importContactsFromTeam } from '@/services/contactService';
 
 interface TeamContactImportProps {
@@ -13,6 +12,11 @@ interface TeamContactImportProps {
 
 export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportComplete }) => {
   const [loading, setLoading] = useState(false);
+  
+  // Auto-import on component mount
+  useEffect(() => {
+    handleImport();
+  }, []);
 
   const handleImport = async () => {
     try {

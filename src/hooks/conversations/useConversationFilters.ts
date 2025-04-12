@@ -23,8 +23,12 @@ export const useConversationFilters = (conversations: Conversation[]) => {
     });
     
     return conversations.filter(conversation => {
+      // Log current conversation being filtered
+      console.log(`Checking conversation with type: ${conversation.chatType}`, conversation);
+      
       // Filter by chat type
       if (chatTypeFilter !== 'all' && conversation.chatType !== chatTypeFilter) {
+        console.log(`Filtered out - type mismatch: ${conversation.chatType} !== ${chatTypeFilter}`);
         return false;
       }
       
@@ -67,28 +71,22 @@ export const useConversationFilters = (conversations: Conversation[]) => {
 
   // Group conversations by date or another criteria
   const groupedConversations = useMemo(() => {
-    const groups: { [key: string]: Conversation[] } = {
-      today: [],
-      yesterday: [],
-      thisWeek: [],
-      thisMonth: [],
-      earlier: [],
-    };
+    const groups: { [key: string]: Conversation[] } = {};
+    
+    // Add specific groups for each chat type
+    groups['Team'] = [];
+    groups['Clients'] = [];
+    groups['Leads'] = [];
     
     filteredConversations.forEach(conversation => {
-      // Simple demo grouping by chat type
-      // In a production app, you would group by date, status, etc.
-      const groupKey = conversation.chatType === 'team' 
-        ? 'Team' 
-        : conversation.chatType === 'client' 
-          ? 'Clients' 
-          : 'Leads';
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
+      // Group by chat type
+      if (conversation.chatType === 'team') {
+        groups['Team'].push(conversation);
+      } else if (conversation.chatType === 'client') {
+        groups['Clients'].push(conversation);
+      } else if (conversation.chatType === 'lead') {
+        groups['Leads'].push(conversation);
       }
-      
-      groups[groupKey].push(conversation);
     });
     
     // Remove empty groups
@@ -98,6 +96,7 @@ export const useConversationFilters = (conversations: Conversation[]) => {
       }
     });
     
+    console.log('Grouped conversations:', groups);
     return groups;
   }, [filteredConversations]);
 
