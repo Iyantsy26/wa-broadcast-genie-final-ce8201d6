@@ -2,14 +2,13 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Users } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { importContactsFromTeam } from '@/services/contactService';
 
 interface TeamContactImportProps {
-  onImportComplete: () => void;
+  onImportComplete: (contacts: Contact[]) => void;
 }
 
 export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportComplete }) => {
@@ -19,15 +18,17 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
     try {
       setLoading(true);
       
-      // Use the service to import contacts
-      await importContactsFromTeam();
+      // Use the service to import contacts and get the returned contacts
+      const importedContacts = await importContactsFromTeam();
       
-      // Call the callback to notify parent component
-      onImportComplete();
+      console.log('Team contacts imported successfully:', importedContacts);
+      
+      // Call the callback to notify parent component with the imported contacts
+      onImportComplete(importedContacts);
       
       toast({
         title: 'Team contacts imported',
-        description: `Team contacts imported successfully`,
+        description: `${importedContacts.length} team contacts imported successfully`,
       });
     } catch (error) {
       console.error('Error importing team contacts:', error);

@@ -52,6 +52,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     }
     
     if (!teamMembers || teamMembers.length === 0) {
+      console.log('No team members found to import');
       toast.info('No team members found to import');
       return [];
     }
@@ -61,7 +62,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     // Convert team members to contacts
     const contacts: Contact[] = teamMembers.map(member => ({
       id: member.id,
-      name: member.name,
+      name: member.name || 'Unknown Team Member',
       avatar: member.avatar || '',
       phone: member.phone || '',
       type: 'team',
@@ -71,9 +72,14 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
       tags: []
     }));
     
-    // Update conversations table to include these team members
-    for (const contact of contacts) {
-      try {
+    console.log('Converted team members to contacts:', contacts);
+    
+    // Try to update conversations table to include these team members
+    // but don't fail if we can't update the conversations table
+    try {
+      for (const contact of contacts) {
+        console.log(`Processing team member for conversation: ${contact.name} (${contact.id})`);
+        
         // Check if conversation already exists for this team member
         const { data: existingConv } = await supabase
           .from('conversations')
@@ -83,26 +89,37 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
         
         // If not, create a new conversation entry
         if (!existingConv) {
-          const { error: convError } = await supabase
-            .from('conversations')
-            .insert({
-              team_member_id: contact.id,
-              status: 'active',
-              last_message: 'Conversation started',
-              last_message_timestamp: new Date().toISOString()
-            });
-            
-          if (convError) {
-            console.error(`Error creating conversation for team member ${contact.name}:`, convError);
+          console.log(`Creating conversation for team member: ${contact.name} (${contact.id})`);
+          
+          try {
+            const { error: convError } = await supabase
+              .from('conversations')
+              .insert({
+                team_member_id: contact.id,
+                status: 'active',
+                last_message: 'Conversation started',
+                last_message_timestamp: new Date().toISOString()
+              });
+              
+            if (convError) {
+              console.error(`Error creating conversation for team member ${contact.name}:`, convError);
+            } else {
+              console.log(`Successfully created conversation for ${contact.name}`);
+            }
+          } catch (error) {
+            console.error(`Error processing team member ${contact.name}:`, error);
           }
+        } else {
+          console.log(`Conversation already exists for team member: ${contact.name} (${contact.id})`);
         }
-      } catch (error) {
-        console.error(`Error processing team member ${contact.name}:`, error);
       }
+    } catch (error) {
+      // Don't let conversation creation errors stop us from returning the contacts
+      console.error('Error updating conversations for team members:', error);
     }
     
     if (contacts.length > 0) {
-      toast.success(`Imported ${contacts.length} team contacts`);
+      console.log(`Successfully imported ${contacts.length} team contacts`);
     }
     
     return contacts;

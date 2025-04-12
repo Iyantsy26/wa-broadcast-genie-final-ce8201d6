@@ -47,16 +47,21 @@ const Conversations = () => {
           tags: client.tags || []
         }));
 
-        // Automatically fetch and add team contacts
+        // Fetch team contacts
+        console.log('Fetching team contacts...');
         const teamContacts = await importContactsFromTeam();
+        console.log('Team contacts fetched:', teamContacts);
 
         // Combine all contacts
         const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
+        console.log('All contacts combined:', allContacts);
+        console.log('Team contacts count:', teamContacts.length);
+        
         setContacts(allContacts);
 
         toast({
           title: 'Contacts loaded',
-          description: `${allContacts.length} contacts loaded successfully`,
+          description: `${allContacts.length} contacts loaded successfully (${teamContacts.length} team members)`,
         });
       } catch (error) {
         console.error('Error fetching contacts:', error);
@@ -73,10 +78,9 @@ const Conversations = () => {
     fetchContactsFromAllSources();
   }, []);
 
-  const handleTeamContactsImported = async () => {
+  const handleTeamContactsImported = async (importedContacts: Contact[]) => {
     try {
-      // Re-import team contacts - this will update any changed data
-      const importedContacts = await importContactsFromTeam();
+      console.log('Handling team contacts import, received:', importedContacts);
       
       // Add the newly imported contacts to our state
       setContacts(prevContacts => {
@@ -86,15 +90,14 @@ const Conversations = () => {
         );
         
         // Add the new imported contacts
-        return [...filteredContacts, ...importedContacts];
-      });
-      
-      toast({
-        title: 'Team contacts refreshed',
-        description: `${importedContacts.length} team contacts refreshed successfully`,
+        const updatedContacts = [...filteredContacts, ...importedContacts];
+        console.log('Updated contacts state:', updatedContacts);
+        console.log('Team contacts in updated list:', updatedContacts.filter(c => c.type === 'team').length);
+        
+        return updatedContacts;
       });
     } catch (error) {
-      console.error('Error importing team contacts:', error);
+      console.error('Error handling team contacts import:', error);
       toast({
         title: 'Error',
         description: 'Failed to refresh team contacts',

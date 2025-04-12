@@ -56,8 +56,12 @@ export const useConversationState = () => {
 
   const fetchConversations = async () => {
     try {
+      console.log('Fetching all conversations...');
       setLoading(true);
       const data = await getConversations();
+      console.log('Retrieved conversations:', data);
+      console.log('Team conversations:', data.filter(c => c.chatType === 'team').length);
+      
       setConversations(data);
       
       if (!activeConversation && data.length > 0) {

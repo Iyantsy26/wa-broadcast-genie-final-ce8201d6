@@ -7,10 +7,17 @@ import { importContactsFromTeam } from '../contactService';
 
 export const getConversations = async (): Promise<Conversation[]> => {
   try {
+    console.log('Fetching conversations from all sources...');
+    
     // Get data from all sources
     const leads = await getLeads();
+    console.log(`Fetched ${leads.length} leads`);
+    
     const clients = await getClients();
+    console.log(`Fetched ${clients.length} clients`);
+    
     const teamContacts = await importContactsFromTeam();
+    console.log(`Fetched ${teamContacts.length} team contacts`);
     
     // Create lead conversations
     const leadConversations = leads.map(lead => {
@@ -45,6 +52,8 @@ export const getConversations = async (): Promise<Conversation[]> => {
       } as Conversation;
     });
     
+    console.log(`Created ${leadConversations.length} lead conversations`);
+    
     // Create client conversations
     const clientConversations = clients.map(client => {
       const contact: Contact = {
@@ -77,9 +86,13 @@ export const getConversations = async (): Promise<Conversation[]> => {
         unreadCount: 0
       } as Conversation;
     });
+    
+    console.log(`Created ${clientConversations.length} client conversations`);
 
     // Create team member conversations
     const teamConversations = teamContacts.map(contact => {
+      console.log(`Creating team conversation for: ${contact.name}`);
+      
       return {
         id: `team-conversation-${contact.id}`,
         contact,
@@ -100,8 +113,13 @@ export const getConversations = async (): Promise<Conversation[]> => {
       } as Conversation;
     });
     
+    console.log(`Created ${teamConversations.length} team conversations`);
+    
     // Combine and return all conversations
-    return [...leadConversations, ...clientConversations, ...teamConversations];
+    const allConversations = [...leadConversations, ...clientConversations, ...teamConversations];
+    console.log(`Total conversations: ${allConversations.length}`);
+    
+    return allConversations;
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return [];
