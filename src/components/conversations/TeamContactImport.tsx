@@ -31,10 +31,16 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       // Use the service to import contacts and get the returned contacts
       const importedContacts = await importContactsFromTeam();
       
-      // Set the team count
-      setTeamCount(importedContacts.length);
+      // Verify all contacts have the correct type
+      const validatedContacts = importedContacts.map(contact => ({
+        ...contact,
+        type: 'team' as const // Explicitly set as team type with const assertion
+      }));
       
-      if (importedContacts.length === 0) {
+      // Set the team count
+      setTeamCount(validatedContacts.length);
+      
+      if (validatedContacts.length === 0) {
         console.warn('No team contacts were imported. Check your team_members table in Supabase.');
         toast({
           title: 'No team contacts found',
@@ -46,11 +52,11 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       }
       
       // Call the callback to notify parent component with the imported contacts
-      onImportComplete(importedContacts);
+      onImportComplete(validatedContacts);
       
       toast({
         title: 'Team contacts imported',
-        description: `${importedContacts.length} team contacts imported successfully.`,
+        description: `${validatedContacts.length} team contacts imported successfully.`,
       });
     } catch (error) {
       console.error('Error importing team contacts:', error);
