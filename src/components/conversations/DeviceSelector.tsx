@@ -20,12 +20,6 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Helper function to validate UUID format
-  const isValidUuid = (id: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(id);
-  };
-
   useEffect(() => {
     async function fetchDevices() {
       try {
@@ -77,16 +71,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // Removed selectedDevice and onSelectDevice from dependencies to avoid unnecessary re-fetches
-
-  // Update the device if it's a valid selection
-  useEffect(() => {
-    if (selectedDevice && devices.length > 0 && 
-        !devices.some(device => device.id === selectedDevice)) {
-      // If the selected device is not in the devices list, select the first one
-      onSelectDevice(devices[0].id);
-    }
-  }, [selectedDevice, devices, onSelectDevice]);
+  }, [selectedDevice, onSelectDevice, toast]);
 
   if (loading) {
     return (
@@ -113,15 +98,7 @@ const DeviceSelector: React.FC<DeviceSelectorProps> = ({
     <div className="flex items-center gap-2">
       <Smartphone className="h-5 w-5 text-gray-500" />
       <div>
-        <Select 
-          value={selectedDevice} 
-          onValueChange={(value) => {
-            // Only set if it's one of our devices
-            if (devices.some(device => device.id === value)) {
-              onSelectDevice(value);
-            }
-          }}
-        >
+        <Select value={selectedDevice} onValueChange={onSelectDevice}>
           <SelectTrigger className="w-[240px]">
             <SelectValue placeholder="Select WhatsApp device" />
           </SelectTrigger>

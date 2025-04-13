@@ -51,8 +51,7 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
   };
   
   useEffect(() => {
-    // Only check device status if we have a valid UUID format device ID
-    if (!currentDeviceId || !isValidUuid(currentDeviceId)) return;
+    if (!currentDeviceId) return;
     
     const checkDeviceStatus = async () => {
       try {
@@ -80,46 +79,37 @@ const ConversationLayout: React.FC<ConversationLayoutProps> = ({ currentDeviceId
     
     checkDeviceStatus();
     
-    // Only set up the subscription if we have a valid device ID
-    if (isValidUuid(currentDeviceId)) {
-      const channel = supabase
-        .channel('device-status')
-        .on('postgres_changes', 
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'device_accounts',
-            filter: `id=eq.${currentDeviceId}`
-          },
-          (payload) => {
-            const status = payload.new?.status;
-            if (status === 'disconnected') {
-              toast({
-                title: "Device disconnected",
-                description: "Your WhatsApp device has been disconnected. Please reconnect it to continue messaging.",
-                variant: "destructive",
-              });
-            } else if (status === 'connected') {
-              toast({
-                title: "Device connected",
-                description: "Your WhatsApp device is now connected.",
-              });
-            }
+    const channel = supabase
+      .channel('device-status')
+      .on('postgres_changes', 
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'device_accounts',
+          filter: `id=eq.${currentDeviceId}`
+        },
+        (payload) => {
+          const status = payload.new?.status;
+          if (status === 'disconnected') {
+            toast({
+              title: "Device disconnected",
+              description: "Your WhatsApp device has been disconnected. Please reconnect it to continue messaging.",
+              variant: "destructive",
+            });
+          } else if (status === 'connected') {
+            toast({
+              title: "Device connected",
+              description: "Your WhatsApp device is now connected.",
+            });
           }
-        )
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentDeviceId]);
-  
-  // Helper function to validate UUID format
-  const isValidUuid = (id: string): boolean => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(id);
-  };
   
   const changeWallpaper = (wallpaperUrl: string | null) => {
     setWallpaper(wallpaperUrl);

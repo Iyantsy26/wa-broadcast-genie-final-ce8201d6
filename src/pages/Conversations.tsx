@@ -13,33 +13,9 @@ import { importContactsFromTeam } from '@/services/contactService';
 import { supabase } from '@/integrations/supabase/client';
 
 const Conversations = () => {
-  const [selectedDevice, setSelectedDevice] = useState<string>('');
+  const [selectedDevice, setSelectedDevice] = useState('1');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Get available devices to initialize with a valid one
-    const fetchDevices = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('device_accounts')
-          .select('id');
-        
-        if (error) {
-          console.error('Error fetching devices:', error);
-          return;
-        }
-        
-        if (data && data.length > 0) {
-          setSelectedDevice(data[0].id);
-        }
-      } catch (error) {
-        console.error('Error in fetchDevices:', error);
-      }
-    };
-    
-    fetchDevices();
-  }, []);
 
   useEffect(() => {
     async function fetchContactsFromAllSources() {
