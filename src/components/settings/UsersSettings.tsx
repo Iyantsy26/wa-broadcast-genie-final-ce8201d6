@@ -259,7 +259,7 @@ const UsersSettings: React.FC<UsersSettingsProps> = ({ currentRole }) => {
             </div>
             
             <div className="flex justify-end">
-              <Button variant="primary">Save Changes</Button>
+              <Button variant="default">Save Changes</Button>
             </div>
           </div>
         </CardContent>
