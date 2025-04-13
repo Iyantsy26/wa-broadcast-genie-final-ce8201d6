@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { UserCheck, Users, Building2, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Building2, Users, User } from 'lucide-react';
 import { UserRole } from '@/services/devices/deviceTypes';
 
 interface RoleSelectorProps {
@@ -19,44 +18,60 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({ currentRole, onRoleChange }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/40 mb-6">
-      <span className="text-sm text-muted-foreground mr-2">View as role:</span>
-      
-      <Badge 
-        variant={currentRole === 'super_admin' ? "default" : "outline"} 
-        className={`cursor-pointer flex items-center gap-1 px-3 py-1 ${currentRole === 'super_admin' ? 'bg-amber-500 hover:bg-amber-600' : 'hover:bg-muted'}`}
-        onClick={() => onRoleChange('super_admin')}
-      >
-        <ShieldCheck className="h-3.5 w-3.5" />
-        Super Admin
-      </Badge>
-      
-      <Badge 
-        variant={currentRole === 'white_label' ? "default" : "outline"} 
-        className={`cursor-pointer flex items-center gap-1 px-3 py-1 ${currentRole === 'white_label' ? 'bg-blue-500 hover:bg-blue-600' : 'hover:bg-muted'}`}
-        onClick={() => onRoleChange('white_label')}
-      >
-        <Building2 className="h-3.5 w-3.5" />
-        White Label
-      </Badge>
-      
-      <Badge 
-        variant={currentRole === 'admin' ? "default" : "outline"} 
-        className={`cursor-pointer flex items-center gap-1 px-3 py-1 ${currentRole === 'admin' ? 'bg-purple-500 hover:bg-purple-600' : 'hover:bg-muted'}`}
-        onClick={() => onRoleChange('admin')}
-      >
-        <Users className="h-3.5 w-3.5" />
-        Admin
-      </Badge>
-      
-      <Badge 
-        variant={currentRole === 'user' ? "default" : "outline"} 
-        className={`cursor-pointer flex items-center gap-1 px-3 py-1 ${currentRole === 'user' ? 'bg-green-500 hover:bg-green-600' : 'hover:bg-muted'}`}
-        onClick={() => onRoleChange('user')}
-      >
-        <UserCheck className="h-3.5 w-3.5" />
-        User
-      </Badge>
+    <div className="flex justify-end mb-6">
+      <div className="flex items-center">
+        <span className="text-sm font-medium text-muted-foreground mr-3">View as role (Demo):</span>
+        
+        <div className="flex space-x-2">
+          <button
+            onClick={() => onRoleChange('super_admin')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+              currentRole === 'super_admin' 
+                ? 'bg-amber-500 text-white' 
+                : 'border border-input bg-background hover:bg-muted'
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>Super Admin</span>
+          </button>
+          
+          <button
+            onClick={() => onRoleChange('white_label')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+              currentRole === 'white_label' 
+                ? 'bg-blue-500 text-white' 
+                : 'border border-input bg-background hover:bg-muted'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            <span>White Label</span>
+          </button>
+          
+          <button
+            onClick={() => onRoleChange('admin')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+              currentRole === 'admin' 
+                ? 'bg-orange-500 text-white' 
+                : 'border border-input bg-background hover:bg-muted'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Admin</span>
+          </button>
+          
+          <button
+            onClick={() => onRoleChange('user')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+              currentRole === 'user' 
+                ? 'bg-green-500 text-white' 
+                : 'border border-input bg-background hover:bg-muted'
+            }`}
+          >
+            <User className="h-4 w-4" />
+            <span>User</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
