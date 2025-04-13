@@ -82,9 +82,7 @@ const App = () => {
               <Route path="/team" element={<TeamManagement />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/tickets" element={<Tickets />} />
-              
-              {/* Settings Routes with Nested Paths */}
-              <Route path="/settings/*" element={<Settings />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
             
             {/* Redirect Route */}
