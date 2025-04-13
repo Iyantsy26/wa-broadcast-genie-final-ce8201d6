@@ -47,30 +47,14 @@ const Conversations = () => {
           lastSeen: client.join_date || new Date().toISOString(),
           tags: client.tags || []
         }));
-
-        // Fetch team contacts
-        console.log('Fetching team contacts...');
-        const teamContacts = await importContactsFromTeam();
-        console.log('Team contacts fetched:', teamContacts);
-        console.log('Team contact types:', teamContacts.map(c => c.type));
-
-        // Combine all contacts
-        const allContacts = [...leadContacts, ...clientContacts, ...teamContacts];
-        console.log('All contacts combined:', allContacts.length);
-        console.log('Contact types in combined list:', 
-          {
-            leads: allContacts.filter(c => c.type === 'lead').length,
-            clients: allContacts.filter(c => c.type === 'client').length, 
-            team: allContacts.filter(c => c.type === 'team').length
-          }
-        );
         
-        setContacts(allContacts);
+        // Combine leads and clients for now (team will be added separately)
+        const initialContacts = [...leadContacts, ...clientContacts];
+        setContacts(initialContacts);
 
-        toast({
-          title: 'Contacts loaded',
-          description: `${allContacts.length} contacts loaded successfully (${teamContacts.length} team members)`,
-        });
+        // Wait to set loading to false until after team contacts are handled by TeamContactImport
+        setIsLoading(false);
+        
       } catch (error) {
         console.error('Error fetching contacts:', error);
         toast({
@@ -78,57 +62,27 @@ const Conversations = () => {
           description: 'Failed to load contacts',
           variant: 'destructive',
         });
-      } finally {
         setIsLoading(false);
       }
     }
 
     fetchContactsFromAllSources();
-    
-    // Listen for team_members changes and update contacts
-    const teamMembersSubscription = supabase
-      .channel('team_members_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'team_members' 
-        },
-        (payload) => {
-          console.log('Team members change detected:', payload);
-          importContactsFromTeam().then(teamContacts => {
-            setContacts(prevContacts => {
-              // Remove existing team contacts
-              const nonTeamContacts = prevContacts.filter(c => c.type !== 'team');
-              // Add the new team contacts
-              return [...nonTeamContacts, ...teamContacts];
-            });
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(teamMembersSubscription);
-    };
   }, []);
 
   const handleTeamContactsImported = async (importedContacts: Contact[]) => {
     try {
       console.log('Handling team contacts import, received:', importedContacts.length);
-      console.log('Imported contact types:', importedContacts.map(c => c.type));
       
       // Add the newly imported contacts to our state
       setContacts(prevContacts => {
         // Filter out existing team contacts to avoid duplicates
         const filteredContacts = prevContacts.filter(contact => 
-          contact.type !== 'team' || !importedContacts.some(imp => imp.id === contact.id)
+          contact.type !== 'team'
         );
         
         // Add the new imported contacts
         const updatedContacts = [...filteredContacts, ...importedContacts];
         console.log('Updated contacts state:', updatedContacts.length);
-        console.log('Team contacts in updated list:', updatedContacts.filter(c => c.type === 'team').length);
         
         return updatedContacts;
       });

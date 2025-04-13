@@ -5,6 +5,7 @@ import { Users } from 'lucide-react';
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { importContactsFromTeam } from '@/services/contactService';
+import { Badge } from "@/components/ui/badge";
 
 interface TeamContactImportProps {
   onImportComplete: (contacts: Contact[]) => void;
@@ -12,6 +13,7 @@ interface TeamContactImportProps {
 
 export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportComplete }) => {
   const [loading, setLoading] = useState(false);
+  const [teamCount, setTeamCount] = useState(0);
   
   // Auto-import on component mount
   useEffect(() => {
@@ -29,9 +31,8 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       // Use the service to import contacts and get the returned contacts
       const importedContacts = await importContactsFromTeam();
       
-      console.log('Team contacts imported successfully:', importedContacts);
-      console.log('Team contact count:', importedContacts.length);
-      console.log('Team contact types:', importedContacts.map(c => c.type));
+      // Set the team count
+      setTeamCount(importedContacts.length);
       
       if (importedContacts.length === 0) {
         console.warn('No team contacts were imported. Check your team_members table in Supabase.');
@@ -40,6 +41,7 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
           description: 'No team contacts were found in your database.',
           variant: 'destructive',
         });
+        setLoading(false);
         return;
       }
       
@@ -48,7 +50,7 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       
       toast({
         title: 'Team contacts imported',
-        description: `${importedContacts.length} team contacts imported successfully. Please click on "Team" tab to view them.`,
+        description: `${importedContacts.length} team contacts imported successfully.`,
       });
     } catch (error) {
       console.error('Error importing team contacts:', error);
@@ -63,14 +65,21 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
   };
 
   return (
-    <Button 
-      variant="outline" 
-      onClick={handleImport} 
-      className="flex items-center gap-2"
-      disabled={loading}
-    >
-      <Users className="h-4 w-4" />
-      <span>{loading ? 'Refreshing...' : 'Refresh Team'}</span>
-    </Button>
+    <div className="flex items-center gap-2">
+      <Button 
+        variant="outline" 
+        onClick={handleImport} 
+        className="flex items-center gap-2"
+        disabled={loading}
+      >
+        <Users className="h-4 w-4" />
+        <span>{loading ? 'Refreshing...' : 'Refresh Team'}</span>
+      </Button>
+      {teamCount > 0 && (
+        <Badge variant="secondary" className="h-6">
+          {teamCount}
+        </Badge>
+      )}
+    </div>
   );
 };
