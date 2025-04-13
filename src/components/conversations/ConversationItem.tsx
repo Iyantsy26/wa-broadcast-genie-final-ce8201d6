@@ -16,6 +16,16 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   isActive,
   onClick
 }) => {
+  // Create initials for avatar fallback
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <div 
       className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
@@ -27,9 +37,19 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         <div className="flex items-center gap-2">
           <div className="relative">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={conversation.contact.avatar} />
+              {conversation.contact.avatar ? (
+                <AvatarImage 
+                  src={conversation.contact.avatar} 
+                  alt={conversation.contact.name}
+                  onError={(e) => {
+                    // Handle image loading error
+                    console.warn(`Avatar image failed to load for ${conversation.contact.name}`);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : null}
               <AvatarFallback className="bg-primary/10 text-primary">
-                {conversation.contact.name.split(' ').map(n => n[0]).join('')}
+                {getInitials(conversation.contact.name)}
               </AvatarFallback>
             </Avatar>
             {conversation.contact.isOnline && (

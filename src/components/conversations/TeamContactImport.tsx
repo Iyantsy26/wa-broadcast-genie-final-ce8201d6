@@ -31,10 +31,12 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       // Use the service to import contacts and get the returned contacts
       const importedContacts = await importContactsFromTeam();
       
-      // Verify all contacts have the correct type
+      // Process the contacts with validated data
       const validatedContacts = importedContacts.map(contact => ({
         ...contact,
-        type: 'team' as const // Explicitly set as team type with const assertion
+        type: 'team' as const, // Explicitly set as team type with const assertion
+        // Ensure avatar field has a valid URL or set to empty string
+        avatar: contact.avatar && contact.avatar.trim() !== '' ? contact.avatar : ''
       }));
       
       // Set the team count

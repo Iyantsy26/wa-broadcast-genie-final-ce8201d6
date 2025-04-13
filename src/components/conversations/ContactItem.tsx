@@ -93,6 +93,16 @@ const ContactItem: React.FC<ContactItemProps> = ({
     }
   };
   
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    return contact.name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+  
   return (
     <div
       className={`px-3 py-3 flex items-start gap-3 cursor-pointer transition-colors border-l-2 hover:bg-muted/50 ${
@@ -105,11 +115,18 @@ const ContactItem: React.FC<ContactItemProps> = ({
       {/* Avatar with online indicator */}
       <div className="relative flex-shrink-0">
         <Avatar>
-          <AvatarImage src={contact.avatar} />
+          {contact.avatar ? (
+            <AvatarImage 
+              src={contact.avatar} 
+              alt={contact.name}
+              onError={(e) => {
+                console.warn(`Avatar failed to load for ${contact.name}`);
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : null}
           <AvatarFallback className={`bg-muted ${getTypeColor()}`}>
-            {contact.name.split(' ')
-              .map(n => n[0])
-              .join('')}
+            {getInitials()}
           </AvatarFallback>
         </Avatar>
         {contact.isOnline && (
