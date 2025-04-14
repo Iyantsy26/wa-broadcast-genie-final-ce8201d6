@@ -49,7 +49,7 @@ const Conversations = () => {
         const leadContacts: Contact[] = leads.map(lead => ({
           id: lead.id,
           name: lead.name,
-          avatar: lead.avatar_url,
+          avatar: lead.avatar_url || '',
           phone: lead.phone || '',
           type: 'lead' as ChatType,
           isOnline: false,
@@ -62,7 +62,7 @@ const Conversations = () => {
         const clientContacts: Contact[] = clients.map(client => ({
           id: client.id,
           name: client.name,
-          avatar: client.avatar_url,
+          avatar: client.avatar_url || '',
           phone: client.phone || '',
           type: 'client' as ChatType,
           isOnline: false,
@@ -70,13 +70,10 @@ const Conversations = () => {
           tags: client.tags || []
         }));
         
-        // Combine leads and clients for now (team will be added separately)
+        // Combine leads and clients
         const initialContacts = [...leadContacts, ...clientContacts];
         setContacts(initialContacts);
-
-        // Wait to set loading to false until after team contacts are handled by TeamContactImport
         setIsLoading(false);
-        
       } catch (error) {
         console.error('Error fetching contacts:', error);
         toast({
@@ -102,8 +99,16 @@ const Conversations = () => {
           contact.type !== 'team'
         );
         
-        // Add the new imported contacts
-        const updatedContacts = [...filteredContacts, ...importedContacts];
+        // Ensure each imported contact has consistent structure
+        const formattedTeamContacts = importedContacts.map(contact => ({
+          ...contact,
+          type: 'team' as ChatType,
+          avatar: '', // Explicitly empty to prevent 404 errors
+          tags: contact.tags || []
+        }));
+        
+        // Add the formatted imported contacts
+        const updatedContacts = [...filteredContacts, ...formattedTeamContacts];
         console.log('Updated contacts state:', updatedContacts.length);
         
         return updatedContacts;

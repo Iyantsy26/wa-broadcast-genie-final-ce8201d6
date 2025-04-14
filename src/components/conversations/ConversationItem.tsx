@@ -34,6 +34,15 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
            conversation.contact.avatar.trim() !== '';
   };
 
+  // Get the appropriate role or chat type label
+  const getContactSubtitle = () => {
+    if (conversation.chatType === 'team') {
+      return conversation.contact.role || 'Team Member';
+    } else {
+      return conversation.contact.phone || '';
+    }
+  };
+
   return (
     <div 
       className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
@@ -67,9 +76,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           <div>
             <div className="font-medium">{conversation.contact.name}</div>
             <div className="text-xs text-muted-foreground">
-              {conversation.chatType === 'team' ? 
-                (conversation.contact.role || 'Team Member') : 
-                conversation.contact.phone || ''}
+              {getContactSubtitle()}
             </div>
           </div>
         </div>

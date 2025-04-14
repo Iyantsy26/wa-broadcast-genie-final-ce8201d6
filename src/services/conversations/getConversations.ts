@@ -18,7 +18,6 @@ export const getConversations = async (): Promise<Conversation[]> => {
     
     const teamContacts = await importContactsFromTeam();
     console.log(`Fetched ${teamContacts.length} team contacts`);
-    console.log('Team contact types:', teamContacts.map(c => c.type));
     
     if (teamContacts.length === 0) {
       console.warn('No team contacts were found. Verify team_members table in Supabase has active members.');
@@ -29,7 +28,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
       const contact: Contact = {
         id: lead.id,
         name: lead.name,
-        avatar: lead.avatar_url,
+        avatar: lead.avatar_url || '',
         phone: lead.phone || '',
         type: 'lead' as ChatType,
         isOnline: Math.random() > 0.7, // Random online status for demo
@@ -64,7 +63,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
       const contact: Contact = {
         id: client.id,
         name: client.name,
-        avatar: client.avatar_url,
+        avatar: client.avatar_url || '',
         phone: client.phone || '',
         type: 'client' as ChatType,
         isOnline: Math.random() > 0.7, // Random online status for demo
@@ -95,15 +94,25 @@ export const getConversations = async (): Promise<Conversation[]> => {
     console.log(`Created ${clientConversations.length} client conversations`);
 
     // Create team member conversations with improved handling
-    const teamConversations = teamContacts.map((contact) => {
+    const teamConversations = teamContacts.map((member) => {
+      // Ensure consistent contact structure for team members
+      const contact: Contact = {
+        id: member.id,
+        name: member.name,
+        avatar: '', // Explicitly empty to prevent 404 errors
+        phone: member.phone || '',
+        type: 'team' as ChatType,
+        isOnline: member.isOnline !== undefined ? member.isOnline : true,
+        lastSeen: member.lastSeen || new Date().toISOString(),
+        role: member.role || 'Team Member',
+        tags: member.tags || []
+      };
+
       return {
-        id: `team-conversation-${contact.id}`,
-        contact: {
-          ...contact,
-          type: 'team' as ChatType
-        },
+        id: `team-conversation-${member.id}`,
+        contact,
         lastMessage: {
-          content: 'Team messaging available',
+          content: `Team chat with ${member.role || 'Team Member'}`,
           timestamp: new Date().toISOString(),
           isOutbound: false,
           isRead: true

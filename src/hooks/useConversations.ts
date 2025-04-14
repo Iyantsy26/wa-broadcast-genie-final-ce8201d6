@@ -72,17 +72,18 @@ export const useConversations = () => {
           id: `team-${contact.id}`,
           contact: {
             ...contact,
-            avatar: '', // Set empty avatar to avoid 404 errors
+            avatar: '', // Explicitly set empty avatar to prevent 404 errors
+            type: 'team' as ChatType
           },
           lastMessage: {
-            content: 'Team messaging available',
+            content: `Team chat with ${contact.role || 'Team Member'}`,
             timestamp: new Date().toISOString(),
             isOutbound: false,
             isRead: true
           },
-          chatType: 'team',
+          chatType: 'team' as ChatType,
           status: 'open',
-          tags: [],
+          tags: contact.tags || [],
           assignedTo: '',
           isEncrypted: false,
           isPinned: false,
@@ -107,6 +108,9 @@ export const useConversations = () => {
           title: 'Team members imported',
           description: `${importedContacts.length} team members imported successfully`,
         });
+
+        // Set chat type filter to 'team' to show the imported team conversations
+        setChatTypeFilter('team');
       } else {
         toast({
           title: 'No team members found',

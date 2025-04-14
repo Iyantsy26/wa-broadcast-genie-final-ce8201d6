@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Contact, ChatType } from "@/types/conversation";
@@ -40,10 +41,10 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
   try {
     console.log('Importing team contacts from Supabase...');
     
-    // Get team members - make sure we're selecting all the required fields
+    // Get team members with all necessary fields
     const { data: teamMembers, error: teamError } = await supabase
       .from('team_members')
-      .select('id, name, phone, role, status, last_active')
+      .select('id, name, phone, role, email, status, last_active, position')
       .eq('status', 'active');
       
     if (teamError) {
@@ -58,29 +59,29 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     
     console.log('Team members fetched successfully:', teamMembers.length);
     
-    // Convert team members to contacts
-    const contacts: Contact[] = teamMembers.map((member, index) => {
+    // Convert team members to contacts with proper structure
+    const contacts: Contact[] = teamMembers.map((member) => {
       const contact: Contact = {
         id: member.id,
-        name: member.name || `Team Member ${index + 1}`,
-        avatar: '', // Use empty string for avatar to avoid 404 errors
+        name: member.name || 'Team Member',
+        avatar: '', // Set empty avatar to avoid 404 errors
         phone: member.phone || '',
         type: 'team' as ChatType,
         isOnline: member.status === 'active',
         lastSeen: member.last_active || new Date().toISOString(),
-        role: member.role,
-        tags: []
+        role: member.role || member.position,
+        tags: [],
+        email: member.email
       };
       
       return contact;
     });
     
     console.log('Converted team members to contacts:', contacts.length);
-    console.log('Team contact types:', contacts.map(c => c.type));
     
     return contacts;
   } catch (error) {
     console.error('Error importing team contacts:', error);
-    throw error; // Rethrow to allow handling in the component
+    throw error;
   }
 };

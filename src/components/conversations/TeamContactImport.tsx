@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { UserPlus } from 'lucide-react';
 import { Contact } from '@/types/conversation';
@@ -23,18 +23,17 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
         description: 'Please wait while we import your team contacts...',
       });
       
-      // Use the service to import contacts and get the returned contacts
+      // Import contacts from the team_members table
       const importedContacts = await importContactsFromTeam();
       
-      // Process the contacts with validated data
+      // Ensure each contact has the correct structure
       const validatedContacts = importedContacts.map(contact => ({
         ...contact,
         type: 'team' as const,
-        // Set avatar to empty string to avoid 404 errors
-        avatar: ''
+        avatar: '', // Explicitly set empty avatar to prevent 404 errors
+        tags: contact.tags || []
       }));
       
-      // Set the team count
       setTeamCount(validatedContacts.length);
       
       if (validatedContacts.length === 0) {
