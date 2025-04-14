@@ -102,6 +102,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
         id: `team-conversation-${contact.id}`,
         contact: {
           ...contact,
+          avatar: '', // Ensure avatar is empty string to avoid 404 errors
           type: 'team' as ChatType // Ensure this is explicitly set with the correct type
         },
         lastMessage: {
