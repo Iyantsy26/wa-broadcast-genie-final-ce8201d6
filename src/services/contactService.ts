@@ -61,12 +61,13 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     
     // Convert team members to contacts
     const contacts: Contact[] = teamMembers.map((member, index) => {
-      // Validate avatar URL - ensure it exists and is a valid URL
+      // Validate avatar URL - ensure it exists and is a valid URL format
       let avatarUrl = '';
       if (member.avatar) {
         try {
           // Only set the avatar URL if it's a valid URL or path
-          if (member.avatar.startsWith('http') || member.avatar.startsWith('/')) {
+          if (typeof member.avatar === 'string' && 
+              (member.avatar.startsWith('http') || member.avatar.startsWith('/'))) {
             avatarUrl = member.avatar;
           } else {
             console.warn(`Invalid avatar URL format for team member ${member.id}: ${member.avatar}`);

@@ -95,12 +95,21 @@ const ContactItem: React.FC<ContactItemProps> = ({
   
   // Get initials for avatar fallback
   const getInitials = () => {
+    if (!contact.name) return 'U'; // Fallback for undefined name
+    
     return contact.name
       .split(' ')
-      .map(n => n[0])
+      .map(n => n?.[0] || '')
       .join('')
       .toUpperCase()
       .substring(0, 2);
+  };
+  
+  // Check if avatar URL is valid
+  const hasValidAvatar = () => {
+    return contact.avatar && 
+           typeof contact.avatar === 'string' && 
+           contact.avatar.trim() !== '';
   };
   
   return (
@@ -115,7 +124,7 @@ const ContactItem: React.FC<ContactItemProps> = ({
       {/* Avatar with online indicator */}
       <div className="relative flex-shrink-0">
         <Avatar>
-          {contact.avatar ? (
+          {hasValidAvatar() ? (
             <AvatarImage 
               src={contact.avatar} 
               alt={contact.name}

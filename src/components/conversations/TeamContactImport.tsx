@@ -36,7 +36,10 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
         ...contact,
         type: 'team' as const, // Explicitly set as team type with const assertion
         // Ensure avatar field has a valid URL or set to empty string
-        avatar: contact.avatar && contact.avatar.trim() !== '' ? contact.avatar : ''
+        avatar: contact.avatar && 
+               typeof contact.avatar === 'string' && 
+               (contact.avatar.startsWith('http') || contact.avatar.startsWith('/')) ? 
+               contact.avatar : ''
       }));
       
       // Set the team count

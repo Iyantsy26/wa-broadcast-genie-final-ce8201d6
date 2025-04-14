@@ -18,12 +18,21 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 }) => {
   // Create initials for avatar fallback
   const getInitials = (name: string): string => {
+    if (!name) return 'U'; // Fallback for undefined name
+    
     return name
       .split(' ')
-      .map(n => n[0])
+      .map(n => n?.[0] || '')
       .join('')
       .toUpperCase()
       .substring(0, 2);
+  };
+
+  // Check if avatar URL is valid
+  const hasValidAvatar = () => {
+    return conversation.contact.avatar && 
+           typeof conversation.contact.avatar === 'string' && 
+           conversation.contact.avatar.trim() !== '';
   };
 
   return (
@@ -37,7 +46,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         <div className="flex items-center gap-2">
           <div className="relative">
             <Avatar className="h-10 w-10">
-              {conversation.contact.avatar ? (
+              {hasValidAvatar() ? (
                 <AvatarImage 
                   src={conversation.contact.avatar} 
                   alt={conversation.contact.name}
