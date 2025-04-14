@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Users } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { Contact } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { importContactsFromTeam } from '@/services/contactService';
@@ -15,11 +15,6 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
   const [loading, setLoading] = useState(false);
   const [teamCount, setTeamCount] = useState(0);
   
-  // Auto-import on component mount
-  useEffect(() => {
-    handleImport();
-  }, []);
-
   const handleImport = async () => {
     try {
       setLoading(true);
@@ -34,12 +29,9 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       // Process the contacts with validated data
       const validatedContacts = importedContacts.map(contact => ({
         ...contact,
-        type: 'team' as const, // Explicitly set as team type with const assertion
-        // Ensure avatar field has a valid URL or set to empty string
-        avatar: contact.avatar && 
-               typeof contact.avatar === 'string' && 
-               (contact.avatar.startsWith('http') || contact.avatar.startsWith('/')) ? 
-               contact.avatar : ''
+        type: 'team' as const,
+        // Set avatar to empty string to avoid 404 errors
+        avatar: ''
       }));
       
       // Set the team count
@@ -61,7 +53,7 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
       
       toast({
         title: 'Team contacts imported',
-        description: `${validatedContacts.length} team contacts imported successfully.`,
+        description: `${validatedContacts.length} team members imported to team chat successfully.`,
       });
     } catch (error) {
       console.error('Error importing team contacts:', error);
@@ -83,8 +75,8 @@ export const TeamContactImport: React.FC<TeamContactImportProps> = ({ onImportCo
         className="flex items-center gap-2"
         disabled={loading}
       >
-        <Users className="h-4 w-4" />
-        <span>{loading ? 'Refreshing...' : 'Refresh Team'}</span>
+        <UserPlus className="h-4 w-4" />
+        <span>{loading ? 'Importing...' : 'Import Team'}</span>
       </Button>
       {teamCount > 0 && (
         <Badge variant="secondary" className="h-6">

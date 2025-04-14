@@ -94,18 +94,16 @@ export const getConversations = async (): Promise<Conversation[]> => {
     
     console.log(`Created ${clientConversations.length} client conversations`);
 
-    // Create team member conversations
-    const teamConversations = teamContacts.map((contact, index) => {
-      console.log(`Creating team conversation ${index + 1} for: ${contact.name} with type: ${contact.type}`);
-      
+    // Create team member conversations with improved handling
+    const teamConversations = teamContacts.map((contact) => {
       return {
         id: `team-conversation-${contact.id}`,
         contact: {
           ...contact,
-          type: 'team' as ChatType // Ensure this is explicitly set with the correct type
+          type: 'team' as ChatType
         },
         lastMessage: {
-          content: 'This is a team conversation',
+          content: 'Team messaging available',
           timestamp: new Date().toISOString(),
           isOutbound: false,
           isRead: true

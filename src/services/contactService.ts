@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Contact, ChatType } from "@/types/conversation";
@@ -44,7 +43,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     // Get team members - make sure we're selecting all the required fields
     const { data: teamMembers, error: teamError } = await supabase
       .from('team_members')
-      .select('id, name, avatar, phone, role, status, last_active')
+      .select('id, name, phone, role, status, last_active')
       .eq('status', 'active');
       
     if (teamError) {
@@ -61,28 +60,12 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
     
     // Convert team members to contacts
     const contacts: Contact[] = teamMembers.map((member, index) => {
-      // Validate avatar URL - ensure it exists and is a valid URL format
-      let avatarUrl = '';
-      if (member.avatar) {
-        try {
-          // Only set the avatar URL if it's a valid URL or path
-          if (typeof member.avatar === 'string' && 
-              (member.avatar.startsWith('http') || member.avatar.startsWith('/'))) {
-            avatarUrl = member.avatar;
-          } else {
-            console.warn(`Invalid avatar URL format for team member ${member.id}: ${member.avatar}`);
-          }
-        } catch (e) {
-          console.warn(`Error processing avatar URL for team member ${member.id}:`, e);
-        }
-      }
-      
       const contact: Contact = {
         id: member.id,
         name: member.name || `Team Member ${index + 1}`,
-        avatar: avatarUrl, // Use the validated avatar URL
+        avatar: '', // Use empty string for avatar to avoid 404 errors
         phone: member.phone || '',
-        type: 'team' as ChatType, // Explicitly set as team type
+        type: 'team' as ChatType,
         isOnline: member.status === 'active',
         lastSeen: member.last_active || new Date().toISOString(),
         role: member.role,

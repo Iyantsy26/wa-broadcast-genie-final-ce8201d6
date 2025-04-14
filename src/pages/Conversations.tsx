@@ -5,11 +5,9 @@ import ConversationLayout from '@/components/conversations/ConversationLayout';
 import DeviceSelector from '@/components/conversations/DeviceSelector';
 import { getLeads } from '@/services/leadService';
 import { getClients } from '@/services/clientService';
-import { getConversations } from '@/services/conversationService';
 import { Contact, ChatType } from '@/types/conversation';
 import { toast } from '@/hooks/use-toast';
 import { TeamContactImport } from '@/components/conversations/TeamContactImport';
-import { importContactsFromTeam } from '@/services/contactService';
 import { supabase } from '@/integrations/supabase/client';
 
 const Conversations = () => {
@@ -110,11 +108,17 @@ const Conversations = () => {
         
         return updatedContacts;
       });
+      
+      // Inform user about the action
+      toast({
+        title: 'Team Members Imported',
+        description: `${importedContacts.length} team members are now available in team chat`,
+      });
     } catch (error) {
       console.error('Error handling team contacts import:', error);
       toast({
         title: 'Error',
-        description: 'Failed to refresh team contacts',
+        description: 'Failed to import team contacts',
         variant: 'destructive',
       });
     }

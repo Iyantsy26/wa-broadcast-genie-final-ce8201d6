@@ -6,6 +6,7 @@ import { useConversationActions } from './conversations/useConversationActions';
 import { useState, useEffect } from 'react';
 import { Conversation, Contact, ChatType } from '@/types/conversation';
 import { importContactsFromTeam } from '@/services/contactService';
+import { toast } from '@/hooks/use-toast';
 
 export const useConversations = () => {
   const {
@@ -55,23 +56,37 @@ export const useConversations = () => {
     setIsSidebarOpen
   );
 
-  // Add function to handle team contact imports
+  // Enhanced function to handle team contact imports
   const handleImportTeamContacts = async () => {
     try {
+      toast({
+        title: 'Importing team members',
+        description: 'Please wait while we import your team members to conversations...',
+      });
+      
       const importedContacts = await importContactsFromTeam();
       
       if (importedContacts.length > 0) {
         // Convert imported contacts to conversations
         const newConversations: Conversation[] = importedContacts.map(contact => ({
           id: `team-${contact.id}`,
-          contact: contact,
+          contact: {
+            ...contact,
+            avatar: '', // Set empty avatar to avoid 404 errors
+          },
           lastMessage: {
-            content: 'Conversation started',
+            content: 'Team messaging available',
             timestamp: new Date().toISOString(),
             isOutbound: false,
             isRead: true
           },
           chatType: 'team',
+          status: 'open',
+          tags: [],
+          assignedTo: '',
+          isEncrypted: false,
+          isPinned: false,
+          isArchived: false,
           unreadCount: 0
         }));
         
@@ -87,16 +102,27 @@ export const useConversations = () => {
           
           return [...filteredPrev, ...newConversations];
         });
+        
+        toast({
+          title: 'Team members imported',
+          description: `${importedContacts.length} team members imported successfully`,
+        });
+      } else {
+        toast({
+          title: 'No team members found',
+          description: 'Check your team_members table in Supabase',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error importing team contacts:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to import team members',
+        variant: 'destructive',
+      });
     }
   };
-
-  // Auto-import team contacts on component mount
-  useEffect(() => {
-    handleImportTeamContacts();
-  }, []);
 
   return {
     // State

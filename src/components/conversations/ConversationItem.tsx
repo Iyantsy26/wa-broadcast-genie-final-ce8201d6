@@ -2,7 +2,6 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Conversation } from '@/types/conversation';
-import { MessageSquare, RefreshCw, CheckCircle, Clock } from 'lucide-react';
 import { getStatusColor, getStatusIcon } from './StatusUtils';
 
 interface ConversationItemProps {
@@ -67,7 +66,11 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           </div>
           <div>
             <div className="font-medium">{conversation.contact.name}</div>
-            <div className="text-xs text-muted-foreground">{conversation.contact.phone}</div>
+            <div className="text-xs text-muted-foreground">
+              {conversation.chatType === 'team' ? 
+                (conversation.contact.role || 'Team Member') : 
+                conversation.contact.phone || ''}
+            </div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground">
@@ -89,7 +92,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           )}
           <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(conversation.status)}`}>
             {getStatusIcon(conversation.status)}
-            <span className="ml-0.5 capitalize">{conversation.status}</span>
+            <span className="ml-0.5 capitalize">{conversation.chatType}</span>
           </div>
         </div>
       </div>
