@@ -85,6 +85,23 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
     }
   };
 
+  // Validate avatar URL
+  const hasValidAvatar = (avatar?: string) => {
+    return Boolean(avatar && typeof avatar === 'string' && avatar.trim() !== '');
+  };
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string): string => {
+    if (!name) return 'TM'; // Default fallback
+    
+    return name
+      .split(' ')
+      .map(n => n?.[0] || '')
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -104,13 +121,18 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
                 <TableCell className="font-medium" onClick={() => onViewProfile(member.id)}>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      {member.avatar ? (
-                        <AvatarImage src={member.avatar} />
-                      ) : (
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      )}
+                      {hasValidAvatar(member.avatar) ? (
+                        <AvatarImage 
+                          src={member.avatar} 
+                          onError={(e) => {
+                            console.warn(`Team member avatar failed to load: ${member.name}`);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getInitials(member.name)}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <div>{member.name}</div>

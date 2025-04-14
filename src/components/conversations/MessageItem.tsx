@@ -29,6 +29,20 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const handleReaction = (emoji: string) => {
     onReaction(message.id, emoji);
   };
+
+  // Check if avatar URL is valid
+  const hasValidAvatar = () => {
+    return contact.avatar && 
+           typeof contact.avatar === 'string' && 
+           contact.avatar.trim() !== '';
+  };
+
+  // Check if media URL is valid
+  const hasValidMedia = () => {
+    return message.media?.url && 
+           typeof message.media.url === 'string' && 
+           message.media.url.trim() !== '';
+  };
   
   const getMessageStatus = () => {
     if (!message.isOutbound) return null;
@@ -62,11 +76,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
       case 'image':
         return (
           <div className="mt-1">
-            {message.media && (
+            {hasValidMedia() && (
               <img 
-                src={message.media.url} 
+                src={message.media!.url} 
                 alt="Image attachment"
                 className="rounded-md max-h-60 object-cover"
+                onError={(e) => {
+                  console.warn(`Image failed to load: ${message.media?.url}`);
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             )}
             {message.content && <p className="mt-1 text-sm">{message.content}</p>}
@@ -115,7 +133,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
           <div className="flex items-center gap-1 mb-1">
             {!message.isOutbound && (
               <Avatar className="h-4 w-4">
-                <AvatarImage src={contact.avatar} alt={contact.name} />
+                {hasValidAvatar() ? (
+                  <AvatarImage 
+                    src={contact.avatar} 
+                    alt={contact.name}
+                    onError={(e) => {
+                      console.warn(`Sender avatar failed to load: ${contact.name}`);
+                      e.currentTarget.style.display = 'none';
+                    }} 
+                  />
+                ) : null}
                 <AvatarFallback className="text-[8px]">
                   {contact.name.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
