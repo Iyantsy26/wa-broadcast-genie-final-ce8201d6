@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Contact, ChatType } from "@/types/conversation";
@@ -71,7 +70,7 @@ export const importContactsFromTeam = async (): Promise<Contact[]> => {
         lastSeen: member.last_active || new Date().toISOString(),
         role: member.role || member.position,
         tags: [],
-        email: member.email
+        email: member.email // Now we can include email since it's in the Contact type
       };
       
       return contact;

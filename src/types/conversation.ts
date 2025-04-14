@@ -1,4 +1,3 @@
-
 export type MessageStatus = 'sent' | 'read' | 'delivered' | 'error' | 'sending';
 export type MessageType = 'text' | 'image' | 'video' | 'document' | 'voice';
 export type ChatType = 'team' | 'client' | 'lead';
@@ -54,6 +53,7 @@ export interface Contact {
   isArchived?: boolean;
   isBlocked?: boolean;
   tags: string[];
+  email?: string;
 }
 
 export interface ConversationSettings {

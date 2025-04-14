@@ -1,4 +1,3 @@
-
 import { Conversation, Contact, ChatType } from '@/types/conversation';
 import { supabase } from "@/integrations/supabase/client";
 import { getLeads } from '../leadService';
@@ -105,7 +104,8 @@ export const getConversations = async (): Promise<Conversation[]> => {
         isOnline: member.isOnline !== undefined ? member.isOnline : true,
         lastSeen: member.lastSeen || new Date().toISOString(),
         role: member.role || 'Team Member',
-        tags: member.tags || []
+        tags: member.tags || [],
+        email: member.email // Include email
       };
 
       return {
