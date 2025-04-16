@@ -3,6 +3,7 @@ import React from 'react';
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "lucide-react";
+import { useAvatarHandling } from '@/hooks/useAvatarHandling';
 
 interface AvatarDisplayProps {
   avatarUrl: string | null;
@@ -15,25 +16,19 @@ const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
   uploading = false,
   className
 }) => {
-  // Create a safe avatar URL validation function
-  const hasValidAvatar = () => {
-    return Boolean(avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '');
-  };
+  const { isValidAvatarUrl, handleAvatarError } = useAvatarHandling();
 
   return (
     <div className="relative my-2">
       <Avatar className={cn("h-24 w-24 mx-auto", className)}>
-        {hasValidAvatar() ? (
+        {isValidAvatarUrl(avatarUrl) && (
           <AvatarImage 
             src={avatarUrl!} 
             alt="Profile avatar" 
             className="object-cover"
-            onError={(e) => {
-              console.warn('Avatar failed to load:', avatarUrl);
-              e.currentTarget.style.display = 'none';
-            }}
+            onError={(e) => handleAvatarError(e, "Profile")}
           />
-        ) : null}
+        )}
         <AvatarFallback className="bg-primary/10 text-primary text-4xl">
           <User strokeWidth={1.5} />
         </AvatarFallback>

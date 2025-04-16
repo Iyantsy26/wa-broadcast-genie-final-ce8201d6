@@ -28,6 +28,7 @@ import {
   Unlock,
 } from "lucide-react";
 import { TeamMember } from '@/services/teamService';
+import { useAvatarHandling } from '@/hooks/useAvatarHandling';
 
 interface TeamMembersListProps {
   members: TeamMember[];
@@ -46,6 +47,8 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
   onResetPassword,
   onDelete,
 }) => {
+  const { isValidAvatarUrl, getInitials, handleAvatarError } = useAvatarHandling();
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active':
@@ -85,23 +88,6 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
     }
   };
 
-  // Validate avatar URL
-  const hasValidAvatar = (avatar?: string) => {
-    return Boolean(avatar && typeof avatar === 'string' && avatar.trim() !== '');
-  };
-
-  // Get initials for avatar fallback
-  const getInitials = (name: string): string => {
-    if (!name) return 'TM'; // Default fallback
-    
-    return name
-      .split(' ')
-      .map(n => n?.[0] || '')
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -121,15 +107,12 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
                 <TableCell className="font-medium" onClick={() => onViewProfile(member.id)}>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      {hasValidAvatar(member.avatar) ? (
+                      {isValidAvatarUrl(member.avatar) && (
                         <AvatarImage 
                           src={member.avatar} 
-                          onError={(e) => {
-                            console.warn(`Team member avatar failed to load: ${member.name}`);
-                            e.currentTarget.style.display = 'none';
-                          }}
+                          onError={(e) => handleAvatarError(e, member.name)}
                         />
-                      ) : null}
+                      )}
                       <AvatarFallback className="bg-primary/10 text-primary">
                         {getInitials(member.name)}
                       </AvatarFallback>

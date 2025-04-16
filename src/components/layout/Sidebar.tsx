@@ -75,7 +75,7 @@ const navItems: NavItem[] = [
     icon: <Building2 className="h-5 w-5" />,
   },
   {
-    title: 'Team Management',
+    title: 'Team',
     href: '/team',
     icon: <Users className="h-5 w-5" />,
   },

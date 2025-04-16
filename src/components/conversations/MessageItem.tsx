@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Message, Contact } from '@/types/conversation';
 import { format } from 'date-fns';
@@ -6,6 +5,7 @@ import { CheckCircle, Clock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useConversation } from '@/contexts/ConversationContext';
 import { EmojiPicker } from '@/components/ui/emoji-picker';
+import { useAvatarHandling } from '@/hooks/useAvatarHandling';
 
 interface MessageItemProps {
   message: Message;
@@ -25,16 +25,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
   onReply
 }) => {
   const { addReaction, deleteMessage } = useConversation();
+  const { isValidAvatarUrl, getInitials, handleAvatarError } = useAvatarHandling();
   
   const handleReaction = (emoji: string) => {
     onReaction(message.id, emoji);
-  };
-
-  // Check if avatar URL is valid
-  const hasValidAvatar = () => {
-    return contact.avatar && 
-           typeof contact.avatar === 'string' && 
-           contact.avatar.trim() !== '';
   };
 
   // Check if media URL is valid
@@ -133,18 +127,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
           <div className="flex items-center gap-1 mb-1">
             {!message.isOutbound && (
               <Avatar className="h-4 w-4">
-                {hasValidAvatar() ? (
+                {isValidAvatarUrl(contact.avatar) && (
                   <AvatarImage 
                     src={contact.avatar} 
                     alt={contact.name}
-                    onError={(e) => {
-                      console.warn(`Sender avatar failed to load: ${contact.name}`);
-                      e.currentTarget.style.display = 'none';
-                    }} 
+                    onError={(e) => handleAvatarError(e, contact.name)}
                   />
-                ) : null}
+                )}
                 <AvatarFallback className="text-[8px]">
-                  {contact.name.substring(0, 2).toUpperCase()}
+                  {getInitials(contact.name)}
                 </AvatarFallback>
               </Avatar>
             )}
